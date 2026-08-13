@@ -1,0 +1,47 @@
+.insight-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.insight-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--brass-light);
+  color: var(--brass-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+.insight-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.insight-desc {
+  font-size: 12.5px;
+  color: var(--slate);
+  margin-top: 5px;
+  line-height: 1.55;
+}
+.insight-figures {
+  display: flex;
+  gap: 20px;
+  margin-top: 12px;
+}
+.insight-figures div {
+  font-size: 11px;
+  color: var(--slate);
+}
+.insight-figures b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink);
+}

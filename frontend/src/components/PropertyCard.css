@@ -1,0 +1,75 @@
+.prop-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.prop-card:hover {
+  box-shadow: 0 8px 20px rgba(27, 36, 48, 0.1);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+.prop-photo {
+  height: 110px;
+  position: relative;
+}
+.prop-plate {
+  position: absolute;
+  bottom: -16px;
+  left: 16px;
+  background: var(--brass);
+  color: var(--ink);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+.prop-body {
+  padding: 24px 18px 16px 18px;
+}
+.prop-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+.prop-addr {
+  font-size: 12.5px;
+  color: var(--slate);
+  margin-top: 2px;
+}
+.prop-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.prop-stat {
+  font-size: 11.5px;
+  color: var(--slate);
+}
+.prop-stat b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.occ-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  margin-top: 12px;
+  overflow: hidden;
+}
+.occ-fill {
+  height: 100%;
+  background: var(--green);
+}

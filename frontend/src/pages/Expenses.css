@@ -1,0 +1,47 @@
+.exp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .exp-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.exp-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.exp-thumb {
+  height: 80px;
+  background: var(--parchment);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--line);
+  font-size: 24px;
+}
+.exp-body {
+  padding: 12px 14px;
+}
+.exp-amount {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+}
+.exp-cat {
+  font-size: 11px;
+  color: var(--brass-deep);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+.exp-sub {
+  font-size: 11px;
+  color: var(--slate);
+  margin-top: 6px;
+}

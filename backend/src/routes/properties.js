@@ -1,0 +1,109 @@
+import { Router } from "express";
+import pool from "../db.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/errors.js";
+import { parsePropertyBody, parseUnitBody } from "../utils/validate.js";
+
+const router = Router();
+
+// GET /api/properties - every property, with unit/occupancy counts rolled up
+// in a single query so the dashboard doesn't need a separate call per card.
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT
+         p.*,
+         COUNT(u.id)::int AS unit_count,
+         COUNT(u.id) FILTER (WHERE u.status = 'occupied')::int AS occupied_count,
+         ROUND(AVG(u.rent_amount))::int AS avg_rent
+       FROM properties p
+       LEFT JOIN units u ON u.property_id = p.id
+       GROUP BY p.id
+       ORDER BY p.created_at DESC`
+    );
+    res.json(rows);
+  })
+);
+
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const data = parsePropertyBody(req.body);
+    const { rows } = await pool.query(
+      `INSERT INTO properties (name, address, city, province, postal_code)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [data.name, data.address, data.city, data.province, data.postal_code]
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+// GET /api/properties/:id - one property plus its units, for the detail page
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { rows: propertyRows } = await pool.query("SELECT * FROM properties WHERE id = $1", [
+      req.params.id,
+    ]);
+    const property = propertyRows[0];
+    if (!property) throw new ApiError(404, "Property not found");
+
+    const { rows: units } = await pool.query(
+      "SELECT * FROM units WHERE property_id = $1 ORDER BY unit_number",
+      [req.params.id]
+    );
+    res.json({ ...property, units });
+  })
+);
+
+router.put(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const data = parsePropertyBody(req.body);
+    const { rows } = await pool.query(
+      `UPDATE properties
+       SET name = $1, address = $2, city = $3, province = $4, postal_code = $5
+       WHERE id = $6
+       RETURNING *`,
+      [data.name, data.address, data.city, data.province, data.postal_code, req.params.id]
+    );
+    if (!rows[0]) throw new ApiError(404, "Property not found");
+    res.json(rows[0]);
+  })
+);
+
+// DELETE /api/properties/:id - the units FK is ON DELETE CASCADE, so this
+// also removes every unit belonging to the property.
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { rowCount } = await pool.query("DELETE FROM properties WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (!rowCount) throw new ApiError(404, "Property not found");
+    res.status(204).end();
+  })
+);
+
+router.post(
+  "/:id/units",
+  asyncHandler(async (req, res) => {
+    const { rows: propertyRows } = await pool.query("SELECT id FROM properties WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (!propertyRows[0]) throw new ApiError(404, "Property not found");
+
+    const data = parseUnitBody(req.body);
+    const { rows } = await pool.query(
+      `INSERT INTO units (property_id, unit_number, bedrooms, bathrooms, rent_amount, status)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [req.params.id, data.unit_number, data.bedrooms, data.bathrooms, data.rent_amount, data.status]
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+export default router;

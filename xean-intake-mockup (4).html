@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Xean Intake — Platform Mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --slate:#5B6B7A;
+    --slate-soft:#8996A3;
+    --brass:#AD8A55;
+    --brass-deep:#8C6D3E;
+    --brass-light:#E8D9BC;
+    --parchment:#F7F4EE;
+    --card:#FFFFFF;
+    --line:#E6E0D3;
+    --green:#3A7D5C;
+    --green-bg:#E7F1EB;
+    --amber:#B9761E;
+    --amber-bg:#FBEEDD;
+    --red:#B4453D;
+    --red-bg:#F8E7E5;
+    --blue:#4B6B85;
+    --blue-bg:#E8EEF2;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    background:var(--parchment);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .display{font-family:'Fraunces',serif;}
+
+  /* ---- Shell layout ---- */
+  .shell{display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{
+    width:232px;
+    flex-shrink:0;
+    background:var(--ink);
+    color:#F1EEE7;
+    display:flex;
+    flex-direction:column;
+    padding:24px 16px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:0 8px 24px 8px;
+    margin-bottom:8px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .brand-mark{
+    width:30px;height:30px;border-radius:7px;
+    background:linear-gradient(155deg,var(--brass-light),var(--brass-deep));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:600;color:var(--ink);font-size:15px;
+  }
+  .brand-name{font-family:'Fraunces',serif;font-size:17px;font-weight:600;letter-spacing:0.2px;}
+  .brand-name span{color:var(--brass-light);}
+
+  nav{margin-top:14px;display:flex;flex-direction:column;gap:2px;}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;
+    padding:10px 12px;border-radius:8px;
+    color:#C7CDD6;font-size:13.5px;font-weight:500;
+    cursor:pointer;transition:background .15s ease, color .15s ease;
+    user-select:none;
+  }
+  .nav-item svg{width:16px;height:16px;opacity:.8;flex-shrink:0;}
+  .nav-item:hover{background:rgba(255,255,255,0.06);color:#fff;}
+  .nav-item.active{background:rgba(173,138,85,0.18);color:#fff;}
+  .nav-item.active svg{opacity:1;}
+  .nav-badge{
+    margin-left:auto;background:var(--red);color:#fff;font-size:10.5px;
+    font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;
+  }
+  .nav-section-label{
+    font-size:10.5px;text-transform:uppercase;letter-spacing:0.09em;
+    color:#6E7A87;margin:20px 12px 6px 12px;font-weight:600;
+  }
+  .sidebar-footer{
+    margin-top:auto;padding:12px 8px 0 8px;border-top:1px solid rgba(255,255,255,0.08);
+    display:flex;align-items:center;gap:10px;
+  }
+  .avatar{
+    width:30px;height:30px;border-radius:50%;
+    background:var(--brass);color:var(--ink);font-weight:700;font-size:12.5px;
+    display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;
+  }
+  .sidebar-footer div{font-size:12.5px;color:#B7BFC8;line-height:1.3;}
+  .sidebar-footer strong{display:block;color:#EFEDE7;font-weight:600;font-size:13px;}
+
+  /* Main */
+  .main{flex:1;min-width:0;}
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 32px;border-bottom:1px solid var(--line);background:var(--card);
+  }
+  .topbar h1{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin:0;}
+  .topbar p{margin:2px 0 0 0;font-size:13px;color:var(--slate);}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:9px 15px;border-radius:8px;font-size:13.5px;font-weight:600;
+    border:none;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{background:#0F151D;}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line);}
+  .btn-ghost:hover{background:var(--parchment);}
+
+  .content{padding:28px 32px 60px 32px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---- Stat cards ---- */
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;}
+  .stat-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;position:relative;overflow:hidden;
+  }
+  .stat-card::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--brass);
+  }
+  .stat-label{font-size:11.5px;color:var(--slate);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
+  .stat-value{font-family:'Fraunces',serif;font-size:30px;font-weight:600;margin-top:6px;}
+  .stat-sub{font-size:12px;color:var(--slate-soft);margin-top:3px;}
+  .stat-sub.up{color:var(--green);}
+  .stat-sub.warn{color:var(--amber);}
+
+  /* ---- Section headers ---- */
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 14px 0;}
+  .section-head h2{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0;}
+  .section-head a{font-size:12.5px;color:var(--brass-deep);font-weight:600;text-decoration:none;}
+
+  /* ---- Cards generic ---- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);}
+
+  /* ---- Two column dashboard grid ---- */
+  .dash-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;}
+
+  /* Activity feed */
+  .feed{padding:6px 0;}
+  .feed-item{display:flex;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);}
+  .feed-item:last-child{border-bottom:none;}
+  .feed-dot{
+    width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;
+  }
+  .feed-dot.green{background:var(--green);}
+  .feed-dot.amber{background:var(--amber);}
+  .feed-dot.blue{background:var(--blue);}
+  .feed-text{font-size:13.5px;line-height:1.5;}
+  .feed-text strong{font-weight:600;}
+  .feed-time{font-size:11.5px;color:var(--slate-soft);margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+
+  /* Renewal list */
+  .renewal-item{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--line);}
+  .renewal-item:last-child{border-bottom:none;}
+  .renewal-name{font-size:13.5px;font-weight:600;}
+  .renewal-sub{font-size:11.5px;color:var(--slate);margin-top:2px;}
+  .pill{
+    font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;
+    font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;white-space:nowrap;
+  }
+  .pill-red{background:var(--red-bg);color:var(--red);}
+  .pill-amber{background:var(--amber-bg);color:var(--amber);}
+  .pill-green{background:var(--green-bg);color:var(--green);}
+
+  /* ---- Properties grid (door-plate cards) ---- */
+  .prop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .prop-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .prop-photo{
+    height:110px;
+    background:linear-gradient(135deg,#3A4655,#1B2430);
+    position:relative;
+  }
+  .prop-plate{
+    position:absolute;bottom:-16px;left:16px;
+    background:var(--brass);color:var(--ink);
+    padding:6px 12px;border-radius:6px;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:700;
+    box-shadow:0 3px 8px rgba(0,0,0,0.18);
+  }
+  .prop-body{padding:24px 18px 16px 18px;}
+  .prop-name{font-family:'Fraunces',serif;font-size:16px;font-weight:600;}
+  .prop-addr{font-size:12.5px;color:var(--slate);margin-top:2px;}
+  .prop-stats{display:flex;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .prop-stat{font-size:11.5px;color:var(--slate);}
+  .prop-stat b{display:block;font-family:'Fraunces',serif;font-size:17px;color:var(--ink);font-weight:600;}
+  .occ-bar{height:5px;border-radius:3px;background:var(--line);margin-top:12px;overflow:hidden;}
+  .occ-fill{height:100%;background:var(--green);}
+
+  /* ---- Table ---- */
+  table{width:100%;border-collapse:collapse;}
+  th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--slate);font-weight:600;padding:12px 16px;border-bottom:1px solid var(--line);
+  }
+  td{padding:13px 16px;font-size:13.5px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .tenant-name{font-weight:600;}
+  .tenant-unit{color:var(--slate);font-size:12px;}
+  .badge{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;
+  }
+  .badge-green{background:var(--green-bg);color:var(--green);}
+  .badge-amber{background:var(--amber-bg);color:var(--amber);}
+  .badge-red{background:var(--red-bg);color:var(--red);}
+  .badge-slate{background:var(--blue-bg);color:var(--blue);}
+  .badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+  /* ---- Maintenance board ---- */
+  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .board-col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px;}
+  .board-col-head h3{font-size:12.5px;text-transform:uppercase;letter-spacing:0.05em;color:var(--slate);font-weight:700;margin:0;}
+  .board-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate-soft);}
+  .ticket{
+    background:var(--card);border:1px solid var(--line);border-radius:9px;
+    padding:13px 14px;margin-bottom:10px;
+  }
+  .ticket-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .ticket-title{font-size:13px;font-weight:600;line-height:1.4;}
+  .ticket-meta{font-size:11.5px;color:var(--slate);margin-top:6px;}
+  .ai-tag{
+    display:inline-flex;align-items:center;gap:4px;margin-top:9px;
+    font-size:10.5px;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    background:var(--parchment);border:1px solid var(--line);padding:3px 8px;border-radius:6px;color:var(--brass-deep);
+  }
+  .urgency-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+  .urgency-dot.high{background:var(--red);}
+  .urgency-dot.mid{background:var(--amber);}
+  .urgency-dot.low{background:var(--green);}
+
+  /* ---- Document intake ---- */
+  .dropzone{
+    border:2px dashed var(--line);border-radius:var(--radius);
+    padding:38px 20px;text-align:center;background:var(--card);
+  }
+  .dropzone-icon{
+    width:44px;height:44px;border-radius:50%;background:var(--brass-light);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 14px auto;
+  }
+  .dropzone h3{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0 0 4px 0;}
+  .dropzone p{font-size:12.5px;color:var(--slate);margin:0 0 16px 0;}
+
+  .doc-row{
+    display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);
+  }
+  .doc-row:last-child{border-bottom:none;}
+  .doc-icon{
+    width:34px;height:42px;background:var(--parchment);border:1px solid var(--line);border-radius:4px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .doc-name{font-size:13px;font-weight:600;}
+  .doc-sub{font-size:11.5px;color:var(--slate);margin-top:2px;}
+  .extract-fields{display:flex;gap:18px;margin-left:auto;}
+  .extract-field{font-size:11px;color:var(--slate);text-align:right;}
+  .extract-field b{display:block;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink);font-weight:600;}
+  .confidence{
+    width:34px;height:34px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;
+  }
+  .confidence.high{background:var(--green-bg);color:var(--green);}
+  .confidence.mid{background:var(--amber-bg);color:var(--amber);}
+
+  /* ---- Guest stays / turnover ---- */
+  .turnover-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:12px;
+  }
+  .turnover-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .turnover-unit{font-size:13.5px;font-weight:600;}
+  .turnover-addr{font-size:11.5px;color:var(--slate);margin-top:1px;}
+  .turnover-track{display:flex;align-items:center;gap:0;margin-top:16px;}
+  .track-step{flex:1;text-align:center;position:relative;}
+  .track-step::before{
+    content:"";position:absolute;top:9px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0;
+  }
+  .track-step:first-child::before{display:none;}
+  .track-step.done::before{background:var(--green);}
+  .track-dot{
+    width:20px;height:20px;border-radius:50%;background:var(--card);border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center;margin:0 auto;position:relative;z-index:1;
+  }
+  .track-step.done .track-dot{background:var(--green);border-color:var(--green);}
+  .track-step.active .track-dot{background:var(--brass);border-color:var(--brass);}
+  .track-step.done .track-dot::after{content:"✓";color:#fff;font-size:10px;font-weight:700;}
+  .track-step.active .track-dot::after{content:"";width:6px;height:6px;background:#fff;border-radius:50%;}
+  .track-label{font-size:10px;color:var(--slate);margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;}
+  .track-step.done .track-label{color:var(--green);}
+  .track-step.active .track-label{color:var(--brass-deep);}
+
+  .msg-row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);}
+  .msg-row:last-child{border-bottom:none;}
+  .msg-icon{
+    width:34px;height:34px;border-radius:8px;background:var(--brass-light);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brass-deep);
+  }
+  .msg-title{font-size:13px;font-weight:600;}
+  .msg-sub{font-size:11.5px;color:var(--slate);margin-top:2px;}
+  .msg-timing{
+    margin-left:auto;text-align:right;font-size:11px;color:var(--slate);
+  }
+  .msg-timing b{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);font-weight:600;}
+  .toggle{
+    width:34px;height:19px;border-radius:20px;background:var(--green);position:relative;flex-shrink:0;cursor:pointer;
+  }
+  .toggle::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;background:#fff;}
+  .toggle.off{background:var(--line);}
+  .toggle.off::after{left:2px;right:auto;}
+
+  /* ---- Inbox ---- */
+  .inbox-shell{display:grid;grid-template-columns:300px 1fr;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--card);height:560px;}
+  .thread-list{border-right:1px solid var(--line);overflow-y:auto;}
+  .thread{display:flex;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .thread.active{background:var(--parchment);}
+  .thread-avatar{width:32px;height:32px;border-radius:50%;background:var(--brass-light);color:var(--brass-deep);font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .thread-name{font-size:13px;font-weight:600;}
+  .thread-preview{font-size:11.5px;color:var(--slate);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
+  .thread-chan{font-size:9.5px;font-family:'IBM Plex Mono',monospace;color:var(--slate-soft);margin-top:3px;text-transform:uppercase;}
+  .chat-pane{display:flex;flex-direction:column;}
+  .chat-head{padding:14px 20px;border-bottom:1px solid var(--line);}
+  .chat-head b{font-size:13.5px;}
+  .chat-head span{font-size:11.5px;color:var(--slate);display:block;margin-top:1px;}
+  .chat-body{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+  .bubble{max-width:65%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.45;}
+  .bubble.in{background:var(--parchment);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:3px;}
+  .bubble.out{background:var(--ink);color:#F1EEE7;align-self:flex-end;border-bottom-right-radius:3px;}
+  .bubble-chan{font-size:9.5px;font-family:'IBM Plex Mono',monospace;color:var(--slate-soft);margin-bottom:8px;text-align:center;}
+
+  /* ---- Expenses ---- */
+  .exp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .exp-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .exp-thumb{height:80px;background:var(--parchment);display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line);}
+  .exp-body{padding:12px 14px;}
+  .exp-amount{font-family:'Fraunces',serif;font-size:19px;font-weight:600;}
+  .exp-cat{font-size:11px;color:var(--brass-deep);font-weight:600;text-transform:uppercase;letter-spacing:0.03em;margin-top:2px;}
+  .exp-sub{font-size:11px;color:var(--slate);margin-top:6px;}
+
+  /* ---- Compliance ---- */
+  .flag-row{display:flex;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);}
+  .flag-row:last-child{border-bottom:none;}
+  .flag-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;}
+  .flag-icon.red{background:var(--red-bg);color:var(--red);}
+  .flag-icon.amber{background:var(--amber-bg);color:var(--amber);}
+  .flag-icon.green{background:var(--green-bg);color:var(--green);}
+  .flag-title{font-size:13px;font-weight:600;}
+  .flag-desc{font-size:12px;color:var(--slate);margin-top:3px;line-height:1.5;}
+  .flag-clause{font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:var(--slate-soft);margin-top:5px;}
+
+  /* ---- Threshold bar (licensing) ---- */
+  .thresh-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:12px;}
+  .thresh-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .thresh-name{font-size:13.5px;font-weight:600;}
+  .thresh-nights{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--slate);}
+  .thresh-bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;}
+  .thresh-fill{height:100%;background:var(--green);}
+  .thresh-fill.warn{background:var(--amber);}
+  .thresh-note{font-size:11px;color:var(--slate);margin-top:8px;}
+
+  /* ---- Statements ---- */
+  .stmt-summary{display:flex;gap:22px;padding:18px 20px;border-bottom:1px solid var(--line);}
+  .stmt-metric{font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+  .stmt-metric b{display:block;font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:var(--ink);margin-top:3px;}
+
+  /* ---- Insights ---- */
+  .insight-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;margin-bottom:14px;display:flex;gap:14px;align-items:flex-start;
+  }
+  .insight-icon{
+    width:36px;height:36px;border-radius:9px;background:var(--brass-light);color:var(--brass-deep);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .insight-title{font-size:14px;font-weight:600;}
+  .insight-desc{font-size:12.5px;color:var(--slate);margin-top:5px;line-height:1.55;}
+  .insight-figures{display:flex;gap:20px;margin-top:12px;}
+  .insight-figures div{font-size:11px;color:var(--slate);}
+  .insight-figures b{display:block;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--ink);}
+
+  /* ---- Platform sub-tabs ---- */
+  .subtabs{display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--line);padding-bottom:0;}
+  .subtab{
+    display:flex;align-items:center;gap:7px;padding:9px 14px 12px 14px;
+    font-size:13px;font-weight:600;color:var(--slate);cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .subtab:hover{color:var(--ink);}
+  .subtab.active{color:var(--ink);border-bottom-color:var(--brass);}
+  .subtab-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .subtab-count{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;
+    background:var(--parchment);color:var(--slate);padding:1px 7px;border-radius:20px;
+  }
+  .subtab.active .subtab-count{background:var(--brass-light);color:var(--brass-deep);}
+
+  ::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">X</div>
+      <div class="brand-name">Xean <span>Intake</span></div>
+    </div>
+
+    <nav>
+      <div class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-view="properties">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V9.5"/></svg>
+        Properties
+      </div>
+      <div class="nav-item" data-view="tenants">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="8.5" r="2.3"/><path d="M15.5 14.2c2.9.4 4.9 2.4 4.9 5.8"/></svg>
+        Tenants &amp; Leases
+      </div>
+      <div class="nav-item" data-view="stays">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V9.5"/><circle cx="12" cy="14" r="1.3"/></svg>
+        Guest Stays
+        <span class="nav-badge" style="background:var(--brass-deep);">3</span>
+      </div>
+      <div class="nav-item" data-view="maintenance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-3-3z"/></svg>
+        Maintenance
+        <span class="nav-badge">5</span>
+      </div>
+      <div class="nav-item" data-view="documents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/></svg>
+        Documents
+      </div>
+
+      <div class="nav-section-label">AI Tools</div>
+      <div class="nav-item" data-view="inbox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l9 7 9-7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+        Inbox
+        <span class="nav-badge">4</span>
+      </div>
+      <div class="nav-item" data-view="expenses">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="8" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+        Expenses
+      </div>
+      <div class="nav-item" data-view="compliance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 3l8 3v6c0 4.5-3.4 7.6-8 9-4.6-1.4-8-4.5-8-9V6l8-3z"/></svg>
+        Compliance
+      </div>
+      <div class="nav-item" data-view="voice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        Voice Calls
+      </div>
+      <div class="nav-item" data-view="licensing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+        STR Licensing
+      </div>
+      <div class="nav-item" data-view="statements">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg>
+        Owner Statements
+      </div>
+      <div class="nav-item" data-view="insights">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>
+        Insights
+      </div>
+
+      <div class="nav-section-label">Workspace</div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 8.2 4.3l.1.1a1.7 1.7 0 0 0 1.9.3H10.3a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9V9.5a1.7 1.7 0 0 0 1.6 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>
+        Settings
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="avatar">A</div>
+      <div><strong>Account</strong>Aalion Properties</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ============ DASHBOARD ============ -->
+    <div class="view active" id="view-dashboard">
+      <div class="topbar">
+        <div>
+          <h1>Good morning</h1>
+          <p>Here's what's moving across your portfolio today — Wednesday, August 12</p>
+        </div>
+        <button class="btn btn-primary">+ Add property</button>
+      </div>
+
+      <div class="content">
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label">Properties</div>
+            <div class="stat-value">7</div>
+            <div class="stat-sub">across Edmonton NW &amp; NE</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Occupancy</div>
+            <div class="stat-value">92%</div>
+            <div class="stat-sub up">↑ 4% vs last month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Open maintenance</div>
+            <div class="stat-value">5</div>
+            <div class="stat-sub warn">2 flagged urgent</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Leases expiring</div>
+            <div class="stat-value">3</div>
+            <div class="stat-sub warn">within 60 days</div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <div>
+            <div class="section-head"><h2>Recent activity</h2><a href="#">View all</a></div>
+            <div class="card feed">
+              <div class="feed-item">
+                <div class="feed-dot blue"></div>
+                <div>
+                  <div class="feed-text"><strong>Lease extracted</strong> — 94 Street Unit 3B, rent $1,650, term confirmed to Apr 2027</div>
+                  <div class="feed-time">TODAY · 9:12 AM</div>
+                </div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot amber"></div>
+                <div>
+                  <div class="feed-text"><strong>New maintenance ticket</strong> — Cy Becker Rd, tenant reports no hot water, classified urgent / plumbing</div>
+                  <div class="feed-time">TODAY · 8:47 AM</div>
+                </div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot green"></div>
+                <div>
+                  <div class="feed-text"><strong>Rent received</strong> — 177 Avenue Unit 1A, $1,450 deposited</div>
+                  <div class="feed-time">YESTERDAY · 6:02 PM</div>
+                </div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot blue"></div>
+                <div>
+                  <div class="feed-text"><strong>Inspection report filed</strong> — 94 Street Unit 1A move-out, 3 deductions flagged</div>
+                  <div class="feed-time">YESTERDAY · 2:15 PM</div>
+                </div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-dot amber"></div>
+                <div>
+                  <div class="feed-text"><strong>Renewal reminder sent</strong> — Cy Becker Rd Unit 2, lease ends Oct 15</div>
+                  <div class="feed-time">MON · 11:30 AM</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-head"><h2>Upcoming renewals</h2><a href="#">View all</a></div>
+            <div class="card">
+              <div class="renewal-item">
+                <div>
+                  <div class="renewal-name">Cy Becker Rd — Unit 2</div>
+                  <div class="renewal-sub">Marcus O. · ends Oct 15</div>
+                </div>
+                <span class="pill pill-red">18 DAYS</span>
+              </div>
+              <div class="renewal-item">
+                <div>
+                  <div class="renewal-name">177 Avenue — Unit 1A</div>
+                  <div class="renewal-sub">Sarah K. · ends Nov 2</div>
+                </div>
+                <span class="pill pill-amber">36 DAYS</span>
+              </div>
+              <div class="renewal-item">
+                <div>
+                  <div class="renewal-name">94 Street — Unit 3B</div>
+                  <div class="renewal-sub">D. Osei · ends Dec 1</div>
+                </div>
+                <span class="pill pill-green">65 DAYS</span>
+              </div>
+            </div>
+
+            <div class="section-head"><h2>Intake queue</h2><a href="#">Open</a></div>
+            <div class="card" style="padding:16px 18px;">
+              <div style="font-size:12.5px;color:var(--slate);margin-bottom:10px;">2 documents waiting for review</div>
+              <button class="btn btn-ghost" style="width:100%;justify-content:center;">Review extracted data</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PROPERTIES ============ -->
+    <div class="view" id="view-properties">
+      <div class="topbar">
+        <div>
+          <h1>Properties</h1>
+          <p>7 properties · 24 units · 92% occupied</p>
+        </div>
+        <button class="btn btn-primary">+ Add property</button>
+      </div>
+      <div class="content">
+        <div class="prop-grid">
+
+          <div class="prop-card">
+            <div class="prop-photo"><div class="prop-plate">177 AVE</div></div>
+            <div class="prop-body">
+              <div class="prop-name">177 Avenue Townhomes</div>
+              <div class="prop-addr">177 Avenue NW, Edmonton, AB</div>
+              <div class="prop-stats">
+                <div class="prop-stat">Units<b>6</b></div>
+                <div class="prop-stat">Occupied<b>6</b></div>
+                <div class="prop-stat">Avg rent<b class="mono" style="font-size:15px;">$1,480</b></div>
+              </div>
+              <div class="occ-bar"><div class="occ-fill" style="width:100%;"></div></div>
+            </div>
+          </div>
+
+          <div class="prop-card">
+            <div class="prop-photo" style="background:linear-gradient(135deg,#4A5A6A,#1B2430);"><div class="prop-plate">94 ST</div></div>
+            <div class="prop-body">
+              <div class="prop-name">94 Street Fourplex</div>
+              <div class="prop-addr">94 Street NW, Edmonton, AB</div>
+              <div class="prop-stats">
+                <div class="prop-stat">Units<b>4</b></div>
+                <div class="prop-stat">Occupied<b>3</b></div>
+                <div class="prop-stat">Avg rent<b class="mono" style="font-size:15px;">$1,610</b></div>
+              </div>
+              <div class="occ-bar"><div class="occ-fill" style="width:75%;"></div></div>
+            </div>
+          </div>
+
+          <div class="prop-card">
+            <div class="prop-photo" style="background:linear-gradient(135deg,#5C6F58,#1B2430);"><div class="prop-plate">CY BECKER</div></div>
+            <div class="prop-body">
+              <div class="prop-name">Cy Becker Summit</div>
+              <div class="prop-addr">Cy Becker Road NE, Edmonton, AB</div>
+              <div class="prop-stats">
+                <div class="prop-stat">Units<b>1</b></div>
+                <div class="prop-stat">Occupied<b>1</b></div>
+                <div class="prop-stat">Avg rent<b class="mono" style="font-size:15px;">$1,950</b></div>
+              </div>
+              <div class="occ-bar"><div class="occ-fill" style="width:100%;"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TENANTS ============ -->
+    <div class="view" id="view-tenants">
+      <div class="topbar">
+        <div>
+          <h1>Tenants &amp; Leases</h1>
+          <p>22 active tenants across your portfolio</p>
+        </div>
+        <button class="btn btn-primary">+ Add tenant</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <table>
+            <thead>
+              <tr><th>Tenant</th><th>Property / Unit</th><th>Rent</th><th>Lease ends</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="tenant-name">Sarah K.</div></td>
+                <td><div class="tenant-unit">177 Avenue · 1A</div></td>
+                <td class="mono">$1,450</td>
+                <td class="mono">Nov 2, 2026</td>
+                <td><span class="badge badge-amber"><span class="badge-dot"></span>Renewal due</span></td>
+              </tr>
+              <tr>
+                <td><div class="tenant-name">Marcus O.</div></td>
+                <td><div class="tenant-unit">Cy Becker Rd · 2</div></td>
+                <td class="mono">$1,950</td>
+                <td class="mono">Oct 15, 2026</td>
+                <td><span class="badge badge-red"><span class="badge-dot"></span>Urgent renewal</span></td>
+              </tr>
+              <tr>
+                <td><div class="tenant-name">D. Osei</div></td>
+                <td><div class="tenant-unit">94 Street · 3B</div></td>
+                <td class="mono">$1,650</td>
+                <td class="mono">Dec 1, 2026</td>
+                <td><span class="badge badge-green"><span class="badge-dot"></span>Active</span></td>
+              </tr>
+              <tr>
+                <td><div class="tenant-name">Ade F.</div></td>
+                <td><div class="tenant-unit">177 Avenue · 2C</div></td>
+                <td class="mono">$1,510</td>
+                <td class="mono">Feb 18, 2027</td>
+                <td><span class="badge badge-green"><span class="badge-dot"></span>Active</span></td>
+              </tr>
+              <tr>
+                <td><div class="tenant-name">R. Nwosu</div></td>
+                <td><div class="tenant-unit">94 Street · 1A</div></td>
+                <td class="mono">—</td>
+                <td class="mono">—</td>
+                <td><span class="badge badge-slate"><span class="badge-dot"></span>Vacant</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ GUEST STAYS ============ -->
+    <div class="view" id="view-stays">
+      <div class="topbar">
+        <div>
+          <h1>Guest Stays</h1>
+          <p>Short-term turnovers and scheduled guest messages</p>
+        </div>
+        <button class="btn btn-primary">+ New booking</button>
+      </div>
+      <div class="content">
+
+        <div class="subtabs">
+          <div class="subtab active">
+            <span class="subtab-dot" style="background:var(--ink);"></span>
+            All platforms <span class="subtab-count">3</span>
+          </div>
+          <div class="subtab">
+            <span class="subtab-dot" style="background:#FF5A5F;"></span>
+            Airbnb <span class="subtab-count">2</span>
+          </div>
+          <div class="subtab">
+            <span class="subtab-dot" style="background:#00447C;"></span>
+            Vrbo <span class="subtab-count">1</span>
+          </div>
+          <div class="subtab">
+            <span class="subtab-dot" style="background:#003580;"></span>
+            Booking.com <span class="subtab-count">0</span>
+          </div>
+          <div class="subtab">
+            <span class="subtab-dot" style="background:var(--brass);"></span>
+            Direct booking <span class="subtab-count">0</span>
+          </div>
+          <div class="subtab" style="margin-left:auto;color:var(--brass-deep);">
+            + Connect a platform
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <div>
+            <div class="section-head"><h2>Active turnovers</h2><a href="#">View calendar</a></div>
+
+            <div class="turnover-card">
+              <div class="turnover-top">
+                <div>
+                  <div class="turnover-unit">Cy Becker Summit — Unit 1 <span class="pill" style="background:#FFE4E5;color:#FF5A5F;">AIRBNB</span></div>
+                  <div class="turnover-addr">Checkout Aug 12 · Next check-in Aug 14</div>
+                </div>
+                <span class="pill pill-amber">CLEANING DUE</span>
+              </div>
+              <div class="turnover-track">
+                <div class="track-step done"><div class="track-dot"></div><div class="track-label">Checkout</div></div>
+                <div class="track-step done"><div class="track-dot"></div><div class="track-label">Inspection</div></div>
+                <div class="track-step active"><div class="track-dot"></div><div class="track-label">Cleaning</div></div>
+                <div class="track-step"><div class="track-dot"></div><div class="track-label">Check-in</div></div>
+              </div>
+            </div>
+
+            <div class="turnover-card">
+              <div class="turnover-top">
+                <div>
+                  <div class="turnover-unit">177 Avenue — Unit 1A <span class="pill" style="background:#E5EDF5;color:#00447C;">VRBO</span></div>
+                  <div class="turnover-addr">Checkout Aug 15 · Next check-in Aug 16</div>
+                </div>
+                <span class="pill pill-green">ON TRACK</span>
+              </div>
+              <div class="turnover-track">
+                <div class="track-step"><div class="track-dot"></div><div class="track-label">Checkout</div></div>
+                <div class="track-step"><div class="track-dot"></div><div class="track-label">Inspection</div></div>
+                <div class="track-step"><div class="track-dot"></div><div class="track-label">Cleaning</div></div>
+                <div class="track-step"><div class="track-dot"></div><div class="track-label">Check-in</div></div>
+              </div>
+            </div>
+
+            <div class="turnover-card">
+              <div class="turnover-top">
+                <div>
+                  <div class="turnover-unit">94 Street — Unit 3B <span class="pill" style="background:#FFE4E5;color:#FF5A5F;">AIRBNB</span></div>
+                  <div class="turnover-addr">Checkout Aug 10 · Guest checked in Aug 11</div>
+                </div>
+                <span class="pill pill-green">COMPLETE</span>
+              </div>
+              <div class="turnover-track">
+                <div class="track-step done"><div class="track-dot"></div><div class="track-label">Checkout</div></div>
+                <div class="track-step done"><div class="track-dot"></div><div class="track-label">Inspection</div></div>
+                <div class="track-step done"><div class="track-dot"></div><div class="track-label">Cleaning</div></div>
+                <div class="track-step done"><div class="track-dot"></div><div class="track-label">Check-in</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-head"><h2>Scheduled messages</h2><a href="#">+ Add</a></div>
+            <div class="card">
+              <div class="msg-row">
+                <div class="msg-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+                </div>
+                <div>
+                  <div class="msg-title">Check-in instructions</div>
+                  <div class="msg-sub">Door code, WiFi, parking</div>
+                </div>
+                <div class="msg-timing">Sends<b>24h before</b></div>
+                <div class="toggle"></div>
+              </div>
+              <div class="msg-row">
+                <div class="msg-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/></svg>
+                </div>
+                <div>
+                  <div class="msg-title">Welcome message</div>
+                  <div class="msg-sub">House rules + local tips</div>
+                </div>
+                <div class="msg-timing">Sends<b>on arrival</b></div>
+                <div class="toggle"></div>
+              </div>
+              <div class="msg-row">
+                <div class="msg-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+                </div>
+                <div>
+                  <div class="msg-title">Checkout reminder</div>
+                  <div class="msg-sub">Keys, trash, checklist</div>
+                </div>
+                <div class="msg-timing">Sends<b>8am, checkout day</b></div>
+                <div class="toggle"></div>
+              </div>
+              <div class="msg-row">
+                <div class="msg-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 17.3-5.4 3 1-6-4.3-4.2 6-.9L12 3l2.7 5.2 6 .9-4.3 4.2 1 6z"/></svg>
+                </div>
+                <div>
+                  <div class="msg-title">Review request</div>
+                  <div class="msg-sub">Sent after checkout</div>
+                </div>
+                <div class="msg-timing">Sends<b>2h after checkout</b></div>
+                <div class="toggle off"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ INBOX ============ -->
+    <div class="view" id="view-inbox">
+      <div class="topbar">
+        <div>
+          <h1>Inbox</h1>
+          <p>Texts, email, and Airbnb messages — one thread per unit</p>
+        </div>
+        <button class="btn btn-primary">+ New message</button>
+      </div>
+      <div class="content">
+        <div class="inbox-shell">
+          <div class="thread-list">
+            <div class="thread active">
+              <div class="thread-avatar">SK</div>
+              <div>
+                <div class="thread-name">Sarah K.</div>
+                <div class="thread-preview">Can I pay rent a day late this month?</div>
+                <div class="thread-chan">SMS · 177 Ave 1A</div>
+              </div>
+            </div>
+            <div class="thread">
+              <div class="thread-avatar">MO</div>
+              <div>
+                <div class="thread-name">Marcus O.</div>
+                <div class="thread-preview">Still no hot water, any update?</div>
+                <div class="thread-chan">EMAIL · Cy Becker 2</div>
+              </div>
+            </div>
+            <div class="thread">
+              <div class="thread-avatar">JT</div>
+              <div>
+                <div class="thread-name">Jordan T. (guest)</div>
+                <div class="thread-preview">What's the WiFi password?</div>
+                <div class="thread-chan">AIRBNB · 94 St 3B</div>
+              </div>
+            </div>
+            <div class="thread">
+              <div class="thread-avatar">DO</div>
+              <div>
+                <div class="thread-name">D. Osei</div>
+                <div class="thread-preview">Dishwasher guy came, all fixed</div>
+                <div class="thread-chan">SMS · 94 St 3B</div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-pane">
+            <div class="chat-head">
+              <b>Sarah K.</b>
+              <span>177 Avenue · Unit 1A · via SMS</span>
+            </div>
+            <div class="chat-body">
+              <div class="bubble-chan">TODAY</div>
+              <div class="bubble in">Hey! Quick question — can I pay rent a day late this month? Pay day shifted at work.</div>
+              <div class="bubble out">No problem at all, thanks for the heads up. One day is totally fine.</div>
+              <div class="bubble in">Thank you so much, appreciate it 🙏</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ EXPENSES ============ -->
+    <div class="view" id="view-expenses">
+      <div class="topbar">
+        <div>
+          <h1>Expenses</h1>
+          <p>Snap a receipt — Xean logs the amount, category, and property</p>
+        </div>
+        <button class="btn btn-primary">Upload receipt</button>
+      </div>
+      <div class="content">
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label">This month</div>
+            <div class="stat-value">$2,140</div>
+            <div class="stat-sub">across 11 receipts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Repairs</div>
+            <div class="stat-value">$980</div>
+            <div class="stat-sub">largest category</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Unreviewed</div>
+            <div class="stat-value">3</div>
+            <div class="stat-sub warn">needs a category check</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Tax-ready export</div>
+            <div class="stat-value mono" style="font-size:22px;">2026</div>
+            <div class="stat-sub">year to date</div>
+          </div>
+        </div>
+
+        <div class="section-head"><h2>Recent receipts</h2><a href="#">View all</a></div>
+        <div class="exp-grid">
+          <div class="exp-card">
+            <div class="exp-thumb"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8996A3" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+            <div class="exp-body">
+              <div class="exp-amount">$340</div>
+              <div class="exp-cat">Plumbing repair</div>
+              <div class="exp-sub">94 St · ABC Plumbing · Aug 9</div>
+            </div>
+          </div>
+          <div class="exp-card">
+            <div class="exp-thumb"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8996A3" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+            <div class="exp-body">
+              <div class="exp-amount">$86</div>
+              <div class="exp-cat">Cleaning supplies</div>
+              <div class="exp-sub">Cy Becker · Home Depot · Aug 8</div>
+            </div>
+          </div>
+          <div class="exp-card">
+            <div class="exp-thumb"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8996A3" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+            <div class="exp-body">
+              <div class="exp-amount">$210</div>
+              <div class="exp-cat">Landscaping</div>
+              <div class="exp-sub">177 Ave · GreenCut · Aug 6</div>
+            </div>
+          </div>
+          <div class="exp-card">
+            <div class="exp-thumb"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8996A3" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+            <div class="exp-body">
+              <div class="exp-amount">$1,504</div>
+              <div class="exp-cat">Property tax</div>
+              <div class="exp-sub">94 St · City of Edmonton · Aug 1</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ COMPLIANCE ============ -->
+    <div class="view" id="view-compliance">
+      <div class="topbar">
+        <div>
+          <h1>Compliance</h1>
+          <p>Checks new leases and bylaws against Alberta RTA + condo rules</p>
+        </div>
+        <button class="btn btn-primary">Check a document</button>
+      </div>
+      <div class="content">
+        <div class="section-head"><h2>Cy Becker Summit — Bylaw review</h2></div>
+        <div class="card">
+          <div class="flag-row">
+            <div class="flag-icon red">!</div>
+            <div>
+              <div class="flag-title">Short-term rental restriction</div>
+              <div class="flag-desc">Bylaw section limits stays under 30 days without board approval — conflicts with planned Airbnb use for this unit.</div>
+              <div class="flag-clause">BYLAW §7.3 · flagged high priority</div>
+            </div>
+          </div>
+          <div class="flag-row">
+            <div class="flag-icon amber">i</div>
+            <div>
+              <div class="flag-title">EV charging clause</div>
+              <div class="flag-desc">Installation requires written board notice 30 days in advance — no penalty, just a heads up before you install.</div>
+              <div class="flag-clause">BYLAW §12.1 · informational</div>
+            </div>
+          </div>
+          <div class="flag-row">
+            <div class="flag-icon green">✓</div>
+            <div>
+              <div class="flag-title">Pet policy</div>
+              <div class="flag-desc">Standard pet clause, no conflicts found with current lease terms.</div>
+              <div class="flag-clause">BYLAW §5.0 · clear</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-head"><h2>177 Avenue — New lease draft</h2></div>
+        <div class="card">
+          <div class="flag-row">
+            <div class="flag-icon red">!</div>
+            <div>
+              <div class="flag-title">Deposit exceeds legal limit</div>
+              <div class="flag-desc">Security deposit listed at $1,600 on a $1,450/mo unit — Alberta RTA caps deposits at one month's rent.</div>
+              <div class="flag-clause">RTA §20(1) · fix before sending</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ VOICE CALLS ============ -->
+    <div class="view" id="view-voice">
+      <div class="topbar">
+        <div>
+          <h1>Voice Calls</h1>
+          <p>Tenants can call in a maintenance issue — it's transcribed and triaged automatically</p>
+        </div>
+        <button class="btn btn-ghost">Call line settings</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="doc-row">
+            <div class="doc-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6B7A" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+            </div>
+            <div>
+              <div class="doc-name">Marcus O. — 2m 14s</div>
+              <div class="doc-sub">"There's no hot water since this morning, it's freezing..."</div>
+            </div>
+            <div class="extract-fields">
+              <div class="extract-field">Urgency<b>High</b></div>
+              <div class="extract-field">Trade<b>Plumbing</b></div>
+            </div>
+            <div class="confidence high">✓</div>
+          </div>
+          <div class="doc-row">
+            <div class="doc-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6B7A" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+            </div>
+            <div>
+              <div class="doc-name">Sarah K. — 0m 48s</div>
+              <div class="doc-sub">"Just wanted to confirm my late rent is okay..."</div>
+            </div>
+            <div class="extract-fields">
+              <div class="extract-field">Urgency<b>N/A</b></div>
+              <div class="extract-field">Trade<b>General</b></div>
+            </div>
+            <div class="confidence high">✓</div>
+          </div>
+          <div class="doc-row">
+            <div class="doc-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6B7A" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+            </div>
+            <div>
+              <div class="doc-name">D. Osei — 1m 32s</div>
+              <div class="doc-sub">"Dishwasher's still not draining properly..."</div>
+            </div>
+            <div class="extract-fields">
+              <div class="extract-field">Urgency<b>Mid</b></div>
+              <div class="extract-field">Trade<b>Appliance</b></div>
+            </div>
+            <div class="confidence mid">~</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STR LICENSING ============ -->
+    <div class="view" id="view-licensing">
+      <div class="topbar">
+        <div>
+          <h1>STR Licensing</h1>
+          <p>Tracks occupied nights against Edmonton's short-term rental thresholds</p>
+        </div>
+        <button class="btn btn-ghost">Renewal settings</button>
+      </div>
+      <div class="content">
+        <div class="thresh-card">
+          <div class="thresh-top">
+            <div class="thresh-name">Cy Becker Summit — Unit 1</div>
+            <div class="thresh-nights">142 / 180 nights</div>
+          </div>
+          <div class="thresh-bar"><div class="thresh-fill warn" style="width:79%;"></div></div>
+          <div class="thresh-note">Approaching annual threshold — license renewal due Nov 30, 2026</div>
+        </div>
+        <div class="thresh-card">
+          <div class="thresh-top">
+            <div class="thresh-name">94 Street — Unit 3B</div>
+            <div class="thresh-nights">58 / 180 nights</div>
+          </div>
+          <div class="thresh-bar"><div class="thresh-fill" style="width:32%;"></div></div>
+          <div class="thresh-note">Well within threshold — license active until Mar 2027</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ OWNER STATEMENTS ============ -->
+    <div class="view" id="view-statements">
+      <div class="topbar">
+        <div>
+          <h1>Owner Statements</h1>
+          <p>Auto-generated monthly statements from your existing records</p>
+        </div>
+        <button class="btn btn-primary">Generate statement</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="stmt-summary">
+            <div class="stmt-metric">Rent collected<b>$8,900</b></div>
+            <div class="stmt-metric">Expenses<b>$2,140</b></div>
+            <div class="stmt-metric">Net payout<b>$6,760</b></div>
+            <div class="stmt-metric">Period<b>Jul 2026</b></div>
+          </div>
+          <table>
+            <thead><tr><th>Property</th><th>Rent in</th><th>Expenses</th><th>Net</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>177 Avenue</td><td class="mono">$4,350</td><td class="mono">$296</td><td class="mono">$4,054</td><td><a href="#" style="font-size:12px;color:var(--brass-deep);font-weight:600;text-decoration:none;">Download PDF</a></td></tr>
+              <tr><td>94 Street</td><td class="mono">$3,000</td><td class="mono">$1,504</td><td class="mono">$1,496</td><td><a href="#" style="font-size:12px;color:var(--brass-deep);font-weight:600;text-decoration:none;">Download PDF</a></td></tr>
+              <tr><td>Cy Becker Summit</td><td class="mono">$1,950</td><td class="mono">$340</td><td class="mono">$1,610</td><td><a href="#" style="font-size:12px;color:var(--brass-deep);font-weight:600;text-decoration:none;">Download PDF</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ INSIGHTS ============ -->
+    <div class="view" id="view-insights">
+      <div class="topbar">
+        <div>
+          <h1>Insights</h1>
+          <p>Light nudges based on your own booking and rent history — not guesses</p>
+        </div>
+      </div>
+      <div class="content">
+        <div class="insight-card">
+          <div class="insight-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>
+          </div>
+          <div>
+            <div class="insight-title">Unit 3B could earn more short-term this winter</div>
+            <div class="insight-desc">Based on booking history at 94 Street and comparable Edmonton listings, short-term nightly rates trend well above your current long-term rent through the winter season.</div>
+            <div class="insight-figures">
+              <div>Current LTR<b>$1,650/mo</b></div>
+              <div>Est. STR<b>$2,400/mo</b></div>
+              <div>Confidence<b>Moderate</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+          </div>
+          <div>
+            <div class="insight-title">177 Avenue renewals cluster in November</div>
+            <div class="insight-desc">Three leases renew within the same two-week window — worth staggering future lease start dates to avoid a repeat vacancy crunch next year.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MAINTENANCE ============ -->
+    <div class="view" id="view-maintenance">
+      <div class="topbar">
+        <div>
+          <h1>Maintenance</h1>
+          <p>AI reads each request and sorts urgency + trade automatically</p>
+        </div>
+        <button class="btn btn-primary">+ New ticket</button>
+      </div>
+      <div class="content">
+        <div class="board">
+
+          <div>
+            <div class="board-col-head"><h3>New</h3><span class="board-count">2</span></div>
+            <div class="ticket">
+              <div class="ticket-top">
+                <div class="urgency-dot high"></div>
+                <div class="ticket-title" style="flex:1;">No hot water in unit</div>
+              </div>
+              <div class="ticket-meta">Cy Becker Rd · Marcus O.</div>
+              <div class="ai-tag">⚡ Urgent · Plumbing</div>
+            </div>
+            <div class="ticket">
+              <div class="ticket-top">
+                <div class="urgency-dot low"></div>
+                <div class="ticket-title" style="flex:1;">Squeaky bedroom door hinge</div>
+              </div>
+              <div class="ticket-meta">177 Avenue · Sarah K.</div>
+              <div class="ai-tag">⚡ Routine · General</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="board-col-head"><h3>Triaged</h3><span class="board-count">1</span></div>
+            <div class="ticket">
+              <div class="ticket-top">
+                <div class="urgency-dot mid"></div>
+                <div class="ticket-title" style="flex:1;">Dishwasher not draining</div>
+              </div>
+              <div class="ticket-meta">94 Street · D. Osei</div>
+              <div class="ai-tag">⚡ Moderate · Appliance</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="board-col-head"><h3>Dispatched</h3><span class="board-count">1</span></div>
+            <div class="ticket">
+              <div class="ticket-top">
+                <div class="urgency-dot high"></div>
+                <div class="ticket-title" style="flex:1;">Breaker tripping in kitchen</div>
+              </div>
+              <div class="ticket-meta">177 Avenue · Ade F.</div>
+              <div class="ai-tag">⚡ Vendor notified — ETA 2pm</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="board-col-head"><h3>Resolved</h3><span class="board-count">1</span></div>
+            <div class="ticket" style="opacity:0.65;">
+              <div class="ticket-top">
+                <div class="urgency-dot low"></div>
+                <div class="ticket-title" style="flex:1;">Leaky bathroom faucet</div>
+              </div>
+              <div class="ticket-meta">94 Street · R. Nwosu</div>
+              <div class="ai-tag">✓ Closed Aug 9</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DOCUMENTS ============ -->
+    <div class="view" id="view-documents">
+      <div class="topbar">
+        <div>
+          <h1>Documents</h1>
+          <p>Upload a lease, invoice, or inspection report — Xean reads it for you</p>
+        </div>
+        <button class="btn btn-primary">Upload document</button>
+      </div>
+      <div class="content">
+
+        <div class="dropzone">
+          <div class="dropzone-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8C6D3E" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+          </div>
+          <h3>Drag a file here, or click to upload</h3>
+          <p>PDF, JPG, or PNG — leases, invoices, applications, inspection reports</p>
+          <button class="btn btn-ghost">Browse files</button>
+        </div>
+
+        <div class="section-head"><h2>Recently processed</h2><a href="#">View all</a></div>
+        <div class="card">
+          <div class="doc-row">
+            <div class="doc-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6B7A" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/></svg>
+            </div>
+            <div>
+              <div class="doc-name">Lease_94Street_3B.pdf</div>
+              <div class="doc-sub">Uploaded today, 9:10 AM</div>
+            </div>
+            <div class="extract-fields">
+              <div class="extract-field">Rent<b>$1,650</b></div>
+              <div class="extract-field">Ends<b>04/2027</b></div>
+              <div class="extract-field">Deposit<b>$1,650</b></div>
+            </div>
+            <div class="confidence high">98%</div>
+          </div>
+
+          <div class="doc-row">
+            <div class="doc-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6B7A" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/></svg>
+            </div>
+            <div>
+              <div class="doc-name">Inspection_94St_1A_moveout.pdf</div>
+              <div class="doc-sub">Uploaded yesterday, 2:15 PM</div>
+            </div>
+            <div class="extract-fields">
+              <div class="extract-field">Deductions<b>3</b></div>
+              <div class="extract-field">Total<b>$210</b></div>
+              <div class="extract-field">Signed<b>Yes</b></div>
+            </div>
+            <div class="confidence mid">84%</div>
+          </div>
+
+          <div class="doc-row">
+            <div class="doc-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6B7A" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/></svg>
+            </div>
+            <div>
+              <div class="doc-name">VendorInvoice_ABC_Plumbing.pdf</div>
+              <div class="doc-sub">Uploaded Aug 9, 11:02 AM</div>
+            </div>
+            <div class="extract-fields">
+              <div class="extract-field">Amount<b>$340</b></div>
+              <div class="extract-field">Unit<b>94 St 1A</b></div>
+              <div class="extract-field">Due<b>Aug 24</b></div>
+            </div>
+            <div class="confidence high">96%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.nav-item[data-view]').forEach(function(item){
+    item.addEventListener('click', function(){
+      document.querySelectorAll('.nav-item[data-view]').forEach(function(i){ i.classList.remove('active'); });
+      document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+      item.classList.add('active');
+      document.getElementById('view-' + item.dataset.view).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

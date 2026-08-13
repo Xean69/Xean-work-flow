@@ -1,0 +1,70 @@
+.feed {
+  padding: 6px 0;
+}
+.feed-item {
+  display: flex;
+  gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.feed-item:last-child {
+  border-bottom: none;
+}
+.feed-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.feed-dot.green {
+  background: var(--green);
+}
+.feed-dot.amber {
+  background: var(--amber);
+}
+.feed-dot.blue {
+  background: var(--blue);
+}
+.feed-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.feed-time {
+  font-size: 11.5px;
+  color: var(--slate-soft);
+  margin-top: 2px;
+}
+
+.renewal-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.renewal-item:last-child {
+  border-bottom: none;
+}
+.renewal-name {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.renewal-sub {
+  font-size: 11.5px;
+  color: var(--slate);
+  margin-top: 2px;
+}
+
+.intake-card {
+  padding: 16px 18px;
+}
+.intake-note {
+  font-size: 12.5px;
+  color: var(--slate);
+  margin-bottom: 10px;
+}
+.intake-btn {
+  width: 100%;
+  justify-content: center;
+}

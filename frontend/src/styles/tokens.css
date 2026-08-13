@@ -1,0 +1,39 @@
+:root {
+  /* Color palette — matches xean-intake-mockup exactly */
+  --ink: #1b2430;
+  --slate: #5b6b7a;
+  --slate-soft: #8996a3;
+  --brass: #ad8a55;
+  --brass-deep: #8c6d3e;
+  --brass-light: #e8d9bc;
+  --parchment: #f7f4ee;
+  --card: #ffffff;
+  --line: #e6e0d3;
+  --green: #3a7d5c;
+  --green-bg: #e7f1eb;
+  --amber: #b9761e;
+  --amber-bg: #fbeedd;
+  --red: #b4453d;
+  --red-bg: #f8e7e5;
+  --blue: #4b6b85;
+  --blue-bg: #e8eef2;
+
+  /* Radius */
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-pill: 20px;
+
+  /* Spacing scale (page/layout level; components use mockup-tuned values directly) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Type */
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Fraunces', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
