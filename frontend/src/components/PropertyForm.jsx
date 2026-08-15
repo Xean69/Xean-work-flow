@@ -87,7 +87,7 @@ function PropertyForm({ initialValues, onSubmit, onCancel }) {
       </div>
 
       <div className="form-actions">
-        <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={submitting}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={submitting}>
           Cancel
         </button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>

@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import propertiesRouter from "./routes/properties.js";
 import unitsRouter from "./routes/units.js";
+import tenantsRouter from "./routes/tenants.js";
 import { ApiError } from "./utils/errors.js";
 
 const app = express();
@@ -15,6 +16,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api/properties", propertiesRouter);
 app.use("/api/units", unitsRouter);
+app.use("/api/tenants", tenantsRouter);
 
 // Central error handler: ApiError carries its own status code, anything
 // else is an unexpected failure.

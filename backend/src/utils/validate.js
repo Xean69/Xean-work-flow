@@ -25,6 +25,37 @@ export function parsePropertyBody(body) {
   };
 }
 
+function optionalString(value) {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+function requireDate(value, field) {
+  if (!value || Number.isNaN(new Date(value).getTime())) {
+    throw new ApiError(400, `${field} must be a valid date`);
+  }
+  return value;
+}
+
+export function parseTenantBody(body) {
+  requireDate(body.lease_start, "lease_start");
+  requireDate(body.lease_end, "lease_end");
+  if (new Date(body.lease_end) <= new Date(body.lease_start)) {
+    throw new ApiError(400, "lease_end must be after lease_start");
+  }
+  return {
+    unit_id: requireNumber(body.unit_id, "unit_id", { min: 1 }),
+    full_name: requireString(body.full_name, "full_name"),
+    email: optionalString(body.email),
+    phone: optionalString(body.phone),
+    lease_start: body.lease_start,
+    lease_end: body.lease_end,
+    rent_amount: requireNumber(body.rent_amount, "rent_amount", { min: 0 }),
+    deposit_amount: requireNumber(body.deposit_amount, "deposit_amount", { min: 0 }),
+  };
+}
+
 export function parseUnitBody(body) {
   const status = body.status === undefined ? "vacant" : body.status;
   if (status !== "vacant" && status !== "occupied") {

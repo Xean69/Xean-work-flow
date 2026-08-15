@@ -1,0 +1,149 @@
+import { Router } from "express";
+import pool from "../db.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/errors.js";
+import { parseTenantBody } from "../utils/validate.js";
+
+const router = Router();
+
+const URGENT_DAYS = 14;
+const RENEWAL_DAYS = 60;
+
+// Status is never stored — it's derived from lease_end every time it's
+// requested, so it can't ever go stale the way a saved value would.
+function computeStatus(leaseEnd) {
+  const end = new Date(leaseEnd);
+  end.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysLeft = Math.round((end - today) / 86400000);
+  if (daysLeft <= URGENT_DAYS) return "urgent_renewal";
+  if (daysLeft <= RENEWAL_DAYS) return "renewal_due";
+  return "active";
+}
+
+// Keeps units.status in sync with whether the unit currently has a tenant,
+// so the Properties page's Vacant/Occupied badge always matches reality.
+async function syncUnitStatus(unitId) {
+  const { rows } = await pool.query("SELECT 1 FROM tenants WHERE unit_id = $1 LIMIT 1", [
+    unitId,
+  ]);
+  await pool.query("UPDATE units SET status = $1 WHERE id = $2", [
+    rows.length ? "occupied" : "vacant",
+    unitId,
+  ]);
+}
+
+// GET /api/tenants - one row per unit across the whole portfolio: the
+// unit's most recent tenant if it has one, or vacant if it doesn't.
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT
+         u.id AS unit_id,
+         u.unit_number,
+         p.id AS property_id,
+         p.name AS property_name,
+         t.id AS tenant_id,
+         t.full_name,
+         t.email,
+         t.phone,
+         t.lease_start,
+         t.lease_end,
+         t.rent_amount,
+         t.deposit_amount
+       FROM units u
+       JOIN properties p ON p.id = u.property_id
+       LEFT JOIN LATERAL (
+         SELECT *
+         FROM tenants t2
+         WHERE t2.unit_id = u.id
+         ORDER BY t2.lease_end DESC, t2.created_at DESC
+         LIMIT 1
+       ) t ON true
+       ORDER BY p.name, u.unit_number`
+    );
+
+    res.json(
+      rows.map((row) => ({
+        ...row,
+        status: row.tenant_id ? computeStatus(row.lease_end) : "vacant",
+      }))
+    );
+  })
+);
+
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const data = parseTenantBody(req.body);
+    const { rows } = await pool.query(
+      `INSERT INTO tenants (unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        data.unit_id,
+        data.full_name,
+        data.email,
+        data.phone,
+        data.lease_start,
+        data.lease_end,
+        data.rent_amount,
+        data.deposit_amount,
+      ]
+    );
+    await syncUnitStatus(data.unit_id);
+    res.status(201).json(rows[0]);
+  })
+);
+
+router.put(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { rows: existingRows } = await pool.query(
+      "SELECT unit_id FROM tenants WHERE id = $1",
+      [req.params.id]
+    );
+    if (!existingRows[0]) throw new ApiError(404, "Tenant not found");
+    const previousUnitId = existingRows[0].unit_id;
+
+    const data = parseTenantBody(req.body);
+    const { rows } = await pool.query(
+      `UPDATE tenants
+       SET unit_id = $1, full_name = $2, email = $3, phone = $4, lease_start = $5, lease_end = $6, rent_amount = $7, deposit_amount = $8
+       WHERE id = $9
+       RETURNING *`,
+      [
+        data.unit_id,
+        data.full_name,
+        data.email,
+        data.phone,
+        data.lease_start,
+        data.lease_end,
+        data.rent_amount,
+        data.deposit_amount,
+        req.params.id,
+      ]
+    );
+
+    await syncUnitStatus(data.unit_id);
+    if (previousUnitId !== data.unit_id) await syncUnitStatus(previousUnitId);
+
+    res.json(rows[0]);
+  })
+);
+
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query("DELETE FROM tenants WHERE id = $1 RETURNING unit_id", [
+      req.params.id,
+    ]);
+    if (!rows[0]) throw new ApiError(404, "Tenant not found");
+    await syncUnitStatus(rows[0].unit_id);
+    res.status(204).end();
+  })
+);
+
+export default router;

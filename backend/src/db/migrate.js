@@ -9,7 +9,7 @@ const schema = readFileSync(path.join(__dirname, "schema.sql"), "utf8");
 
 try {
   await pool.query(schema);
-  console.log("Migration complete: properties and units tables are ready.");
+  console.log("Migration complete: all tables are up to date.");
 } catch (err) {
   console.error("Migration failed:", err.message);
   process.exitCode = 1;

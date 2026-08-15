@@ -20,3 +20,18 @@ CREATE TABLE IF NOT EXISTS units (
 );
 
 CREATE INDEX IF NOT EXISTS idx_units_property_id ON units(property_id);
+
+CREATE TABLE IF NOT EXISTS tenants (
+  id SERIAL PRIMARY KEY,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  lease_start DATE NOT NULL,
+  lease_end DATE NOT NULL,
+  rent_amount NUMERIC(10,2) NOT NULL,
+  deposit_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenants_unit_id ON tenants(unit_id);

@@ -49,3 +49,19 @@ export function updateUnit(id, data) {
 export function deleteUnit(id) {
   return request(`/units/${id}`, { method: "DELETE" });
 }
+
+export function getTenants() {
+  return request("/tenants");
+}
+
+export function createTenant(data) {
+  return request("/tenants", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateTenant(id, data) {
+  return request(`/tenants/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteTenant(id) {
+  return request(`/tenants/${id}`, { method: "DELETE" });
+}
