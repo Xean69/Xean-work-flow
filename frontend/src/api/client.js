@@ -65,3 +65,19 @@ export function updateTenant(id, data) {
 export function deleteTenant(id) {
   return request(`/tenants/${id}`, { method: "DELETE" });
 }
+
+export function getMaintenanceRequests() {
+  return request("/maintenance");
+}
+
+export function createMaintenanceRequest(data) {
+  return request("/maintenance", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateMaintenanceRequest(id, data) {
+  return request(`/maintenance/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteMaintenanceRequest(id) {
+  return request(`/maintenance/${id}`, { method: "DELETE" });
+}

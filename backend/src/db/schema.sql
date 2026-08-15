@@ -35,3 +35,18 @@ CREATE TABLE IF NOT EXISTS tenants (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tenants_unit_id ON tenants(unit_id);
+
+CREATE TABLE IF NOT EXISTS maintenance_requests (
+  id SERIAL PRIMARY KEY,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  tenant_id INTEGER REFERENCES tenants(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'resolved')),
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_requests_unit_id ON maintenance_requests(unit_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_requests_tenant_id ON maintenance_requests(tenant_id);

@@ -56,6 +56,36 @@ export function parseTenantBody(body) {
   };
 }
 
+function optionalNumber(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const num = Number(value);
+  if (Number.isNaN(num)) {
+    throw new ApiError(400, "tenant_id must be a number");
+  }
+  return num;
+}
+
+const MAINTENANCE_STATUSES = ["new", "in_progress", "resolved"];
+const MAINTENANCE_PRIORITIES = ["low", "medium", "high"];
+
+export function parseMaintenanceBody(body) {
+  if (!MAINTENANCE_STATUSES.includes(body.status)) {
+    throw new ApiError(400, `status must be one of: ${MAINTENANCE_STATUSES.join(", ")}`);
+  }
+  const priority = body.priority === undefined ? "medium" : body.priority;
+  if (!MAINTENANCE_PRIORITIES.includes(priority)) {
+    throw new ApiError(400, `priority must be one of: ${MAINTENANCE_PRIORITIES.join(", ")}`);
+  }
+  return {
+    unit_id: requireNumber(body.unit_id, "unit_id", { min: 1 }),
+    tenant_id: optionalNumber(body.tenant_id),
+    title: requireString(body.title, "title"),
+    description: optionalString(body.description),
+    status: body.status,
+    priority,
+  };
+}
+
 export function parseUnitBody(body) {
   const status = body.status === undefined ? "vacant" : body.status;
   if (status !== "vacant" && status !== "occupied") {

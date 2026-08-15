@@ -1,12 +1,18 @@
 .board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
 @media (max-width: 900px) {
   .board {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
+}
+
+.board-empty {
+  font-size: 12px;
+  color: var(--slate-soft);
+  padding: 4px;
 }
 
 .board-col-head {
@@ -53,19 +59,11 @@
   color: var(--slate);
   margin-top: 6px;
 }
-.ai-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.ticket-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
   margin-top: 9px;
-  font-size: 10.5px;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  background: var(--parchment);
-  border: 1px solid var(--line);
-  padding: 3px 8px;
-  border-radius: 6px;
-  color: var(--brass-deep);
 }
 .urgency-dot {
   width: 7px;

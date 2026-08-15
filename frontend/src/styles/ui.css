@@ -356,7 +356,8 @@ tr:last-child td {
   color: var(--ink);
 }
 .form-field input,
-.form-field select {
+.form-field select,
+.form-field textarea {
   font-family: var(--font-sans);
   font-size: 14px;
   padding: 9px 12px;
@@ -366,9 +367,14 @@ tr:last-child td {
   color: var(--ink);
 }
 .form-field input:focus,
-.form-field select:focus {
+.form-field select:focus,
+.form-field textarea:focus {
   outline: 2px solid var(--brass);
   outline-offset: -1px;
+}
+.form-field textarea {
+  resize: vertical;
+  min-height: 70px;
 }
 .form-row {
   display: grid;
