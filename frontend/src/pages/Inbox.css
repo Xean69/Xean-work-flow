@@ -80,49 +80,9 @@
   flex-direction: column;
   gap: 12px;
 }
-.bubble {
-  max-width: 65%;
-  padding: 10px 13px;
-  border-radius: 12px;
-  font-size: 13px;
-  line-height: 1.45;
-}
-.bubble.in {
-  background: var(--parchment);
-  border: 1px solid var(--line);
-  align-self: flex-start;
-  border-bottom-left-radius: 3px;
-}
-.bubble.out {
-  background: var(--ink);
-  color: #f1eee7;
-  align-self: flex-end;
-  border-bottom-right-radius: 3px;
-}
 .bubble-chan {
   font-size: 9.5px;
   color: var(--slate-soft);
   margin-bottom: 8px;
   text-align: center;
-}
-
-.chat-composer {
-  display: flex;
-  gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--line);
-}
-.chat-composer input {
-  flex: 1;
-  font-family: var(--font-sans);
-  font-size: 14px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--parchment);
-  color: var(--ink);
-}
-.chat-composer input:focus {
-  outline: 2px solid var(--brass);
-  outline-offset: -1px;
 }

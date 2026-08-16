@@ -48,6 +48,14 @@ export function createPortalMaintenance(data) {
   return request("/maintenance", { method: "POST", body: JSON.stringify(data) });
 }
 
+export function getPortalMaintenanceDetail(id) {
+  return request(`/maintenance/${id}`);
+}
+
+export function addPortalMaintenanceComment(id, body) {
+  return request(`/maintenance/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) });
+}
+
 export function getPortalMessages() {
   return request("/messages");
 }

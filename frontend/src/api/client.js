@@ -86,6 +86,14 @@ export function deleteMaintenanceRequest(id) {
   return request(`/maintenance/${id}`, { method: "DELETE" });
 }
 
+export function getMaintenanceRequest(id) {
+  return request(`/maintenance/${id}`);
+}
+
+export function addMaintenanceComment(id, body) {
+  return request(`/maintenance/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) });
+}
+
 export function getDocuments() {
   return request("/documents");
 }

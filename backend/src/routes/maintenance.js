@@ -2,7 +2,7 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseMaintenanceBody } from "../utils/validate.js";
+import { parseMaintenanceBody, parseMessageBody } from "../utils/validate.js";
 
 const router = Router();
 
@@ -15,7 +15,13 @@ router.get(
          u.unit_number,
          p.id AS property_id,
          p.name AS property_name,
-         t.full_name AS tenant_name
+         t.full_name AS tenant_name,
+         EXISTS (
+           SELECT 1 FROM maintenance_comments c
+           WHERE c.request_id = m.id
+             AND c.sender = 'tenant'
+             AND c.created_at > COALESCE(m.manager_last_read_at, '-infinity'::timestamptz)
+         ) AS unread_by_manager
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
@@ -38,6 +44,63 @@ router.post(
        RETURNING *`,
       [data.unit_id, data.tenant_id, data.title, data.description, data.priority]
     );
+    res.status(201).json(rows[0]);
+  })
+);
+
+// Opening a ticket's detail view marks it read from the manager's side —
+// this is what clears the unread badge, same as opening an email.
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT
+         m.*,
+         u.unit_number,
+         p.id AS property_id,
+         p.name AS property_name,
+         t.full_name AS tenant_name
+       FROM maintenance_requests m
+       JOIN units u ON u.id = m.unit_id
+       JOIN properties p ON p.id = u.property_id
+       LEFT JOIN tenants t ON t.id = m.tenant_id
+       WHERE m.id = $1`,
+      [req.params.id]
+    );
+    if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
+
+    const { rows: comments } = await pool.query(
+      "SELECT id, sender, body, created_at FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
+      [req.params.id]
+    );
+
+    await pool.query("UPDATE maintenance_requests SET manager_last_read_at = now() WHERE id = $1", [
+      req.params.id,
+    ]);
+
+    res.json({ ...rows[0], comments });
+  })
+);
+
+router.post(
+  "/:id/comments",
+  asyncHandler(async (req, res) => {
+    const data = parseMessageBody(req.body);
+    const { rows: ticketRows } = await pool.query("SELECT id FROM maintenance_requests WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
+
+    const { rows } = await pool.query(
+      `INSERT INTO maintenance_comments (request_id, sender, body)
+       VALUES ($1, 'manager', $2)
+       RETURNING id, sender, body, created_at`,
+      [req.params.id, data.body]
+    );
+    // Sending a comment implies you've seen the thread up to now too.
+    await pool.query("UPDATE maintenance_requests SET manager_last_read_at = now() WHERE id = $1", [
+      req.params.id,
+    ]);
     res.status(201).json(rows[0]);
   })
 );

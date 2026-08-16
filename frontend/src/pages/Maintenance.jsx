@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   getMaintenanceRequests,
   getTenants,
   createMaintenanceRequest,
   updateMaintenanceRequest,
   deleteMaintenanceRequest,
+  getMaintenanceRequest,
+  addMaintenanceComment,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
@@ -21,6 +23,15 @@ const COLUMNS = [
 // named low/mid/high (from the original mockup), so this bridges the two.
 const PRIORITY_DOT_CLASS = { low: 'low', medium: 'mid', high: 'high' }
 
+function formatTime(value) {
+  return new Date(value).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 function Maintenance() {
   const [tickets, setTickets] = useState([])
   const [unitRows, setUnitRows] = useState([])
@@ -28,10 +39,20 @@ function Maintenance() {
   const [loadError, setLoadError] = useState('')
   // null = closed, {} = new ticket, { ticket } = editing
   const [formState, setFormState] = useState(null)
+  // null = closed, otherwise the ticket whose thread is open
+  const [threadTicketId, setThreadTicketId] = useState(null)
+  const [threadData, setThreadData] = useState(null)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [sendingComment, setSendingComment] = useState(false)
+  const threadBodyRef = useRef(null)
 
   useEffect(() => {
     load()
   }, [])
+
+  useEffect(() => {
+    if (threadBodyRef.current) threadBodyRef.current.scrollTop = threadBodyRef.current.scrollHeight
+  }, [threadData])
 
   async function load() {
     setLoading(true)
@@ -81,6 +102,33 @@ function Maintenance() {
     await load()
   }
 
+  // Opening the thread marks it read server-side; clear the badge locally
+  // right away instead of waiting on a full board reload.
+  async function openThread(ticket) {
+    setThreadTicketId(ticket.id)
+    setThreadData(await getMaintenanceRequest(ticket.id))
+    setTickets((rows) => rows.map((r) => (r.id === ticket.id ? { ...r, unread_by_manager: false } : r)))
+  }
+
+  function closeThread() {
+    setThreadTicketId(null)
+    setThreadData(null)
+    setCommentDraft('')
+  }
+
+  async function handleSendComment(e) {
+    e.preventDefault()
+    if (!commentDraft.trim()) return
+    setSendingComment(true)
+    try {
+      await addMaintenanceComment(threadTicketId, commentDraft.trim())
+      setCommentDraft('')
+      setThreadData(await getMaintenanceRequest(threadTicketId))
+    } finally {
+      setSendingComment(false)
+    }
+  }
+
   const initialValues = formState?.ticket
     ? {
         unit_id: formState.ticket.unit_id,
@@ -125,7 +173,10 @@ function Maintenance() {
                     <div className="ticket" key={t.id}>
                       <div className="ticket-top">
                         <div className={`urgency-dot ${PRIORITY_DOT_CLASS[t.priority]}`} />
-                        <div className="ticket-title">{t.title}</div>
+                        <button className="ticket-title-link" onClick={() => openThread(t)}>
+                          {t.title}
+                          {t.unread_by_manager && <span className="ticket-unread-dot" title="New comment" />}
+                        </button>
                       </div>
                       <div className="ticket-meta">
                         {t.property_name} · {t.unit_number}
@@ -179,6 +230,48 @@ function Maintenance() {
             onSubmit={handleFormSubmit}
             onCancel={() => setFormState(null)}
           />
+        </Modal>
+      )}
+
+      {threadTicketId && (
+        <Modal title={threadData?.title || 'Ticket'} onClose={closeThread}>
+          {!threadData ? (
+            <p>Loading…</p>
+          ) : (
+            <div>
+              <p className="ticket-thread-meta">
+                {threadData.property_name} · {threadData.unit_number}
+                {threadData.tenant_name ? ` · ${threadData.tenant_name}` : ''}
+              </p>
+              {threadData.description && <p className="ticket-thread-description">{threadData.description}</p>}
+
+              <div className="ticket-thread-body" ref={threadBodyRef}>
+                {threadData.comments.length === 0 && (
+                  <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>
+                    No comments yet — say hello, or ask for a photo.
+                  </p>
+                )}
+                {threadData.comments.map((c) => (
+                  <div className={`bubble ${c.sender === 'manager' ? 'out' : 'in'}`} key={c.id}>
+                    {c.body}
+                    <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(c.created_at)}</div>
+                  </div>
+                ))}
+              </div>
+
+              <form className="ticket-thread-composer" onSubmit={handleSendComment}>
+                <input
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  placeholder="Type a comment…"
+                  disabled={sendingComment}
+                />
+                <button type="submit" className="btn btn-primary" disabled={sendingComment || !commentDraft.trim()}>
+                  Send
+                </button>
+              </form>
+            </div>
+          )}
         </Modal>
       )}
     </div>

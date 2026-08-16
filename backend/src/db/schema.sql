@@ -55,11 +55,30 @@ CREATE TABLE IF NOT EXISTS maintenance_requests (
   status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'resolved')),
   priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  resolved_at TIMESTAMPTZ
+  resolved_at TIMESTAMPTZ,
+  -- NULL means "never opened" — any comment at all counts as unread until
+  -- the corresponding side actually opens the ticket's comment thread.
+  tenant_last_read_at TIMESTAMPTZ,
+  manager_last_read_at TIMESTAMPTZ
 );
+
+-- Added after the initial table existed; ADD COLUMN IF NOT EXISTS keeps
+-- this migration safe to re-run on a database that predates these columns.
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS tenant_last_read_at TIMESTAMPTZ;
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS manager_last_read_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS idx_maintenance_requests_unit_id ON maintenance_requests(unit_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_requests_tenant_id ON maintenance_requests(tenant_id);
+
+CREATE TABLE IF NOT EXISTS maintenance_comments (
+  id SERIAL PRIMARY KEY,
+  request_id INTEGER NOT NULL REFERENCES maintenance_requests(id) ON DELETE CASCADE,
+  sender TEXT NOT NULL CHECK (sender IN ('tenant', 'manager')),
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_comments_request_id ON maintenance_comments(request_id);
 
 CREATE TABLE IF NOT EXISTS documents (
   id SERIAL PRIMARY KEY,

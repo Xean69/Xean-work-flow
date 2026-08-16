@@ -104,10 +104,17 @@ router.get(
   requireTenantAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT id, title, description, status, priority, created_at, resolved_at
-       FROM maintenance_requests
-       WHERE tenant_id = $1
-       ORDER BY created_at DESC`,
+      `SELECT
+         m.id, m.title, m.description, m.status, m.priority, m.created_at, m.resolved_at,
+         EXISTS (
+           SELECT 1 FROM maintenance_comments c
+           WHERE c.request_id = m.id
+             AND c.sender = 'manager'
+             AND c.created_at > COALESCE(m.tenant_last_read_at, '-infinity'::timestamptz)
+         ) AS unread_by_tenant
+       FROM maintenance_requests m
+       WHERE m.tenant_id = $1
+       ORDER BY m.created_at DESC`,
       [req.tenantId]
     );
     res.json(rows);
@@ -132,6 +139,58 @@ router.post(
        RETURNING id, title, description, status, priority, created_at, resolved_at`,
       [tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
     );
+    res.status(201).json(rows[0]);
+  })
+);
+
+// Ownership is checked in the WHERE clause, not just by looking the row up
+// by id — a tenant can only ever open their own repair requests. Opening
+// the thread marks it read from the tenant's side.
+router.get(
+  "/maintenance/:id",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT id, title, description, status, priority, created_at, resolved_at
+       FROM maintenance_requests
+       WHERE id = $1 AND tenant_id = $2`,
+      [req.params.id, req.tenantId]
+    );
+    if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
+
+    const { rows: comments } = await pool.query(
+      "SELECT id, sender, body, created_at FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
+      [req.params.id]
+    );
+
+    await pool.query("UPDATE maintenance_requests SET tenant_last_read_at = now() WHERE id = $1", [
+      req.params.id,
+    ]);
+
+    res.json({ ...rows[0], comments });
+  })
+);
+
+router.post(
+  "/maintenance/:id/comments",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseMessageBody(req.body);
+    const { rows: ticketRows } = await pool.query(
+      "SELECT id FROM maintenance_requests WHERE id = $1 AND tenant_id = $2",
+      [req.params.id, req.tenantId]
+    );
+    if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
+
+    const { rows } = await pool.query(
+      `INSERT INTO maintenance_comments (request_id, sender, body)
+       VALUES ($1, 'tenant', $2)
+       RETURNING id, sender, body, created_at`,
+      [req.params.id, data.body]
+    );
+    await pool.query("UPDATE maintenance_requests SET tenant_last_read_at = now() WHERE id = $1", [
+      req.params.id,
+    ]);
     res.status(201).json(rows[0]);
   })
 );
