@@ -64,3 +64,43 @@ CREATE TABLE IF NOT EXISTS documents (
 
 CREATE INDEX IF NOT EXISTS idx_documents_property_id ON documents(property_id);
 CREATE INDEX IF NOT EXISTS idx_documents_tenant_id ON documents(tenant_id);
+
+CREATE TABLE IF NOT EXISTS stays (
+  id SERIAL PRIMARY KEY,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL CHECK (platform IN ('airbnb', 'vrbo', 'booking', 'direct')),
+  guest_name TEXT NOT NULL,
+  checkout_date DATE NOT NULL,
+  next_checkin_date DATE NOT NULL,
+  turnover_status TEXT NOT NULL DEFAULT 'checkout_done'
+    CHECK (turnover_status IN ('checkout_done', 'inspection_done', 'cleaning_done', 'checkin_ready')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_stays_unit_id ON stays(unit_id);
+
+CREATE TABLE IF NOT EXISTS scheduled_messages (
+  id SERIAL PRIMARY KEY,
+  stay_id INTEGER REFERENCES stays(id) ON DELETE CASCADE,
+  message_type TEXT NOT NULL
+    CHECK (message_type IN ('checkin_instructions', 'welcome', 'checkout_reminder', 'review_request')),
+  send_timing TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_messages_stay_id ON scheduled_messages(stay_id);
+
+-- Only one global template (stay_id IS NULL) per message type — the
+-- portfolio-wide toggle panel assumes exactly one row per type.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_scheduled_messages_global_type
+  ON scheduled_messages(message_type) WHERE stay_id IS NULL;
+
+-- Seeds the 4 default global templates once; safe to re-run.
+INSERT INTO scheduled_messages (message_type, send_timing, is_active)
+VALUES
+  ('checkin_instructions', '24h_before_checkin', true),
+  ('welcome', 'on_arrival', true),
+  ('checkout_reminder', '8am_checkout_day', true),
+  ('review_request', '2h_after_checkout', false)
+ON CONFLICT (message_type) WHERE stay_id IS NULL DO NOTHING;

@@ -101,6 +101,52 @@ export function parseDocumentBody(body) {
   };
 }
 
+const PLATFORMS = ["airbnb", "vrbo", "booking", "direct"];
+const TURNOVER_STATUSES = ["checkout_done", "inspection_done", "cleaning_done", "checkin_ready"];
+
+export function parseStayBody(body) {
+  if (!PLATFORMS.includes(body.platform)) {
+    throw new ApiError(400, `platform must be one of: ${PLATFORMS.join(", ")}`);
+  }
+  if (!TURNOVER_STATUSES.includes(body.turnover_status)) {
+    throw new ApiError(400, `turnover_status must be one of: ${TURNOVER_STATUSES.join(", ")}`);
+  }
+  requireDate(body.checkout_date, "checkout_date");
+  requireDate(body.next_checkin_date, "next_checkin_date");
+  if (new Date(body.next_checkin_date) < new Date(body.checkout_date)) {
+    throw new ApiError(400, "next_checkin_date must be on or after checkout_date");
+  }
+  return {
+    unit_id: requireNumber(body.unit_id, "unit_id", { min: 1 }),
+    platform: body.platform,
+    guest_name: requireString(body.guest_name, "guest_name"),
+    checkout_date: body.checkout_date,
+    next_checkin_date: body.next_checkin_date,
+    turnover_status: body.turnover_status,
+  };
+}
+
+const MESSAGE_TYPES = ["checkin_instructions", "welcome", "checkout_reminder", "review_request"];
+
+function requireBoolean(value, field) {
+  if (typeof value !== "boolean") {
+    throw new ApiError(400, `${field} must be true or false`);
+  }
+  return value;
+}
+
+export function parseScheduledMessageBody(body) {
+  if (!MESSAGE_TYPES.includes(body.message_type)) {
+    throw new ApiError(400, `message_type must be one of: ${MESSAGE_TYPES.join(", ")}`);
+  }
+  return {
+    stay_id: optionalNumber(body.stay_id, "stay_id"),
+    message_type: body.message_type,
+    send_timing: requireString(body.send_timing, "send_timing"),
+    is_active: requireBoolean(body.is_active, "is_active"),
+  };
+}
+
 export function parseUnitBody(body) {
   const status = body.status === undefined ? "vacant" : body.status;
   if (status !== "vacant" && status !== "occupied") {

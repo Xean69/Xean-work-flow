@@ -108,3 +108,27 @@ export function deleteDocument(id) {
 export function getDocumentUrl(id) {
   return `${BASE_URL}/documents/${id}/download`;
 }
+
+export function getStays() {
+  return request("/stays");
+}
+
+export function createStay(data) {
+  return request("/stays", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateStay(id, data) {
+  return request(`/stays/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteStay(id) {
+  return request(`/stays/${id}`, { method: "DELETE" });
+}
+
+export function getScheduledMessages() {
+  return request("/scheduled-messages");
+}
+
+export function updateScheduledMessage(id, data) {
+  return request(`/scheduled-messages/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}

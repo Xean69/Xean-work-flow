@@ -507,6 +507,19 @@ tr:last-child td {
   color: var(--amber);
 }
 
+/* ---- Card action rows / empty states (maintenance, guest stays) ---- */
+.ticket-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+.board-empty {
+  font-size: 12px;
+  color: var(--slate-soft);
+  padding: 4px;
+}
+
 /* ---- Two-column layout (dashboard, guest stays, etc.) ---- */
 .dash-grid {
   display: grid;
