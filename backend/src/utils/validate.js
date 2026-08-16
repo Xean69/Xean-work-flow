@@ -56,11 +56,11 @@ export function parseTenantBody(body) {
   };
 }
 
-function optionalNumber(value) {
+function optionalNumber(value, field) {
   if (value === undefined || value === null || value === "") return null;
   const num = Number(value);
   if (Number.isNaN(num)) {
-    throw new ApiError(400, "tenant_id must be a number");
+    throw new ApiError(400, `${field} must be a number`);
   }
   return num;
 }
@@ -78,11 +78,26 @@ export function parseMaintenanceBody(body) {
   }
   return {
     unit_id: requireNumber(body.unit_id, "unit_id", { min: 1 }),
-    tenant_id: optionalNumber(body.tenant_id),
+    tenant_id: optionalNumber(body.tenant_id, "tenant_id"),
     title: requireString(body.title, "title"),
     description: optionalString(body.description),
     status: body.status,
     priority,
+  };
+}
+
+const DOC_TYPES = ["lease", "invoice", "inspection", "application", "other"];
+
+export function parseDocumentBody(body) {
+  const doc_type = body.doc_type === undefined ? "other" : body.doc_type;
+  if (!DOC_TYPES.includes(doc_type)) {
+    throw new ApiError(400, `doc_type must be one of: ${DOC_TYPES.join(", ")}`);
+  }
+  return {
+    property_id: optionalNumber(body.property_id, "property_id"),
+    tenant_id: optionalNumber(body.tenant_id, "tenant_id"),
+    doc_type,
+    notes: optionalString(body.notes),
   };
 }
 

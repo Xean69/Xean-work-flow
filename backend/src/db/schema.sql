@@ -50,3 +50,17 @@ CREATE TABLE IF NOT EXISTS maintenance_requests (
 
 CREATE INDEX IF NOT EXISTS idx_maintenance_requests_unit_id ON maintenance_requests(unit_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_requests_tenant_id ON maintenance_requests(tenant_id);
+
+CREATE TABLE IF NOT EXISTS documents (
+  id SERIAL PRIMARY KEY,
+  property_id INTEGER REFERENCES properties(id) ON DELETE SET NULL,
+  tenant_id INTEGER REFERENCES tenants(id) ON DELETE SET NULL,
+  file_name TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  doc_type TEXT NOT NULL DEFAULT 'other' CHECK (doc_type IN ('lease', 'invoice', 'inspection', 'application', 'other')),
+  notes TEXT,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_documents_property_id ON documents(property_id);
+CREATE INDEX IF NOT EXISTS idx_documents_tenant_id ON documents(tenant_id);

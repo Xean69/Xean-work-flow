@@ -81,3 +81,30 @@ export function updateMaintenanceRequest(id, data) {
 export function deleteMaintenanceRequest(id) {
   return request(`/maintenance/${id}`, { method: "DELETE" });
 }
+
+export function getDocuments() {
+  return request("/documents");
+}
+
+// Bypasses the JSON-only request() helper: file uploads use FormData, and
+// the browser needs to set its own multipart Content-Type header (with the
+// boundary) rather than the one request() hardcodes.
+export async function uploadDocument(formData) {
+  const res = await fetch(`${BASE_URL}/documents`, {
+    method: "POST",
+    body: formData,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error || `Request failed with status ${res.status}`);
+  }
+  return data;
+}
+
+export function deleteDocument(id) {
+  return request(`/documents/${id}`, { method: "DELETE" });
+}
+
+export function getDocumentUrl(id) {
+  return `${BASE_URL}/documents/${id}/download`;
+}

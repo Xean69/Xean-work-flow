@@ -1,78 +1,171 @@
+import { useEffect, useRef, useState } from 'react'
+import {
+  getDocuments,
+  uploadDocument,
+  deleteDocument,
+  getDocumentUrl,
+  getProperties,
+  getTenants,
+} from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
+import DocumentForm from '../components/DocumentForm.jsx'
 import './Documents.css'
 
-const docs = [
-  {
-    name: 'Lease_94Street_3B.pdf',
-    sub: 'Uploaded today, 9:10 AM',
-    fields: [
-      { label: 'Rent', value: '$1,650' },
-      { label: 'Ends', value: '04/2027' },
-      { label: 'Deposit', value: '$1,650' },
-    ],
-    confidence: { level: 'high', label: '98%' },
-  },
-  {
-    name: 'Inspection_94St_1A_moveout.pdf',
-    sub: 'Uploaded yesterday, 2:15 PM',
-    fields: [
-      { label: 'Deductions', value: '3' },
-      { label: 'Total', value: '$210' },
-      { label: 'Signed', value: 'Yes' },
-    ],
-    confidence: { level: 'mid', label: '84%' },
-  },
-  {
-    name: 'VendorInvoice_ABC_Plumbing.pdf',
-    sub: 'Uploaded Aug 9, 11:02 AM',
-    fields: [
-      { label: 'Amount', value: '$340' },
-      { label: 'Unit', value: '94 St 1A' },
-      { label: 'Due', value: 'Aug 24' },
-    ],
-    confidence: { level: 'high', label: '96%' },
-  },
-]
+const DOC_TYPE_LABELS = {
+  lease: 'Lease',
+  invoice: 'Invoice',
+  inspection: 'Inspection',
+  application: 'Application',
+  other: 'Other',
+}
+
+function formatDate(value) {
+  return new Date(value).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 function Documents() {
+  const [documents, setDocuments] = useState([])
+  const [properties, setProperties] = useState([])
+  const [unitRows, setUnitRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [dragActive, setDragActive] = useState(false)
+  const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function load() {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const [docs, props, units] = await Promise.all([getDocuments(), getProperties(), getTenants()])
+      setDocuments(docs)
+      setProperties(props)
+      setUnitRows(units)
+    } catch (err) {
+      setLoadError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const tenantOptions = unitRows
+    .filter((r) => r.tenant_id)
+    .map((r) => ({
+      value: r.tenant_id,
+      label: `${r.full_name} (${r.property_name} · ${r.unit_number})`,
+    }))
+
+  function handleDragOver(e) {
+    e.preventDefault()
+    setDragActive(true)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) setSelectedFile(file)
+  }
+
+  function handleFileInputChange(e) {
+    const file = e.target.files?.[0]
+    if (file) setSelectedFile(file)
+    e.target.value = ''
+  }
+
+  async function handleUpload(formData) {
+    await uploadDocument(formData)
+    setSelectedFile(null)
+    await load()
+  }
+
+  async function handleDelete(doc) {
+    if (!window.confirm(`Delete "${doc.file_name}"?`)) return
+    await deleteDocument(doc.id)
+    await load()
+  }
+
   return (
     <div>
-      <PageHeader title="Documents" subtitle="Upload a lease, invoice, or inspection report — Xean reads it for you">
-        <button className="btn btn-primary">Upload document</button>
-      </PageHeader>
+      <PageHeader title="Documents" subtitle="Upload a lease, invoice, or inspection report to keep on file" />
 
       <div className="content">
-        <div className="dropzone">
-          <div className="dropzone-icon">↑</div>
-          <h3>Drag a file here, or click to upload</h3>
-          <p>PDF, JPG, or PNG — leases, invoices, applications, inspection reports</p>
-          <button className="btn btn-ghost">Browse files</button>
-        </div>
+        {selectedFile ? (
+          <div className="card doc-upload-panel">
+            <DocumentForm
+              file={selectedFile}
+              properties={properties}
+              tenants={tenantOptions}
+              onSubmit={handleUpload}
+              onCancel={() => setSelectedFile(null)}
+            />
+          </div>
+        ) : (
+          <div
+            className={'dropzone' + (dragActive ? ' dropzone-active' : '')}
+            onDragOver={handleDragOver}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={handleDrop}
+          >
+            <div className="dropzone-icon">↑</div>
+            <h3>Drag a file here, or click to upload</h3>
+            <p>PDF, JPG, or PNG — leases, invoices, applications, inspection reports</p>
+            <button type="button" className="btn btn-ghost" onClick={() => fileInputRef.current?.click()}>
+              Browse files
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileInputChange}
+              style={{ display: 'none' }}
+            />
+          </div>
+        )}
 
         <div className="section-head">
-          <h2>Recently processed</h2>
-          <span className="section-head-link">View all</span>
+          <h2>Uploaded documents</h2>
         </div>
-        <div className="card">
-          {docs.map((d) => (
-            <div className="doc-row" key={d.name}>
-              <div className="doc-icon">📄</div>
-              <div>
-                <div className="doc-name">{d.name}</div>
-                <div className="doc-sub">{d.sub}</div>
-              </div>
-              <div className="extract-fields">
-                {d.fields.map((f) => (
-                  <div className="extract-field" key={f.label}>
-                    {f.label}
-                    <b>{f.value}</b>
+
+        {loadError && <p className="form-error">{loadError}</p>}
+
+        {!loading && !loadError && documents.length === 0 && (
+          <div className="empty-state card">
+            <h3>No documents yet</h3>
+            <p>Upload your first file above to keep it on record.</p>
+          </div>
+        )}
+
+        {documents.length > 0 && (
+          <div className="card">
+            {documents.map((d) => (
+              <div className="doc-row" key={d.id}>
+                <div className="doc-icon">📄</div>
+                <div>
+                  <a href={getDocumentUrl(d.id)} target="_blank" rel="noreferrer" className="doc-name">
+                    {d.file_name}
+                  </a>
+                  <div className="doc-sub">
+                    {DOC_TYPE_LABELS[d.doc_type]} · {formatDate(d.uploaded_at)}
+                    {d.property_name ? ` · ${d.property_name}` : ''}
+                    {d.tenant_name ? ` · ${d.tenant_name}` : ''}
                   </div>
-                ))}
+                </div>
+                <button className="btn btn-danger btn-sm doc-delete" onClick={() => handleDelete(d)}>
+                  Delete
+                </button>
               </div>
-              <div className={`confidence ${d.confidence.level}`}>{d.confidence.label}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
