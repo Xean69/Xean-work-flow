@@ -133,3 +133,24 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 CREATE INDEX IF NOT EXISTS idx_expenses_property_id ON expenses(property_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_unit_id ON expenses(unit_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id SERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  sender TEXT NOT NULL CHECK (sender IN ('tenant', 'manager')),
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_tenant_id ON messages(tenant_id);
+
+CREATE TABLE IF NOT EXISTS property_guides (
+  id SERIAL PRIMARY KEY,
+  property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  section_title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_property_guides_property_id ON property_guides(property_id);

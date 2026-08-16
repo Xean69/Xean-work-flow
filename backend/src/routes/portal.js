@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, requireTenantAuth } from "../utils/auth.js";
 import { UPLOADS_DIR } from "../utils/upload.js";
+import { parsePortalRepairBody, parseMessageBody } from "../utils/validate.js";
 
 const router = Router();
 
@@ -95,6 +96,89 @@ router.get(
         res.status(404).json({ error: "File not found on disk" });
       }
     });
+  })
+);
+
+router.get(
+  "/maintenance",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT id, title, description, status, priority, created_at, resolved_at
+       FROM maintenance_requests
+       WHERE tenant_id = $1
+       ORDER BY created_at DESC`,
+      [req.tenantId]
+    );
+    res.json(rows);
+  })
+);
+
+// The unit is looked up from the tenant's own record, never taken from the
+// request — a tenant can only ever file a repair against their own unit.
+router.post(
+  "/maintenance",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parsePortalRepairBody(req.body);
+    const { rows: tenantRows } = await pool.query("SELECT unit_id FROM tenants WHERE id = $1", [
+      req.tenantId,
+    ]);
+    if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+
+    const { rows } = await pool.query(
+      `INSERT INTO maintenance_requests (unit_id, tenant_id, title, description, status, priority)
+       VALUES ($1, $2, $3, $4, 'new', $5)
+       RETURNING id, title, description, status, priority, created_at, resolved_at`,
+      [tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+router.get(
+  "/messages",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      "SELECT id, sender, body, created_at FROM messages WHERE tenant_id = $1 ORDER BY created_at ASC",
+      [req.tenantId]
+    );
+    res.json(rows);
+  })
+);
+
+router.post(
+  "/messages",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseMessageBody(req.body);
+    const { rows } = await pool.query(
+      `INSERT INTO messages (tenant_id, sender, body)
+       VALUES ($1, 'tenant', $2)
+       RETURNING id, sender, body, created_at`,
+      [req.tenantId, data.body]
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+// The property is derived from the tenant's own unit, never taken from the
+// request — a tenant can only ever see their own property's guide.
+router.get(
+  "/guide",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT g.id, g.section_title, g.content
+       FROM property_guides g
+       JOIN units u ON u.property_id = g.property_id
+       JOIN tenants t ON t.unit_id = u.id
+       WHERE t.id = $1
+       ORDER BY g.sort_order, g.id`,
+      [req.tenantId]
+    );
+    res.json(rows);
   })
 );
 

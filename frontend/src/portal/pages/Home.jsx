@@ -29,15 +29,6 @@ function Home() {
     <div>
       <p className="portal-greeting">Hi, {firstName}</p>
 
-      <div className="portal-card">
-        <h2>Your home</h2>
-        <p>{tenant.property_name}</p>
-        <p>
-          {tenant.address}, {tenant.city}, {tenant.province} {tenant.postal_code}
-        </p>
-        <p>Unit {tenant.unit_number}</p>
-      </div>
-
       {showRenewalNotice && (
         <div className="portal-notice">
           Your lease ends {formatDate(tenant.lease_end)}
@@ -45,10 +36,21 @@ function Home() {
         </div>
       )}
 
-      <div className="portal-card">
-        <h2>Monthly rent</h2>
-        <div className="portal-rent-amount">{formatMoney(tenant.rent_amount)}</div>
-        <p style={{ marginTop: 8 }}>Contact your property manager for payment instructions.</p>
+      <div className="portal-grid-2">
+        <div className="portal-card">
+          <h2>Your home</h2>
+          <p>{tenant.property_name}</p>
+          <p>
+            {tenant.address}, {tenant.city}, {tenant.province} {tenant.postal_code}
+          </p>
+          <p>Unit {tenant.unit_number}</p>
+        </div>
+
+        <div className="portal-card">
+          <h2>Monthly rent</h2>
+          <div className="portal-rent-amount">{formatMoney(tenant.rent_amount)}</div>
+          <p style={{ marginTop: 8 }}>Contact your property manager for payment instructions.</p>
+        </div>
       </div>
     </div>
   )

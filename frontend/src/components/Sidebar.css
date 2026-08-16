@@ -39,7 +39,7 @@
   color: var(--brass-light);
 }
 
-nav {
+.sidebar nav {
   margin-top: 14px;
   display: flex;
   flex-direction: column;

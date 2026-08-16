@@ -25,6 +25,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 16px 20px;
   background: var(--ink);
   color: #f1eee7;
@@ -33,6 +34,7 @@ body {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 17px;
+  flex-shrink: 0;
 }
 .portal-brand span {
   color: var(--brass-light);
@@ -45,8 +47,35 @@ body {
   font-family: var(--font-sans);
   cursor: pointer;
   padding: 6px 10px;
+  flex-shrink: 0;
 }
 .portal-logout:hover {
+  color: #fff;
+}
+
+/* Desktop-only top nav — same links as the bottom tab bar, hidden on
+   mobile where the tab bar is used instead. See the breakpoint below. */
+.portal-topnav {
+  display: none;
+  flex-direction: row;
+  flex: 1;
+  justify-content: center;
+  gap: 4px;
+}
+.portal-topnav-link {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #c7cdd6;
+  text-decoration: none;
+}
+.portal-topnav-link:hover {
+  color: #fff;
+  text-decoration: none;
+}
+.portal-topnav-link.active {
+  background: rgba(173, 138, 85, 0.22);
   color: #fff;
 }
 
@@ -63,6 +92,7 @@ body {
   width: 100%;
   max-width: 480px;
   display: flex;
+  flex-direction: row;
   background: var(--card);
   border-top: 1px solid var(--line);
   padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)) 0;
@@ -241,7 +271,9 @@ body {
   font-weight: 600;
   color: var(--ink);
 }
-.portal-field input {
+.portal-field input,
+.portal-field select,
+.portal-field textarea {
   font-family: var(--font-sans);
   font-size: 16px;
   padding: 14px;
@@ -250,9 +282,121 @@ body {
   background: var(--card);
   color: var(--ink);
 }
-.portal-field input:focus {
+.portal-field input:focus,
+.portal-field select:focus,
+.portal-field textarea:focus {
   outline: 2px solid var(--brass);
   outline-offset: -1px;
+}
+.portal-field textarea {
+  resize: vertical;
+  min-height: 70px;
+  font-size: 14px;
+}
+
+.portal-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.portal-badge-slate {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.portal-badge-amber {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+.portal-badge-green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.portal-badge-red {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+/* Chat (Messages screen) */
+.portal-chat {
+  display: flex;
+  flex-direction: column;
+  height: 60vh;
+  min-height: 360px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.portal-chat-body {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.portal-bubble {
+  max-width: 78%;
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.portal-bubble.in {
+  background: var(--parchment);
+  border: 1px solid var(--line);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.portal-bubble.out {
+  background: var(--ink);
+  color: #f1eee7;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.portal-bubble-time {
+  font-size: 10px;
+  opacity: 0.65;
+  margin-top: 4px;
+}
+.portal-chat-composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  background: var(--card);
+}
+.portal-chat-composer input {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--parchment);
+  color: var(--ink);
+}
+.portal-chat-composer input:focus {
+  outline: 2px solid var(--brass);
+  outline-offset: -1px;
+}
+.portal-chat-composer .portal-btn {
+  width: auto;
+  padding: 12px 20px;
+}
+
+/* Generic 2-up layout helper — 1 column on mobile, 2 on desktop (see the
+   responsive block at the bottom of this file). */
+.portal-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
 }
 
 .portal-error {
@@ -313,4 +457,34 @@ body {
   font-size: 13px;
   color: var(--slate);
   margin: 0 0 24px 0;
+}
+
+/* ---- Responsive: desktop gets a wider shell, a top nav instead of the
+   bottom tab bar, and two-column card layouts where it makes sense — same
+   colors/fonts/warmth as mobile, just using the extra width. ---- */
+@media (min-width: 860px) {
+  .portal-shell {
+    max-width: 960px;
+  }
+  .portal-header {
+    padding: 18px 32px;
+  }
+  .portal-main {
+    padding: 32px 32px 40px 32px;
+  }
+  .portal-topnav {
+    display: flex;
+  }
+  .portal-tabbar {
+    display: none;
+  }
+  .portal-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .portal-greeting {
+    font-size: 30px;
+  }
+  .portal-chat {
+    height: 65vh;
+  }
 }

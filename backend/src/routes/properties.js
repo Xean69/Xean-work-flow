@@ -2,7 +2,7 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parsePropertyBody, parseUnitBody } from "../utils/validate.js";
+import { parsePropertyBody, parseUnitBody, parseGuideSectionBody } from "../utils/validate.js";
 
 const router = Router();
 
@@ -54,7 +54,11 @@ router.get(
       "SELECT * FROM units WHERE property_id = $1 ORDER BY unit_number",
       [req.params.id]
     );
-    res.json({ ...property, units });
+    const { rows: guide } = await pool.query(
+      "SELECT * FROM property_guides WHERE property_id = $1 ORDER BY sort_order, id",
+      [req.params.id]
+    );
+    res.json({ ...property, units, guide });
   })
 );
 
@@ -101,6 +105,31 @@ router.post(
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [req.params.id, data.unit_number, data.bedrooms, data.bathrooms, data.rent_amount, data.status]
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+// New sections append to the end of the list — sort_order is picked here,
+// not sent by the client, so it always lands after whatever already exists.
+router.post(
+  "/:id/guide",
+  asyncHandler(async (req, res) => {
+    const { rows: propertyRows } = await pool.query("SELECT id FROM properties WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (!propertyRows[0]) throw new ApiError(404, "Property not found");
+
+    const data = parseGuideSectionBody(req.body);
+    const { rows: maxRows } = await pool.query(
+      "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM property_guides WHERE property_id = $1",
+      [req.params.id]
+    );
+    const { rows } = await pool.query(
+      `INSERT INTO property_guides (property_id, section_title, content, sort_order)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [req.params.id, data.section_title, data.content, maxRows[0].next_order]
     );
     res.status(201).json(rows[0]);
   })

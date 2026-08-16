@@ -39,3 +39,23 @@ export function getPortalDocuments() {
 export function getPortalDocumentUrl(id) {
   return `${BASE_URL}/documents/${id}/download`;
 }
+
+export function getPortalMaintenance() {
+  return request("/maintenance");
+}
+
+export function createPortalMaintenance(data) {
+  return request("/maintenance", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function getPortalMessages() {
+  return request("/messages");
+}
+
+export function sendPortalMessage(body) {
+  return request("/messages", { method: "POST", body: JSON.stringify({ body }) });
+}
+
+export function getPortalGuide() {
+  return request("/guide");
+}

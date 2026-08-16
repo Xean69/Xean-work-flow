@@ -7,11 +7,15 @@ import {
   createUnit,
   updateUnit,
   deleteUnit,
+  createGuideSection,
+  updateGuideSection,
+  deleteGuideSection,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
 import PropertyForm from '../components/PropertyForm.jsx'
 import UnitForm from '../components/UnitForm.jsx'
+import GuideSectionForm from '../components/GuideSectionForm.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import './PropertyDetail.css'
 
@@ -23,6 +27,7 @@ function PropertyDetail() {
   const [loadError, setLoadError] = useState('')
   const [editingProperty, setEditingProperty] = useState(false)
   const [unitModal, setUnitModal] = useState(null) // null | 'new' | the unit being edited
+  const [guideModal, setGuideModal] = useState(null) // null | 'new' | the section being edited
 
   useEffect(() => {
     load()
@@ -68,6 +73,22 @@ function PropertyDetail() {
   async function handleDeleteUnit(unit) {
     if (!window.confirm(`Delete unit ${unit.unit_number}?`)) return
     await deleteUnit(unit.id)
+    await load()
+  }
+
+  async function handleSaveGuideSection(values) {
+    if (guideModal && guideModal !== 'new') {
+      await updateGuideSection(guideModal.id, values)
+    } else {
+      await createGuideSection(id, values)
+    }
+    setGuideModal(null)
+    await load()
+  }
+
+  async function handleDeleteGuideSection(section) {
+    if (!window.confirm(`Delete the "${section.section_title}" section?`)) return
+    await deleteGuideSection(section.id)
     await load()
   }
 
@@ -155,6 +176,39 @@ function PropertyDetail() {
             </table>
           </div>
         )}
+
+        <div className="section-head">
+          <h2>Property guide</h2>
+          <button className="btn btn-primary btn-sm" onClick={() => setGuideModal('new')}>
+            + Add section
+          </button>
+        </div>
+
+        {property.guide.length === 0 ? (
+          <div className="empty-state card">
+            <h3>No guide content yet</h3>
+            <p>Add sections like parking, trash day, or WiFi — tenants will see these on their portal.</p>
+          </div>
+        ) : (
+          <div className="card">
+            {property.guide.map((section) => (
+              <div className="guide-row" key={section.id}>
+                <div className="guide-row-body">
+                  <h3>{section.section_title}</h3>
+                  <p>{section.content}</p>
+                </div>
+                <div className="table-actions">
+                  <button className="btn btn-ghost btn-sm" onClick={() => setGuideModal(section)}>
+                    Edit
+                  </button>
+                  <button className="btn btn-danger btn-sm" onClick={() => handleDeleteGuideSection(section)}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {editingProperty && (
@@ -173,6 +227,16 @@ function PropertyDetail() {
             initialValues={unitModal === 'new' ? undefined : unitModal}
             onSubmit={handleSaveUnit}
             onCancel={() => setUnitModal(null)}
+          />
+        </Modal>
+      )}
+
+      {guideModal && (
+        <Modal title={guideModal === 'new' ? 'Add guide section' : 'Edit guide section'} onClose={() => setGuideModal(null)}>
+          <GuideSectionForm
+            initialValues={guideModal === 'new' ? undefined : guideModal}
+            onSubmit={handleSaveGuideSection}
+            onCancel={() => setGuideModal(null)}
           />
         </Modal>
       )}

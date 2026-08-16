@@ -13,6 +13,8 @@ import staysRouter from "./routes/stays.js";
 import scheduledMessagesRouter from "./routes/scheduledMessages.js";
 import expensesRouter from "./routes/expenses.js";
 import portalRouter from "./routes/portal.js";
+import messagesRouter from "./routes/messages.js";
+import guideSectionsRouter from "./routes/guideSections.js";
 import { ApiError } from "./utils/errors.js";
 
 const app = express();
@@ -50,6 +52,8 @@ app.use("/api/stays", staysRouter);
 app.use("/api/scheduled-messages", scheduledMessagesRouter);
 app.use("/api/expenses", expensesRouter);
 app.use("/api/portal", portalRouter);
+app.use("/api/messages", messagesRouter);
+app.use("/api/guide-sections", guideSectionsRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

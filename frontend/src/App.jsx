@@ -4,6 +4,9 @@ import PortalLayout from './portal/PortalLayout.jsx'
 import PortalLogin from './portal/pages/Login.jsx'
 import PortalHome from './portal/pages/Home.jsx'
 import PortalLease from './portal/pages/Lease.jsx'
+import PortalRepairs from './portal/pages/Repairs.jsx'
+import PortalMessages from './portal/pages/Messages.jsx'
+import PortalGuide from './portal/pages/Guide.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Properties from './pages/Properties.jsx'
 import PropertyDetail from './pages/PropertyDetail.jsx'
@@ -27,6 +30,9 @@ function App() {
       <Route path="/portal/login" element={<PortalLogin />} />
       <Route element={<PortalLayout />}>
         <Route path="/portal/home" element={<PortalHome />} />
+        <Route path="/portal/repairs" element={<PortalRepairs />} />
+        <Route path="/portal/messages" element={<PortalMessages />} />
+        <Route path="/portal/guide" element={<PortalGuide />} />
         <Route path="/portal/lease" element={<PortalLease />} />
       </Route>
 

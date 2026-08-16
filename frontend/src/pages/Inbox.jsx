@@ -1,103 +1,144 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { getMessageThreads, getMessageThread, sendManagerMessage } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import './Inbox.css'
 
-const threads = [
-  {
-    id: 1,
-    initials: 'SK',
-    name: 'Sarah K.',
-    preview: 'Can I pay rent a day late this month?',
-    chan: 'SMS · 177 Ave 1A',
-    head: 'Sarah K.',
-    headSub: '177 Avenue · Unit 1A · via SMS',
-    messages: [
-      { dir: 'in', text: 'Hey! Quick question — can I pay rent a day late this month? Pay day shifted at work.' },
-      { dir: 'out', text: 'No problem at all, thanks for the heads up. One day is totally fine.' },
-      { dir: 'in', text: 'Thank you so much, appreciate it 🙏' },
-    ],
-  },
-  {
-    id: 2,
-    initials: 'MO',
-    name: 'Marcus O.',
-    preview: 'Still no hot water, any update?',
-    chan: 'EMAIL · Cy Becker 2',
-    head: 'Marcus O.',
-    headSub: 'Cy Becker Road · Unit 2 · via Email',
-    messages: [
-      { dir: 'in', text: 'Still no hot water, any update on when the plumber is coming?' },
-      { dir: 'out', text: "Plumber's on the way, ETA 2pm today. Sorry for the wait." },
-    ],
-  },
-  {
-    id: 3,
-    initials: 'JT',
-    name: 'Jordan T. (guest)',
-    preview: "What's the WiFi password?",
-    chan: 'AIRBNB · 94 St 3B',
-    head: 'Jordan T.',
-    headSub: '94 Street · Unit 3B · via Airbnb',
-    messages: [
-      { dir: 'in', text: "Hi! What's the WiFi password?" },
-      { dir: 'out', text: "It's on the welcome card on the counter — network is 94St_Guest." },
-    ],
-  },
-  {
-    id: 4,
-    initials: 'DO',
-    name: 'D. Osei',
-    preview: 'Dishwasher guy came, all fixed',
-    chan: 'SMS · 94 St 3B',
-    head: 'D. Osei',
-    headSub: '94 Street · Unit 3B · via SMS',
-    messages: [{ dir: 'in', text: 'Dishwasher guy came, all fixed. Thanks!' }],
-  },
-]
+function initials(name) {
+  return name
+    .split(' ')
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function formatTime(value) {
+  return new Date(value).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
 
 function Inbox() {
-  const [activeId, setActiveId] = useState(threads[0].id)
-  const active = threads.find((t) => t.id === activeId)
+  const [threads, setThreads] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [activeId, setActiveId] = useState(null)
+  const [activeMessages, setActiveMessages] = useState([])
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    loadThreads()
+  }, [])
+
+  async function loadThreads() {
+    setLoading(true)
+    try {
+      const rows = await getMessageThreads()
+      setThreads(rows)
+      if (rows.length > 0) selectThread(rows[0].tenant_id)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function selectThread(tenantId) {
+    setActiveId(tenantId)
+    setActiveMessages(await getMessageThread(tenantId))
+  }
+
+  async function handleSend(e) {
+    e.preventDefault()
+    if (!draft.trim() || !activeId) return
+    setSending(true)
+    try {
+      await sendManagerMessage(activeId, draft.trim())
+      setDraft('')
+      await selectThread(activeId)
+      await loadThreads()
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const active = threads.find((t) => t.tenant_id === activeId)
 
   return (
     <div>
-      <PageHeader title="Inbox" subtitle="Texts, email, and Airbnb messages — one thread per unit">
-        <button className="btn btn-primary">+ New message</button>
+      <PageHeader title="Inbox" subtitle="Messages from tenants with a portal login">
+        {threads.length === 0 && !loading && (
+          <span style={{ fontSize: 13, color: 'var(--slate)' }}>No tenants have a portal login yet</span>
+        )}
       </PageHeader>
 
       <div className="content">
-        <div className="inbox-shell">
-          <div className="thread-list">
-            {threads.map((t) => (
-              <div
-                key={t.id}
-                className={'thread' + (t.id === activeId ? ' active' : '')}
-                onClick={() => setActiveId(t.id)}
-              >
-                <div className="thread-avatar">{t.initials}</div>
-                <div>
-                  <div className="thread-name">{t.name}</div>
-                  <div className="thread-preview">{t.preview}</div>
-                  <div className="thread-chan mono">{t.chan}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="chat-pane">
-            <div className="chat-head">
-              <b>{active.head}</b>
-              <span>{active.headSub}</span>
-            </div>
-            <div className="chat-body">
-              <div className="bubble-chan mono">TODAY</div>
-              {active.messages.map((m, i) => (
-                <div className={`bubble ${m.dir}`} key={i}>
-                  {m.text}
+        {threads.length > 0 ? (
+          <div className="inbox-shell">
+            <div className="thread-list">
+              {threads.map((t) => (
+                <div
+                  key={t.tenant_id}
+                  className={'thread' + (t.tenant_id === activeId ? ' active' : '')}
+                  onClick={() => selectThread(t.tenant_id)}
+                >
+                  <div className="thread-avatar">{initials(t.full_name)}</div>
+                  <div>
+                    <div className="thread-name">{t.full_name}</div>
+                    <div className="thread-preview">
+                      {t.last_message ? `${t.last_sender === 'manager' ? 'You: ' : ''}${t.last_message}` : 'No messages yet'}
+                    </div>
+                    <div className="thread-chan mono">
+                      {t.property_name} · {t.unit_number}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
+            <div className="chat-pane">
+              {active && (
+                <>
+                  <div className="chat-head">
+                    <b>{active.full_name}</b>
+                    <span>
+                      {active.property_name} · Unit {active.unit_number}
+                    </span>
+                  </div>
+                  <div className="chat-body">
+                    {activeMessages.length === 0 && (
+                      <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>No messages yet</p>
+                    )}
+                    {activeMessages.map((m) => (
+                      <div className={`bubble ${m.sender === 'manager' ? 'out' : 'in'}`} key={m.id}>
+                        {m.body}
+                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(m.created_at)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <form className="chat-composer" onSubmit={handleSend}>
+                    <input
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder="Type a reply…"
+                      disabled={sending}
+                    />
+                    <button type="submit" className="btn btn-primary" disabled={sending || !draft.trim()}>
+                      Send
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          !loading && (
+            <div className="empty-state card">
+              <h3>No conversations yet</h3>
+              <p>Set up a portal login for a tenant on the Tenants &amp; Leases page to start messaging them.</p>
+            </div>
+          )
+        )}
       </div>
     </div>
   )

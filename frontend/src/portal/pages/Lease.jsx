@@ -35,45 +35,47 @@ function Lease() {
         Your lease
       </p>
 
-      <div className="portal-card">
-        <div className="portal-detail-row">
-          <span className="portal-detail-label">Monthly rent</span>
-          <span className="portal-detail-value">{formatMoney(tenant.rent_amount)}</span>
+      <div className="portal-grid-2">
+        <div className="portal-card">
+          <div className="portal-detail-row">
+            <span className="portal-detail-label">Monthly rent</span>
+            <span className="portal-detail-value">{formatMoney(tenant.rent_amount)}</span>
+          </div>
+          <div className="portal-detail-row">
+            <span className="portal-detail-label">Security deposit</span>
+            <span className="portal-detail-value">{formatMoney(tenant.deposit_amount)}</span>
+          </div>
+          <div className="portal-detail-row">
+            <span className="portal-detail-label">Lease start</span>
+            <span className="portal-detail-value">{formatDate(tenant.lease_start)}</span>
+          </div>
+          <div className="portal-detail-row">
+            <span className="portal-detail-label">Lease end</span>
+            <span className="portal-detail-value">{formatDate(tenant.lease_end)}</span>
+          </div>
         </div>
-        <div className="portal-detail-row">
-          <span className="portal-detail-label">Security deposit</span>
-          <span className="portal-detail-value">{formatMoney(tenant.deposit_amount)}</span>
-        </div>
-        <div className="portal-detail-row">
-          <span className="portal-detail-label">Lease start</span>
-          <span className="portal-detail-value">{formatDate(tenant.lease_start)}</span>
-        </div>
-        <div className="portal-detail-row">
-          <span className="portal-detail-label">Lease end</span>
-          <span className="portal-detail-value">{formatDate(tenant.lease_end)}</span>
-        </div>
-      </div>
 
-      <div className="portal-card">
-        <h2 style={{ marginBottom: 12 }}>Documents</h2>
-        {!loading && documents.length === 0 && <p>No documents on file yet.</p>}
-        {documents.map((d) => (
-          <a
-            key={d.id}
-            href={getPortalDocumentUrl(d.id)}
-            target="_blank"
-            rel="noreferrer"
-            className="portal-doc-row"
-          >
-            <div className="portal-doc-icon">📄</div>
-            <div>
-              <div className="portal-doc-name">{d.file_name}</div>
-              <div className="portal-doc-sub">
-                {DOC_TYPE_LABELS[d.doc_type]} · {formatDate(d.uploaded_at)}
+        <div className="portal-card">
+          <h2 style={{ marginBottom: 12 }}>Documents</h2>
+          {!loading && documents.length === 0 && <p>No documents on file yet.</p>}
+          {documents.map((d) => (
+            <a
+              key={d.id}
+              href={getPortalDocumentUrl(d.id)}
+              target="_blank"
+              rel="noreferrer"
+              className="portal-doc-row"
+            >
+              <div className="portal-doc-icon">📄</div>
+              <div>
+                <div className="portal-doc-name">{d.file_name}</div>
+                <div className="portal-doc-sub">
+                  {DOC_TYPE_LABELS[d.doc_type]} · {formatDate(d.uploaded_at)}
+                </div>
               </div>
-            </div>
-          </a>
-        ))}
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   )

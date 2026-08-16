@@ -181,6 +181,32 @@ export function parseExpenseBody(body) {
   };
 }
 
+// Used only by the tenant portal's "report an issue" form — unit_id,
+// tenant_id, and status are never taken from the request; they're derived
+// server-side from the logged-in tenant's session.
+export function parsePortalRepairBody(body) {
+  const priority = body.priority === undefined ? "medium" : body.priority;
+  if (!MAINTENANCE_PRIORITIES.includes(priority)) {
+    throw new ApiError(400, `priority must be one of: ${MAINTENANCE_PRIORITIES.join(", ")}`);
+  }
+  return {
+    title: requireString(body.title, "title"),
+    description: optionalString(body.description),
+    priority,
+  };
+}
+
+export function parseMessageBody(body) {
+  return { body: requireString(body.body, "body") };
+}
+
+export function parseGuideSectionBody(body) {
+  return {
+    section_title: requireString(body.section_title, "section_title"),
+    content: requireString(body.content, "content"),
+  };
+}
+
 export function parseUnitBody(body) {
   const status = body.status === undefined ? "vacant" : body.status;
   if (status !== "vacant" && status !== "occupied") {
