@@ -2,7 +2,8 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseTenantBody } from "../utils/validate.js";
+import { parseTenantBody, requirePassword } from "../utils/validate.js";
+import { hashPassword } from "../utils/auth.js";
 
 const router = Router();
 
@@ -52,7 +53,8 @@ router.get(
          t.lease_start,
          t.lease_end,
          t.rent_amount,
-         t.deposit_amount
+         t.deposit_amount,
+         (t.password_hash IS NOT NULL) AS has_login
        FROM units u
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN LATERAL (
@@ -81,7 +83,7 @@ router.post(
     const { rows } = await pool.query(
       `INSERT INTO tenants (unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
+       RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
       [
         data.unit_id,
         data.full_name,
@@ -113,7 +115,7 @@ router.put(
       `UPDATE tenants
        SET unit_id = $1, full_name = $2, email = $3, phone = $4, lease_start = $5, lease_end = $6, rent_amount = $7, deposit_amount = $8
        WHERE id = $9
-       RETURNING *`,
+       RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
       [
         data.unit_id,
         data.full_name,
@@ -142,6 +144,21 @@ router.delete(
     ]);
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
     await syncUnitStatus(rows[0].unit_id);
+    res.status(204).end();
+  })
+);
+
+// Lets the property manager set or reset a tenant's portal login. There's
+// no invite/self-signup flow yet — this is the manual stand-in for it.
+router.put(
+  "/:id/password",
+  asyncHandler(async (req, res) => {
+    const password = requirePassword(req.body.password);
+    const { rows } = await pool.query(
+      "UPDATE tenants SET password_hash = $1 WHERE id = $2 RETURNING id",
+      [await hashPassword(password), req.params.id]
+    );
+    if (!rows[0]) throw new ApiError(404, "Tenant not found");
     res.status(204).end();
   })
 );

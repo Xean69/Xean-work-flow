@@ -31,10 +31,20 @@ CREATE TABLE IF NOT EXISTS tenants (
   lease_end DATE NOT NULL,
   rent_amount NUMERIC(10,2) NOT NULL,
   deposit_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  password_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Added after the initial tenants table existed; ADD COLUMN IF NOT EXISTS
+-- keeps this migration safe to re-run on a database that already has the
+-- table without password_hash.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_tenants_unit_id ON tenants(unit_id);
+
+-- A tenant needs a unique email to log in with, but email itself stays
+-- optional (property managers won't always have it on file).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email) WHERE email IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS maintenance_requests (
   id SERIAL PRIMARY KEY,

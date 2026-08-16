@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { getTenants, createTenant, updateTenant, deleteTenant } from '../api/client.js'
+import { getTenants, createTenant, updateTenant, deleteTenant, setTenantPassword } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Badge from '../components/Badge.jsx'
 import Modal from '../components/Modal.jsx'
 import TenantForm from '../components/TenantForm.jsx'
+import TenantPasswordForm from '../components/TenantPasswordForm.jsx'
 
 const STATUS_LABEL = {
   active: 'Active',
@@ -33,6 +34,8 @@ function Tenants() {
   const [loadError, setLoadError] = useState('')
   // null = closed, {} = add form, { row } = editing, { presetUnitId } = assigning a specific vacant unit
   const [formState, setFormState] = useState(null)
+  // null = closed, otherwise the row whose portal password is being set
+  const [passwordRow, setPasswordRow] = useState(null)
 
   useEffect(() => {
     load()
@@ -63,6 +66,12 @@ function Tenants() {
   async function handleDelete(row) {
     if (!window.confirm(`Remove ${row.full_name} from unit ${row.unit_number}?`)) return
     await deleteTenant(row.tenant_id)
+    await load()
+  }
+
+  async function handleSetPassword(password) {
+    await setTenantPassword(passwordRow.tenant_id, password)
+    setPasswordRow(null)
     await load()
   }
 
@@ -129,6 +138,7 @@ function Tenants() {
                   <th>Rent</th>
                   <th>Lease ends</th>
                   <th>Status</th>
+                  <th>Portal login</th>
                   <th></th>
                 </tr>
               </thead>
@@ -145,9 +155,26 @@ function Tenants() {
                       <Badge variant={STATUS_VARIANT[row.status]}>{STATUS_LABEL[row.status]}</Badge>
                     </td>
                     <td>
+                      {row.tenant_id ? (
+                        <Badge variant={row.has_login ? 'green' : 'slate'}>
+                          {row.has_login ? 'Active' : 'Not set'}
+                        </Badge>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>
                       <div className="table-actions">
                         {row.tenant_id ? (
                           <>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => setPasswordRow(row)}
+                              disabled={!row.email}
+                              title={row.email ? undefined : 'Add an email first'}
+                            >
+                              {row.has_login ? 'Reset password' : 'Set password'}
+                            </button>
                             <button className="btn btn-ghost btn-sm" onClick={() => setFormState({ row })}>
                               Edit
                             </button>
@@ -176,6 +203,16 @@ function Tenants() {
       {formState && (
         <Modal title={formState?.row ? 'Edit tenant' : 'Add tenant'} onClose={() => setFormState(null)}>
           <TenantForm initialValues={initialValues} unitOptions={unitOptions} onSubmit={handleSubmit} onCancel={() => setFormState(null)} />
+        </Modal>
+      )}
+
+      {passwordRow && (
+        <Modal title="Portal password" onClose={() => setPasswordRow(null)}>
+          <TenantPasswordForm
+            tenantName={passwordRow.full_name}
+            onSubmit={handleSetPassword}
+            onCancel={() => setPasswordRow(null)}
+          />
         </Modal>
       )}
     </div>

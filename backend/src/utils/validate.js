@@ -15,6 +15,13 @@ function requireNumber(value, field, { min = -Infinity } = {}) {
   return num;
 }
 
+export function requirePassword(value) {
+  if (typeof value !== "string" || value.length < 8) {
+    throw new ApiError(400, "password must be at least 8 characters");
+  }
+  return value;
+}
+
 export function parsePropertyBody(body) {
   return {
     name: requireString(body.name, "name"),

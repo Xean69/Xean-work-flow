@@ -1,5 +1,9 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
+import PortalLayout from './portal/PortalLayout.jsx'
+import PortalLogin from './portal/pages/Login.jsx'
+import PortalHome from './portal/pages/Home.jsx'
+import PortalLease from './portal/pages/Lease.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Properties from './pages/Properties.jsx'
 import PropertyDetail from './pages/PropertyDetail.jsx'
@@ -18,6 +22,14 @@ import Insights from './pages/Insights.jsx'
 function App() {
   return (
     <Routes>
+      {/* Tenant portal: entirely separate from the manager dashboard below
+          — its own layout, its own auth, no shared navigation. */}
+      <Route path="/portal/login" element={<PortalLogin />} />
+      <Route element={<PortalLayout />}>
+        <Route path="/portal/home" element={<PortalHome />} />
+        <Route path="/portal/lease" element={<PortalLease />} />
+      </Route>
+
       <Route element={<Layout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/properties" element={<Properties />} />

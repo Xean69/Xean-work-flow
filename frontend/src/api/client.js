@@ -66,6 +66,10 @@ export function deleteTenant(id) {
   return request(`/tenants/${id}`, { method: "DELETE" });
 }
 
+export function setTenantPassword(id, password) {
+  return request(`/tenants/${id}/password`, { method: "PUT", body: JSON.stringify({ password }) });
+}
+
 export function getMaintenanceRequests() {
   return request("/maintenance");
 }
