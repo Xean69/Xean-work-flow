@@ -8,6 +8,7 @@ import maintenanceRouter from "./routes/maintenance.js";
 import documentsRouter from "./routes/documents.js";
 import staysRouter from "./routes/stays.js";
 import scheduledMessagesRouter from "./routes/scheduledMessages.js";
+import expensesRouter from "./routes/expenses.js";
 import { ApiError } from "./utils/errors.js";
 
 const app = express();
@@ -26,6 +27,7 @@ app.use("/api/maintenance", maintenanceRouter);
 app.use("/api/documents", documentsRouter);
 app.use("/api/stays", staysRouter);
 app.use("/api/scheduled-messages", scheduledMessagesRouter);
+app.use("/api/expenses", expensesRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

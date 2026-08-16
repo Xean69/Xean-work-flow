@@ -104,3 +104,22 @@ VALUES
   ('checkout_reminder', '8am_checkout_day', true),
   ('review_request', '2h_after_checkout', false)
 ON CONFLICT (message_type) WHERE stay_id IS NULL DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id SERIAL PRIMARY KEY,
+  property_id INTEGER REFERENCES properties(id) ON DELETE SET NULL,
+  unit_id INTEGER REFERENCES units(id) ON DELETE SET NULL,
+  amount NUMERIC(10,2) NOT NULL,
+  -- No default: NULL means "uncategorized", which the Expenses page
+  -- surfaces as a real, countable state rather than defaulting it away.
+  category TEXT CHECK (category IS NULL OR category IN
+    ('repairs', 'cleaning', 'landscaping', 'utilities', 'property_tax', 'supplies', 'other')),
+  vendor_name TEXT NOT NULL,
+  expense_date DATE NOT NULL,
+  receipt_file_path TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_property_id ON expenses(property_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_unit_id ON expenses(unit_id);

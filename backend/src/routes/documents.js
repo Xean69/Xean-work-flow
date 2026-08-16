@@ -1,39 +1,12 @@
 import { Router } from "express";
-import multer from "multer";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import fs from "node:fs";
-import { randomUUID } from "node:crypto";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseDocumentBody } from "../utils/validate.js";
+import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
 
 const router = Router();
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.join(__dirname, "../../uploads");
-
-const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  // Store under a random name so two uploads can never collide and a
-  // crafted filename can never escape the uploads folder. The original
-  // name is kept in the database purely for display.
-  filename: (req, file, cb) => cb(null, `${randomUUID()}${path.extname(file.originalname)}`),
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      return cb(new ApiError(400, "Only PDF, JPG, and PNG files are supported"));
-    }
-    cb(null, true);
-  },
-});
 
 router.get(
   "/",
@@ -64,7 +37,7 @@ router.post(
     } catch (err) {
       // Metadata was invalid, but multer already wrote the file to disk —
       // clean it up rather than leaving an orphaned upload behind.
-      fs.unlink(req.file.path, () => {});
+      deleteUploadedFile(req.file.filename);
       throw err;
     }
 
@@ -104,7 +77,7 @@ router.delete(
       req.params.id,
     ]);
     if (!rows[0]) throw new ApiError(404, "Document not found");
-    fs.unlink(path.join(UPLOADS_DIR, rows[0].file_path), () => {});
+    deleteUploadedFile(rows[0].file_path);
     res.status(204).end();
   })
 );

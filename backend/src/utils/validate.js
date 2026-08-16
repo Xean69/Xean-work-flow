@@ -147,6 +147,33 @@ export function parseScheduledMessageBody(body) {
   };
 }
 
+const EXPENSE_CATEGORIES = [
+  "repairs",
+  "cleaning",
+  "landscaping",
+  "utilities",
+  "property_tax",
+  "supplies",
+  "other",
+];
+
+export function parseExpenseBody(body) {
+  const category = body.category === undefined || body.category === "" ? null : body.category;
+  if (category !== null && !EXPENSE_CATEGORIES.includes(category)) {
+    throw new ApiError(400, `category must be one of: ${EXPENSE_CATEGORIES.join(", ")} (or omitted)`);
+  }
+  requireDate(body.expense_date, "expense_date");
+  return {
+    property_id: optionalNumber(body.property_id, "property_id"),
+    unit_id: optionalNumber(body.unit_id, "unit_id"),
+    amount: requireNumber(body.amount, "amount", { min: 0 }),
+    category,
+    vendor_name: requireString(body.vendor_name, "vendor_name"),
+    expense_date: body.expense_date,
+    notes: optionalString(body.notes),
+  };
+}
+
 export function parseUnitBody(body) {
   const status = body.status === undefined ? "vacant" : body.status;
   if (status !== "vacant" && status !== "occupied") {
