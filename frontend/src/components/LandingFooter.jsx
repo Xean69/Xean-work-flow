@@ -1,0 +1,46 @@
+import { Link } from 'react-router-dom'
+
+// Shared footer for every public-site page.
+function LandingFooter() {
+  return (
+    <footer className="lnd-footer">
+      <div className="lnd-wrap">
+        <div className="lnd-foot-top">
+          <div>
+            <div className="lnd-logo">
+              <div className="lnd-logo-mark">X</div>
+              <div className="lnd-logo-text">
+                Xean <span>Intake</span>
+              </div>
+            </div>
+            <p className="lnd-foot-blurb">Property management, rebuilt for the AI era.</p>
+          </div>
+          <div className="lnd-foot-links">
+            <div className="lnd-foot-col">
+              <h4>Product</h4>
+              <Link to="/#features">Features</Link>
+              <Link to="/#pricing">Pricing</Link>
+              <Link to="/login">Log in</Link>
+            </div>
+            <div className="lnd-foot-col">
+              <h4>Company</h4>
+              <a href="#">About</a>
+              <a href="#">Contact</a>
+            </div>
+            <div className="lnd-foot-col">
+              <h4>Legal</h4>
+              <Link to="/terms">Terms of Service</Link>
+              <Link to="/privacy">Privacy Policy</Link>
+            </div>
+          </div>
+        </div>
+        <div className="lnd-foot-bottom">
+          <div>© 2026 Xean Telecom Inc. All rights reserved.</div>
+          <div>Edmonton, Alberta</div>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+export default LandingFooter

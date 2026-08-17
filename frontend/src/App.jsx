@@ -8,6 +8,8 @@ import PortalRepairs from './portal/pages/Repairs.jsx'
 import PortalMessages from './portal/pages/Messages.jsx'
 import PortalGuide from './portal/pages/Guide.jsx'
 import Landing from './pages/Landing.jsx'
+import Terms from './pages/Terms.jsx'
+import Privacy from './pages/Privacy.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -42,6 +44,8 @@ function App() {
       {/* Public marketing site — its own design system entirely (dark
           navy/champagne), unrelated to the dashboard's or portal's. */}
       <Route path="/" element={<Landing />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Manager dashboard: its own login, separate from the tenant
           portal's — Layout itself guards every route nested under it. */}

@@ -1,5 +1,18 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import LandingNav from '../components/LandingNav.jsx'
+import LandingFooter from '../components/LandingFooter.jsx'
 import './Landing.css'
+
+// One checkmark icon, reused by every pricing tier's feature list instead
+// of repeating the same inline SVG for each line item.
+function Check() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
 
 // Public marketing homepage — the page visitors see before they sign up.
 // Deliberately self-contained: every class here is prefixed `lnd-` and the
@@ -7,6 +20,18 @@ import './Landing.css'
 // dark navy/champagne design can never bleed into the dashboard or tenant
 // portal, and vice versa.
 function Landing() {
+  const location = useLocation()
+
+  // Footer/nav links to other pages sometimes point here with a #section
+  // hash (e.g. from the Terms/Privacy pages' "Pricing" link) — the browser
+  // only auto-scrolls to a hash on a real page load, not a client-side
+  // route change, so this does it manually once the sections exist in the DOM.
+  useEffect(() => {
+    if (!location.hash) return
+    const el = document.querySelector(location.hash)
+    if (el) el.scrollIntoView()
+  }, [location.hash])
+
   return (
     <div className="landing">
       <div className="lnd-glow lnd-glow-1" />
@@ -14,29 +39,7 @@ function Landing() {
       <div className="lnd-glow lnd-glow-3" />
       <div className="lnd-grid-texture" />
 
-      <div className="lnd-wrap">
-        <nav className="lnd-nav">
-          <div className="lnd-logo">
-            <div className="lnd-logo-mark">X</div>
-            <div className="lnd-logo-text">
-              Xean <span>Intake</span>
-            </div>
-          </div>
-          <div className="lnd-nav-links">
-            <a href="#features">Features</a>
-            <a href="#how">How it works</a>
-            <a href="#pricing">Pricing</a>
-          </div>
-          <div className="lnd-nav-cta">
-            <Link to="/login" className="lnd-btn lnd-btn-ghost">
-              Log in
-            </Link>
-            <Link to="/signup" className="lnd-btn lnd-btn-primary">
-              Request access
-            </Link>
-          </div>
-        </nav>
-      </div>
+      <LandingNav withSectionLinks />
 
       <section className="lnd-hero">
         <div className="lnd-wrap">
@@ -254,21 +257,15 @@ function Landing() {
               </div>
               <div className="lnd-price-list">
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Up to 3 units
                 </div>
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Tenant portal
                 </div>
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Manual document storage
                 </div>
               </div>
@@ -282,31 +279,23 @@ function Landing() {
               <div className="lnd-price-name">Growth</div>
               <div className="lnd-price-desc">For active independent operators</div>
               <div className="lnd-price-amount">
-                $39<span> /mo</span>
+                $110<span> /mo</span>
               </div>
               <div className="lnd-price-list">
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Up to 25 units
                 </div>
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   AI document extraction
                 </div>
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Maintenance triage
                 </div>
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Unified inbox
                 </div>
               </div>
@@ -316,29 +305,56 @@ function Landing() {
             </div>
 
             <div className="lnd-price-card">
-              <div className="lnd-price-name">Portfolio</div>
+              <div className="lnd-price-name">Professional</div>
               <div className="lnd-price-desc">For growing management companies</div>
               <div className="lnd-price-amount">
-                $99<span> /mo</span>
+                $280<span> /mo</span>
               </div>
               <div className="lnd-price-list">
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  Unlimited units
+                  <Check />
+                  Up to 75 units
                 </div>
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Owner statements
                 </div>
                 <div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <Check />
                   Priority support
+                </div>
+                <div>
+                  <Check />
+                  Automated bookkeeping
+                </div>
+              </div>
+              <Link to="/signup" className="lnd-price-btn lnd-btn-ghost">
+                Start free trial
+              </Link>
+            </div>
+
+            <div className="lnd-price-card">
+              <div className="lnd-price-name">Portfolio</div>
+              <div className="lnd-price-desc">For larger management companies</div>
+              <div className="lnd-price-amount">
+                $440<span> /mo</span>
+              </div>
+              <div className="lnd-price-list">
+                <div>
+                  <Check />
+                  Unlimited units
+                </div>
+                <div>
+                  <Check />
+                  White-glove onboarding
+                </div>
+                <div>
+                  <Check />
+                  Dedicated account manager
+                </div>
+                <div>
+                  <Check />
+                  Everything included
                 </div>
               </div>
               <Link to="/signup" className="lnd-price-btn lnd-btn-ghost">
@@ -359,43 +375,7 @@ function Landing() {
         </div>
       </div>
 
-      <footer className="lnd-footer">
-        <div className="lnd-wrap">
-          <div className="lnd-foot-top">
-            <div>
-              <div className="lnd-logo">
-                <div className="lnd-logo-mark">X</div>
-                <div className="lnd-logo-text">
-                  Xean <span>Intake</span>
-                </div>
-              </div>
-              <p className="lnd-foot-blurb">Property management, rebuilt for the AI era.</p>
-            </div>
-            <div className="lnd-foot-links">
-              <div className="lnd-foot-col">
-                <h4>Product</h4>
-                <a href="#features">Features</a>
-                <a href="#pricing">Pricing</a>
-                <Link to="/login">Log in</Link>
-              </div>
-              <div className="lnd-foot-col">
-                <h4>Company</h4>
-                <a href="#">About</a>
-                <a href="#">Contact</a>
-              </div>
-              <div className="lnd-foot-col">
-                <h4>Legal</h4>
-                <a href="#">Terms of Service</a>
-                <a href="#">Privacy Policy</a>
-              </div>
-            </div>
-          </div>
-          <div className="lnd-foot-bottom">
-            <div>© 2026 Xean Telecom Inc. All rights reserved.</div>
-            <div>Edmonton, Alberta</div>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   )
 }
