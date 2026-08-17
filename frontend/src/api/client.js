@@ -3,6 +3,7 @@ const BASE_URL = "/api";
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     ...options,
   });
 
@@ -13,6 +14,25 @@ async function request(path, options = {}) {
     throw new Error(data?.error || `Request failed with status ${res.status}`);
   }
   return data;
+}
+
+export function login(email, password) {
+  return request("/admin/login", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export function signup(businessName, email, password) {
+  return request("/admin/signup", {
+    method: "POST",
+    body: JSON.stringify({ business_name: businessName, email, password }),
+  });
+}
+
+export function logout() {
+  return request("/admin/logout", { method: "POST" });
+}
+
+export function getMe() {
+  return request("/admin/me");
 }
 
 export function getProperties() {
@@ -102,7 +122,7 @@ export function getDocuments() {
 // the browser needs to set its own multipart Content-Type header (with the
 // boundary) rather than the one request() hardcodes.
 async function uploadRequest(path, formData, method = "POST") {
-  const res = await fetch(`${BASE_URL}${path}`, { method, body: formData });
+  const res = await fetch(`${BASE_URL}${path}`, { method, body: formData, credentials: "same-origin" });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(data?.error || `Request failed with status ${res.status}`);

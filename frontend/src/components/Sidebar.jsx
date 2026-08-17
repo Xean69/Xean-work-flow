@@ -3,7 +3,7 @@ import './Sidebar.css'
 
 const mainNav = [
   {
-    to: '/',
+    to: '/dashboard',
     label: 'Dashboard',
     end: true,
     icon: (
@@ -161,7 +161,7 @@ function NavItems({ items }) {
   ))
 }
 
-function Sidebar() {
+function Sidebar({ admin, onLogout }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -189,11 +189,19 @@ function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="avatar" style={{ width: 30, height: 30, fontSize: 12.5 }}>
-          A
+          {admin?.business_name?.[0]?.toUpperCase() ?? 'A'}
         </div>
-        <div>
-          <strong>Account</strong>Aalion Properties
+        <div className="sidebar-account">
+          <strong>{admin?.business_name ?? 'Account'}</strong>
+          {admin?.email ?? ''}
         </div>
+        <button type="button" className="sidebar-logout" onClick={onLogout} title="Log out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
+        </button>
       </div>
     </aside>
   )

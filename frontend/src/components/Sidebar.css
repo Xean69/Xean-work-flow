@@ -108,14 +108,40 @@
   align-items: center;
   gap: 10px;
 }
-.sidebar-footer div {
+.sidebar-account {
   font-size: 12.5px;
   color: #b7bfc8;
   line-height: 1.3;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sidebar-footer strong {
   display: block;
   color: #efede7;
   font-weight: 600;
   font-size: 13px;
+}
+.sidebar-logout {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #b7bfc8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-logout:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.sidebar-logout svg {
+  width: 15px;
+  height: 15px;
 }

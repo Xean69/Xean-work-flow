@@ -7,6 +7,9 @@ import PortalLease from './portal/pages/Lease.jsx'
 import PortalRepairs from './portal/pages/Repairs.jsx'
 import PortalMessages from './portal/pages/Messages.jsx'
 import PortalGuide from './portal/pages/Guide.jsx'
+import Landing from './pages/Landing.jsx'
+import Login from './pages/Login.jsx'
+import Signup from './pages/Signup.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Properties from './pages/Properties.jsx'
 import PropertyDetail from './pages/PropertyDetail.jsx'
@@ -36,8 +39,16 @@ function App() {
         <Route path="/portal/lease" element={<PortalLease />} />
       </Route>
 
+      {/* Public marketing site — its own design system entirely (dark
+          navy/champagne), unrelated to the dashboard's or portal's. */}
+      <Route path="/" element={<Landing />} />
+
+      {/* Manager dashboard: its own login, separate from the tenant
+          portal's — Layout itself guards every route nested under it. */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} />
         <Route path="/tenants" element={<Tenants />} />

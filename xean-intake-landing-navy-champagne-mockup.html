@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Xean Intake — Landing Page Mockup (Premium)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06070B;
+    --bg-alt:#0C0E14;
+    --card:rgba(255,255,255,0.045);
+    --card-border:rgba(255,255,255,0.09);
+    --text:#F3F4F7;
+    --text-dim:#8D93A3;
+    --text-dimmer:#5D6373;
+    --navy-accent:#4A6FA0;
+    --navy-deep:#2C4470;
+    --champagne:#D9C39A;
+    --line:rgba(255,255,255,0.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;
+  }
+  .display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{text-decoration:none;color:inherit;}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 32px;position:relative;z-index:2;}
+
+  /* Ambient glow orbs */
+  .glow{position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none;}
+  .glow-1{width:520px;height:520px;background:radial-gradient(circle,rgba(74,111,160,0.35),transparent 70%);top:-140px;left:-120px;}
+  .glow-2{width:460px;height:460px;background:radial-gradient(circle,rgba(217,195,154,0.22),transparent 70%);top:280px;right:-160px;}
+  .glow-3{width:400px;height:400px;background:radial-gradient(circle,rgba(74,111,160,0.18),transparent 70%);bottom:0;left:30%;}
+
+  .grid-texture{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+
+  /* NAV */
+  nav{
+    display:flex;align-items:center;justify-content:space-between;padding:22px 0;
+    position:relative;z-index:10;
+  }
+  .logo{display:flex;align-items:center;gap:10px;}
+  .logo-mark{
+    width:34px;height:34px;border-radius:9px;
+    background:linear-gradient(135deg,var(--navy-accent),var(--champagne));
+    display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;color:#06070B;
+  }
+  .logo-text{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;letter-spacing:-0.2px;}
+  .logo-text span{color:var(--text-dim);font-weight:400;}
+  .nav-links{display:flex;gap:34px;font-size:13.5px;font-weight:500;color:var(--text-dim);}
+  .nav-links a:hover{color:var(--text);}
+  .nav-cta{display:flex;gap:10px;align-items:center;}
+
+  .btn{padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;font-family:'Inter',sans-serif;}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--card-border);}
+  .btn-primary{
+    background:linear-gradient(135deg,var(--navy-accent),var(--navy-deep));color:#fff;
+    box-shadow:0 0 0 1px rgba(74,111,160,0.4), 0 8px 24px rgba(44,68,112,0.35);
+  }
+  .btn-lg{padding:14px 26px;font-size:14.5px;border-radius:11px;}
+
+  /* HERO */
+  .hero{padding:90px 0 60px 0;position:relative;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--card-border);
+    font-size:11.5px;font-weight:600;padding:7px 14px;border-radius:20px;margin-bottom:26px;color:var(--text-dim);
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--champagne);box-shadow:0 0 8px var(--champagne);}
+  .hero h1{
+    font-family:'Space Grotesk',sans-serif;font-size:58px;font-weight:600;line-height:1.08;letter-spacing:-1.4px;
+    max-width:760px;
+  }
+  .hero h1 .grad{
+    background:linear-gradient(120deg,#fff 20%,var(--navy-accent) 55%,var(--champagne) 90%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero p{font-size:16.5px;color:var(--text-dim);margin-top:24px;max-width:560px;line-height:1.65;}
+  .hero-actions{display:flex;gap:14px;margin-top:36px;align-items:center;}
+  .hero-note{font-size:12px;color:var(--text-dimmer);margin-top:18px;}
+
+  /* Console-style hero visual */
+  .console{
+    margin-top:64px;background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));
+    border:1px solid var(--card-border);border-radius:18px;padding:6px;
+    backdrop-filter:blur(20px);box-shadow:0 40px 90px rgba(0,0,0,0.55);
+  }
+  .console-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);}
+  .console-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.14);}
+  .console-title{margin-left:10px;font-size:11.5px;color:var(--text-dimmer);font-family:'JetBrains Mono',monospace;}
+  .console-body{padding:26px;display:grid;grid-template-columns:1.3fr 1fr;gap:22px;}
+  .console-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+  .c-stat{background:var(--card);border:1px solid var(--card-border);border-radius:11px;padding:14px 16px;}
+  .c-stat-label{font-size:10px;text-transform:uppercase;color:var(--text-dimmer);font-weight:600;letter-spacing:0.05em;}
+  .c-stat-val{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;margin-top:4px;}
+  .c-stat-val.grad{background:linear-gradient(120deg,var(--navy-accent),var(--champagne));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .c-row{display:flex;align-items:center;gap:11px;padding:10px 4px;border-bottom:1px solid var(--line);}
+  .c-row:last-child{border-bottom:none;}
+  .c-avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--navy-accent),var(--champagne));flex-shrink:0;}
+  .c-line{height:7px;border-radius:4px;background:rgba(255,255,255,0.08);flex:1;}
+  .c-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(217,195,154,0.14);color:var(--champagne);white-space:nowrap;}
+  .console-side{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:18px;}
+  .side-label{font-size:10.5px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:14px;}
+  .ring{
+    width:120px;height:120px;border-radius:50%;margin:0 auto 14px auto;
+    background:conic-gradient(var(--navy-accent) 0% 78%, rgba(255,255,255,0.08) 78% 100%);
+    display:flex;align-items:center;justify-content:center;position:relative;
+  }
+  .ring::before{content:"";position:absolute;width:88px;height:88px;border-radius:50%;background:var(--bg-alt);}
+  .ring-val{position:relative;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;}
+  .side-caption{text-align:center;font-size:11.5px;color:var(--text-dim);}
+
+  /* STRIP */
+  .stripbar{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:30px 0;margin-top:70px;}
+  .strip-inner{display:flex;justify-content:space-around;text-align:center;}
+  .strip-item b{display:block;font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;
+    background:linear-gradient(120deg,#fff,var(--navy-accent));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .strip-item span{font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
+
+  /* SECTION */
+  .section{padding:88px 0;}
+  .section-tag{font-size:11.5px;font-weight:700;color:var(--champagne);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;}
+  .section-head h2{font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:600;max-width:600px;letter-spacing:-0.6px;}
+  .section-head p{font-size:15px;color:var(--text-dim);margin-top:14px;max-width:560px;line-height:1.65;}
+
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px;}
+  .feat-card{
+    background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:28px;
+    transition:border-color .2s;position:relative;overflow:hidden;
+  }
+  .feat-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(74,111,160,0.5),transparent);
+  }
+  .feat-icon{
+    width:42px;height:42px;border-radius:11px;background:rgba(74,111,160,0.12);border:1px solid rgba(74,111,160,0.25);
+    color:var(--navy-accent);display:flex;align-items:center;justify-content:center;margin-bottom:18px;
+  }
+  .feat-card h3{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;}
+  .feat-card p{font-size:13.5px;color:var(--text-dim);margin-top:9px;line-height:1.65;}
+
+  /* STEPS */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:48px;}
+  .step-num{
+    width:38px;height:38px;border-radius:11px;
+    background:linear-gradient(135deg,var(--navy-accent),var(--navy-deep));
+    display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;margin-bottom:18px;
+    box-shadow:0 8px 20px rgba(44,68,112,0.35);
+  }
+  .step h3{font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;}
+  .step p{font-size:13.5px;color:var(--text-dim);margin-top:9px;line-height:1.65;}
+
+  /* PRICING */
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px;}
+  .price-card{background:var(--card);border:1px solid var(--card-border);border-radius:18px;padding:32px 26px;position:relative;}
+  .price-card.featured{
+    border:1px solid transparent;
+    background:linear-gradient(var(--bg-alt),var(--bg-alt)) padding-box, linear-gradient(135deg,var(--navy-accent),var(--champagne)) border-box;
+    box-shadow:0 20px 60px rgba(44,68,112,0.25);
+  }
+  .price-badge{
+    position:absolute;top:-13px;right:26px;background:linear-gradient(135deg,var(--navy-accent),var(--champagne));
+    color:#06070B;font-size:10.5px;font-weight:700;padding:5px 12px;border-radius:20px;
+  }
+  .price-name{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;}
+  .price-desc{font-size:12.5px;color:var(--text-dim);margin-top:5px;}
+  .price-amount{font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:600;margin-top:20px;}
+  .price-amount span{font-size:14px;color:var(--text-dim);font-weight:400;}
+  .price-list{margin-top:22px;display:flex;flex-direction:column;gap:11px;}
+  .price-list div{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);}
+  .price-list svg{flex-shrink:0;color:var(--champagne);}
+  .price-btn{width:100%;margin-top:26px;padding:13px;border-radius:10px;text-align:center;font-weight:600;font-size:13.5px;cursor:pointer;}
+
+  /* CTA */
+  .cta-band{
+    position:relative;border-radius:24px;padding:64px;text-align:center;margin:0 32px;overflow:hidden;
+    background:linear-gradient(135deg,rgba(74,111,160,0.15),rgba(217,195,154,0.10));
+    border:1px solid var(--card-border);
+  }
+  .cta-band h2{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:600;letter-spacing:-0.5px;}
+  .cta-band p{color:var(--text-dim);font-size:14.5px;margin-top:12px;}
+  .cta-band .btn{margin-top:28px;}
+
+  /* FOOTER */
+  footer{padding:56px 0 34px 0;}
+  .foot-top{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:34px;border-bottom:1px solid var(--line);}
+  .foot-links{display:flex;gap:60px;}
+  .foot-col h4{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-dimmer);margin-bottom:13px;}
+  .foot-col a{display:block;font-size:13.5px;color:var(--text-dim);margin-bottom:10px;}
+  .foot-col a:hover{color:var(--text);}
+  .foot-bottom{display:flex;justify-content:space-between;padding-top:22px;font-size:11.5px;color:var(--text-dimmer);}
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<div class="glow glow-3"></div>
+<div class="grid-texture"></div>
+
+<div class="wrap">
+  <nav>
+    <div class="logo">
+      <div class="logo-mark">X</div>
+      <div class="logo-text">Xean <span>Intake</span></div>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+    </div>
+    <div class="nav-cta">
+      <a href="#" class="btn btn-ghost">Log in</a>
+      <a href="#" class="btn btn-primary">Request access</a>
+    </div>
+  </nav>
+</div>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow"><span class="dot"></span>Now onboarding independent operators</div>
+    <h1>Property management,<br><span class="grad">rebuilt for the AI era.</span></h1>
+    <p>Xean Intake reads your leases, triages every maintenance request, and keeps every tenant conversation in one place — engineered for operators who expect more than spreadsheets.</p>
+    <div class="hero-actions">
+      <a href="#" class="btn btn-primary btn-lg">Request access →</a>
+      <a href="#" class="btn btn-ghost btn-lg">Watch a 90s demo</a>
+    </div>
+    <div class="hero-note">Currently onboarding a limited number of portfolios this quarter</div>
+
+    <div class="console">
+      <div class="console-bar">
+        <span class="console-dot"></span><span class="console-dot"></span><span class="console-dot"></span>
+        <span class="console-title">xean-intake / portfolio-overview</span>
+      </div>
+      <div class="console-body">
+        <div>
+          <div class="console-stats">
+            <div class="c-stat"><div class="c-stat-label">Properties</div><div class="c-stat-val">7</div></div>
+            <div class="c-stat"><div class="c-stat-label">Occupancy</div><div class="c-stat-val grad">92%</div></div>
+            <div class="c-stat"><div class="c-stat-label">Open tickets</div><div class="c-stat-val">5</div></div>
+          </div>
+          <div class="c-row"><div class="c-avatar"></div><div class="c-line" style="max-width:70%;"></div><span class="c-badge">LEASE PARSED</span></div>
+          <div class="c-row"><div class="c-avatar"></div><div class="c-line" style="max-width:55%;"></div><span class="c-badge">URGENT · PLUMBING</span></div>
+          <div class="c-row"><div class="c-avatar"></div><div class="c-line" style="max-width:62%;"></div><span class="c-badge">RENT COLLECTED</span></div>
+          <div class="c-row"><div class="c-avatar"></div><div class="c-line" style="max-width:48%;"></div><span class="c-badge">RENEWAL · 18D</span></div>
+        </div>
+        <div class="console-side">
+          <div class="side-label">Extraction confidence</div>
+          <div class="ring"><span class="ring-val">98%</span></div>
+          <div class="side-caption">Lease_94Street_3B.pdf<br>read in 4.2s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="stripbar">
+  <div class="wrap strip-inner">
+    <div class="strip-item"><b>4.2s</b><span>Avg. document read time</span></div>
+    <div class="strip-item"><b>1</b><span>Inbox for every channel</span></div>
+    <div class="strip-item"><b>98%</b><span>Extraction accuracy</span></div>
+  </div>
+</div>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-tag">Capabilities</div>
+    <div class="section-head">
+      <h2>Every layer of the stack, engineered — not stitched together</h2>
+      <p>No bolted-on integrations. One system, built end to end for how independent operators actually work.</p>
+    </div>
+
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/></svg></div>
+        <h3>Document intelligence</h3>
+        <p>Leases, invoices, inspection reports — parsed into structured data the moment they're uploaded.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-3-3z"/></svg></div>
+        <h3>Autonomous triage</h3>
+        <p>Maintenance requests are classified by urgency and trade in real time, before you even open the app.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l9 7 9-7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg></div>
+        <h3>Unified communication</h3>
+        <p>SMS, email, and guest-platform messages converge into a single thread per unit.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V9.5"/></svg></div>
+        <h3>Short-term operations</h3>
+        <p>Turnover pipelines and scheduled guest messaging, running natively alongside long-term leases.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg></div>
+        <h3>Automated bookkeeping</h3>
+        <p>Receipts are captured and categorized on upload — your books stay current without the data entry.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/></svg></div>
+        <h3>A tenant-native portal</h3>
+        <p>Your tenants get their own precision-built interface — lease, repairs, and messaging, from their phone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how" style="padding-top:0;">
+  <div class="wrap">
+    <div class="section-tag">Deployment</div>
+    <div class="section-head">
+      <h2>Live in an afternoon</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Import your portfolio</h3>
+        <p>Bring in units and existing leases — enter manually, or let the system read your documents directly.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>Provision tenant access</h3>
+        <p>Every tenant receives their own secured login to their unit — nothing shared, nothing exposed.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Let the system run</h3>
+        <p>Triage, extraction, and messaging operate continuously in the background from day one.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="section-tag">Pricing</div>
+    <div class="section-head">
+      <h2>Priced for operators who value their time</h2>
+    </div>
+
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="price-name">Starter</div>
+        <div class="price-desc">For getting off spreadsheets</div>
+        <div class="price-amount">$0<span> /mo</span></div>
+        <div class="price-list">
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Up to 3 units</div>
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Tenant portal</div>
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Manual document storage</div>
+        </div>
+        <div class="price-btn btn-ghost">Start free</div>
+      </div>
+
+      <div class="price-card featured">
+        <div class="price-badge">MOST POPULAR</div>
+        <div class="price-name">Growth</div>
+        <div class="price-desc">For active independent operators</div>
+        <div class="price-amount">$39<span> /mo</span></div>
+        <div class="price-list">
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Up to 25 units</div>
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>AI document extraction</div>
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Maintenance triage</div>
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Unified inbox</div>
+        </div>
+        <div class="price-btn btn-primary">Start free trial</div>
+      </div>
+
+      <div class="price-card">
+        <div class="price-name">Portfolio</div>
+        <div class="price-desc">For growing management companies</div>
+        <div class="price-amount">$99<span> /mo</span></div>
+        <div class="price-list">
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Unlimited units</div>
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Owner statements</div>
+          <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Priority support</div>
+        </div>
+        <div class="price-btn btn-ghost">Talk to us</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="cta-band">
+    <h2>The paperwork ends here.</h2>
+    <p>Request access — onboarding is limited this quarter.</p>
+    <a href="#" class="btn btn-primary btn-lg">Request access →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div>
+        <div class="logo"><div class="logo-mark">X</div><div class="logo-text">Xean <span>Intake</span></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-top:14px;max-width:220px;">Property management, rebuilt for the AI era.</p>
+      </div>
+      <div class="foot-links">
+        <div class="foot-col">
+          <h4>Product</h4>
+          <a href="#">Features</a>
+          <a href="#">Pricing</a>
+          <a href="#">Log in</a>
+        </div>
+        <div class="foot-col">
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Contact</a>
+        </div>
+        <div class="foot-col">
+          <h4>Legal</h4>
+          <a href="#">Terms of Service</a>
+          <a href="#">Privacy Policy</a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div>© 2026 Xean Telecom Inc. All rights reserved.</div>
+      <div>Edmonton, Alberta</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
