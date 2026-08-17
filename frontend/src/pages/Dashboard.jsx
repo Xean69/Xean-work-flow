@@ -1,74 +1,43 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getProperties, createProperty } from '../api/client.js'
+import { getProperties, createProperty, getMaintenanceRequests, getTenants, getRecentActivity } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import StatCard from '../components/StatCard.jsx'
 import Modal from '../components/Modal.jsx'
 import PropertyForm from '../components/PropertyForm.jsx'
 import './Dashboard.css'
 
-// Placeholder data for the parts of the dashboard whose backend (maintenance,
-// leases, document intake) doesn't exist yet. The Properties/Occupancy stats
-// above them are real, computed from the database.
-const activityFeed = [
-  {
-    dot: 'blue',
-    text: (
-      <>
-        <strong>Lease extracted</strong> — 94 Street Unit 3B, rent $1,650, term confirmed to Apr
-        2027
-      </>
-    ),
-    time: 'TODAY · 9:12 AM',
-  },
-  {
-    dot: 'amber',
-    text: (
-      <>
-        <strong>New maintenance ticket</strong> — Cy Becker Rd, tenant reports no hot water,
-        classified urgent / plumbing
-      </>
-    ),
-    time: 'TODAY · 8:47 AM',
-  },
-  {
-    dot: 'green',
-    text: (
-      <>
-        <strong>Rent received</strong> — 177 Avenue Unit 1A, $1,450 deposited
-      </>
-    ),
-    time: 'YESTERDAY · 6:02 PM',
-  },
-  {
-    dot: 'blue',
-    text: (
-      <>
-        <strong>Inspection report filed</strong> — 94 Street Unit 1A move-out, 3 deductions
-        flagged
-      </>
-    ),
-    time: 'YESTERDAY · 2:15 PM',
-  },
-  {
-    dot: 'amber',
-    text: (
-      <>
-        <strong>Renewal reminder sent</strong> — Cy Becker Rd Unit 2, lease ends Oct 15
-      </>
-    ),
-    time: 'MON · 11:30 AM',
-  },
-]
+const RENEWAL_PILL = { urgent_renewal: 'red', renewal_due: 'amber', active: 'green' }
 
-const upcomingRenewals = [
-  { name: 'Cy Becker Rd — Unit 2', sub: 'Marcus O. · ends Oct 15', pill: 'red', days: '18 DAYS' },
-  { name: '177 Avenue — Unit 1A', sub: 'Sarah K. · ends Nov 2', pill: 'amber', days: '36 DAYS' },
-  { name: '94 Street — Unit 3B', sub: 'D. Osei · ends Dec 1', pill: 'green', days: '65 DAYS' },
-]
+function daysUntil(dateStr) {
+  const end = new Date(dateStr)
+  end.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.round((end - today) / 86400000)
+}
+
+// "2 hours ago", "Yesterday", etc. Computed client-side from a raw
+// timestamp (rather than a pre-formatted string from the API) so it stays
+// accurate without needing a fresh API call if the tab's left open a while.
+function formatRelativeTime(value) {
+  const diffMs = Date.now() - new Date(value).getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`
+  const diffDay = Math.floor(diffHr / 24)
+  if (diffDay === 1) return 'Yesterday'
+  if (diffDay < 7) return `${diffDay} days ago`
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
 
 function Dashboard() {
   const [properties, setProperties] = useState([])
+  const [maintenance, setMaintenance] = useState([])
+  const [tenantRows, setTenantRows] = useState([])
+  const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
 
@@ -79,7 +48,16 @@ function Dashboard() {
   async function load() {
     setLoading(true)
     try {
-      setProperties(await getProperties())
+      const [props, maintenanceRows, tenants, activityRows] = await Promise.all([
+        getProperties(),
+        getMaintenanceRequests(),
+        getTenants(),
+        getRecentActivity(),
+      ])
+      setProperties(props)
+      setMaintenance(maintenanceRows)
+      setTenantRows(tenants)
+      setActivity(activityRows)
     } finally {
       setLoading(false)
     }
@@ -95,6 +73,18 @@ function Dashboard() {
   const occupiedUnits = properties.reduce((sum, p) => sum + p.occupied_count, 0)
   const occupancyPct = totalUnits === 0 ? 0 : Math.round((occupiedUnits / totalUnits) * 100)
   const cities = [...new Set(properties.map((p) => p.city).filter(Boolean))]
+
+  const openMaintenance = maintenance.filter((m) => m.status !== 'resolved')
+  const urgentMaintenanceCount = openMaintenance.filter((m) => m.priority === 'high').length
+
+  const leasedTenants = tenantRows.filter((t) => t.tenant_id)
+  const expiringLeaseCount = leasedTenants.filter(
+    (t) => t.status === 'urgent_renewal' || t.status === 'renewal_due'
+  ).length
+
+  const upcomingRenewals = [...leasedTenants]
+    .sort((a, b) => new Date(a.lease_end) - new Date(b.lease_end))
+    .slice(0, 3)
 
   return (
     <div>
@@ -117,8 +107,18 @@ function Dashboard() {
             sub={totalUnits ? `${occupiedUnits}/${totalUnits} units occupied` : 'no units yet'}
             subVariant={occupancyPct >= 90 ? 'up' : undefined}
           />
-          <StatCard label="Open maintenance" value="5" sub="2 flagged urgent" subVariant="warn" />
-          <StatCard label="Leases expiring" value="3" sub="within 60 days" subVariant="warn" />
+          <StatCard
+            label="Open maintenance"
+            value={loading ? '—' : openMaintenance.length}
+            sub={urgentMaintenanceCount > 0 ? `${urgentMaintenanceCount} flagged urgent` : 'none flagged urgent'}
+            subVariant={urgentMaintenanceCount > 0 ? 'warn' : undefined}
+          />
+          <StatCard
+            label="Leases expiring"
+            value={loading ? '—' : expiringLeaseCount}
+            sub="within 60 days"
+            subVariant={expiringLeaseCount > 0 ? 'warn' : undefined}
+          />
         </div>
 
         <div className="dash-grid">
@@ -128,12 +128,13 @@ function Dashboard() {
               <span className="section-head-link">View all</span>
             </div>
             <div className="card feed">
-              {activityFeed.map((item, i) => (
+              {!loading && activity.length === 0 && <div className="board-empty">No recent activity yet.</div>}
+              {activity.map((item, i) => (
                 <div className="feed-item" key={i}>
                   <div className={`feed-dot ${item.dot}`} />
                   <div>
                     <div className="feed-text">{item.text}</div>
-                    <div className="feed-time mono">{item.time}</div>
+                    <div className="feed-time mono">{formatRelativeTime(item.timestamp)}</div>
                   </div>
                 </div>
               ))}
@@ -146,15 +147,25 @@ function Dashboard() {
               <Link to="/tenants">View all</Link>
             </div>
             <div className="card">
-              {upcomingRenewals.map((r) => (
-                <div className="renewal-item" key={r.name}>
-                  <div>
-                    <div className="renewal-name">{r.name}</div>
-                    <div className="renewal-sub">{r.sub}</div>
+              {!loading && upcomingRenewals.length === 0 && <div className="board-empty">No active leases yet.</div>}
+              {upcomingRenewals.map((r) => {
+                const days = daysUntil(r.lease_end)
+                return (
+                  <div className="renewal-item" key={r.unit_id}>
+                    <div>
+                      <div className="renewal-name">
+                        {r.property_name} — {r.unit_number}
+                      </div>
+                      <div className="renewal-sub">
+                        {r.full_name} · ends {new Date(r.lease_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                    <span className={`pill pill-${RENEWAL_PILL[r.status] ?? 'green'}`}>
+                      {days >= 0 ? `${days} DAYS` : 'OVERDUE'}
+                    </span>
                   </div>
-                  <span className={`pill pill-${r.pill}`}>{r.days}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="section-head">

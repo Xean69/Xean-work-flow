@@ -54,17 +54,29 @@ router.post(
 );
 
 // Used both for editing a booking's details and for advancing/reverting
-// its turnover_status via the step buttons on the board.
+// its turnover_status via the step buttons on the board. updated_at only
+// moves when turnover_status actually changes (not on every edit) — the
+// Dashboard activity feed reads it specifically as "a turnover status
+// change happened here", so bumping it for e.g. a guest-name typo fix
+// would be misleading.
 router.put(
   "/:id",
   asyncHandler(async (req, res) => {
+    const { rows: existingRows } = await pool.query(
+      "SELECT turnover_status FROM stays WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
+    if (!existingRows[0]) throw new ApiError(404, "Stay not found");
+
     const data = parseStayBody(req.body);
     await assertUnitInBusiness(data.unit_id, req.businessId);
+    const statusChanged = data.turnover_status !== existingRows[0].turnover_status;
 
     const { rows } = await pool.query(
       `UPDATE stays
        SET unit_id = $1, platform = $2, guest_name = $3, checkout_date = $4,
-           next_checkin_date = $5, turnover_status = $6
+           next_checkin_date = $5, turnover_status = $6,
+           updated_at = CASE WHEN $9 THEN now() ELSE updated_at END
        WHERE id = $7 AND business_id = $8
        RETURNING *`,
       [
@@ -76,6 +88,7 @@ router.put(
         data.turnover_status,
         req.params.id,
         req.businessId,
+        statusChanged,
       ]
     );
     if (!rows[0]) throw new ApiError(404, "Stay not found");

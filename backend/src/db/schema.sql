@@ -328,3 +328,11 @@ CREATE TABLE IF NOT EXISTS str_licenses (
 
 CREATE INDEX IF NOT EXISTS idx_str_licenses_business_id ON str_licenses(business_id);
 CREATE INDEX IF NOT EXISTS idx_str_licenses_property_id ON str_licenses(property_id);
+
+-- Needed for the Dashboard activity feed (routes/activity.js) to tell an
+-- "added" event from an "updated" one and to know when it happened —
+-- neither table tracked this before. Defaults to now() so a freshly
+-- inserted row's updated_at exactly equals its created_at until something
+-- actually edits it; the feed uses that equality to mean "never updated".
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE stays ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();

@@ -133,7 +133,7 @@ router.put(
 
     const { rows } = await pool.query(
       `UPDATE tenants
-       SET unit_id = $1, full_name = $2, email = $3, phone = $4, lease_start = $5, lease_end = $6, rent_amount = $7, deposit_amount = $8
+       SET unit_id = $1, full_name = $2, email = $3, phone = $4, lease_start = $5, lease_end = $6, rent_amount = $7, deposit_amount = $8, updated_at = now()
        WHERE id = $9 AND business_id = $10
        RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
       [

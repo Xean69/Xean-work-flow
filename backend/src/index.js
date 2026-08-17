@@ -20,6 +20,7 @@ import importsRouter from "./routes/imports.js";
 import teamRouter from "./routes/team.js";
 import ownerStatementsRouter from "./routes/ownerStatements.js";
 import strLicensesRouter from "./routes/strLicenses.js";
+import activityRouter from "./routes/activity.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -79,6 +80,12 @@ app.use("/api/import", requireAdminAuth, staffOnly, importsRouter);
 app.use("/api/team", requireAdminAuth, requireRole("owner"), teamRouter);
 app.use("/api/owner-statements", requireAdminAuth, anyRole, ownerStatementsRouter);
 app.use("/api/str-licenses", requireAdminAuth, staffOnly, strLicensesRouter);
+// Role-aware internally (see routes/activity.js) rather than blocked at
+// the mount level — an accountant gets a real, correctly-scoped feed
+// (documents/expenses only) instead of a 403, on the off chance this ever
+// gets surfaced somewhere an accountant can reach (it isn't yet; the
+// Dashboard page itself is owner/manager only).
+app.use("/api/activity", requireAdminAuth, anyRole, activityRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

@@ -261,3 +261,7 @@ export function updateStrLicense(id, data) {
 export function deleteStrLicense(id) {
   return request(`/str-licenses/${id}`, { method: "DELETE" });
 }
+
+export function getRecentActivity() {
+  return request("/activity");
+}
