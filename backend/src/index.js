@@ -18,6 +18,7 @@ import messagesRouter from "./routes/messages.js";
 import guideSectionsRouter from "./routes/guideSections.js";
 import importsRouter from "./routes/imports.js";
 import teamRouter from "./routes/team.js";
+import ownerStatementsRouter from "./routes/ownerStatements.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -75,6 +76,7 @@ app.use("/api/messages", requireAdminAuth, staffOnly, messagesRouter);
 app.use("/api/guide-sections", requireAdminAuth, staffOnly, guideSectionsRouter);
 app.use("/api/import", requireAdminAuth, staffOnly, importsRouter);
 app.use("/api/team", requireAdminAuth, requireRole("owner"), teamRouter);
+app.use("/api/owner-statements", requireAdminAuth, anyRole, ownerStatementsRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

@@ -241,3 +241,7 @@ export function updateTeamMemberRole(id, role) {
 export function removeTeamMember(id) {
   return request(`/team/${id}`, { method: "DELETE" });
 }
+
+export function getOwnerStatements(month) {
+  return request(`/owner-statements?month=${encodeURIComponent(month)}`);
+}

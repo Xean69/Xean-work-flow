@@ -1,63 +1,123 @@
+import { useEffect, useState } from 'react'
+import { getOwnerStatements } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import './OwnerStatements.css'
 
-const summary = [
-  { label: 'Rent collected', value: '$8,900' },
-  { label: 'Expenses', value: '$2,140' },
-  { label: 'Net payout', value: '$6,760' },
-  { label: 'Period', value: 'Jul 2026' },
-]
+function currentMonth() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
 
-const rows = [
-  { property: '177 Avenue', rentIn: '$4,350', expenses: '$296', net: '$4,054' },
-  { property: '94 Street', rentIn: '$3,000', expenses: '$1,504', net: '$1,496' },
-  { property: 'Cy Becker Summit', rentIn: '$1,950', expenses: '$340', net: '$1,610' },
-]
+function formatMoney(amount) {
+  return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+}
+
+// "2026-07" -> "Jul 2026" — parsed as separate year/month numbers rather
+// than `new Date("2026-07")`, which JS treats as UTC midnight and can
+// display as the previous day/month in a negative-UTC-offset timezone.
+function formatPeriod(period) {
+  const [year, month] = period.split('-').map(Number)
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+}
 
 function OwnerStatements() {
+  const [month, setMonth] = useState(currentMonth())
+  const [statement, setStatement] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    load()
+  }, [month])
+
+  async function load() {
+    setLoading(true)
+    setLoadError('')
+    try {
+      setStatement(await getOwnerStatements(month))
+    } catch (err) {
+      setLoadError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const summary = statement
+    ? [
+        { label: 'Rent collected', value: formatMoney(statement.totals.rent_collected) },
+        { label: 'Expenses', value: formatMoney(statement.totals.expenses) },
+        { label: 'Net payout', value: formatMoney(statement.totals.net_payout) },
+        { label: 'Period', value: formatPeriod(statement.period) },
+      ]
+    : []
+
   return (
     <div>
-      <PageHeader title="Owner Statements" subtitle="Auto-generated monthly statements from your existing records">
-        <button className="btn btn-primary">Generate statement</button>
+      <PageHeader title="Owner Statements" subtitle="Monthly statements computed live from your properties, tenants, and expenses">
+        <input
+          type="month"
+          className="stmt-month-picker"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          max={currentMonth()}
+        />
       </PageHeader>
 
       <div className="content">
-        <div className="card">
-          <div className="stmt-summary">
-            {summary.map((s) => (
-              <div className="stmt-metric" key={s.label}>
-                {s.label}
-                <b>{s.value}</b>
-              </div>
-            ))}
+        {loadError && <p className="form-error">{loadError}</p>}
+
+        {!loading && !loadError && statement?.properties.length === 0 && (
+          <div className="empty-state card">
+            <h3>No properties yet</h3>
+            <p>Add a property to start seeing monthly statements here.</p>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Property</th>
-                <th>Rent in</th>
-                <th>Expenses</th>
-                <th>Net</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.property}>
-                  <td>{r.property}</td>
-                  <td className="mono">{r.rentIn}</td>
-                  <td className="mono">{r.expenses}</td>
-                  <td className="mono">{r.net}</td>
-                  <td>
-                    <a href="#" style={{ fontSize: 12, color: 'var(--brass-deep)', fontWeight: 600 }}>
-                      Download PDF
-                    </a>
-                  </td>
-                </tr>
+        )}
+
+        {!loadError && statement && statement.properties.length > 0 && (
+          <div className="card">
+            <div className="stmt-summary">
+              {summary.map((s) => (
+                <div className="stmt-metric" key={s.label}>
+                  {s.label}
+                  <b>{loading ? '—' : s.value}</b>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Rent in</th>
+                  <th>Expenses</th>
+                  <th>Net</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {statement.properties.map((p) => (
+                  <tr key={p.property_id}>
+                    <td>{p.property_name}</td>
+                    <td className="mono">{formatMoney(p.rent_collected)}</td>
+                    <td className="mono">{formatMoney(p.expenses)}</td>
+                    <td className="mono">{formatMoney(p.net_payout)}</td>
+                    <td>
+                      {/* PDF generation isn't built yet — placeholder until that's wired up. */}
+                      <a href="#" style={{ fontSize: 12, color: 'var(--brass-deep)', fontWeight: 600 }}>
+                        Download PDF
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {statement.unattributed_expenses > 0 && (
+              <div className="stmt-footnote">
+                Includes {formatMoney(statement.unattributed_expenses)} in expenses not tied to a specific property,
+                counted in the total above but not in any property's row.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
