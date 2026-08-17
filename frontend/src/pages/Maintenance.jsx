@@ -23,6 +23,30 @@ const COLUMNS = [
 // named low/mid/high (from the original mockup), so this bridges the two.
 const PRIORITY_DOT_CLASS = { low: 'low', medium: 'mid', high: 'high' }
 
+// AI urgency/trade values are stored as their raw classifier tokens
+// (high/medium/low, plumbing/electrical/…); these map them to the
+// "⚡ Urgent · Plumbing" labels from the original mockup.
+const AI_URGENCY_LABELS = { high: 'Urgent', medium: 'Moderate', low: 'Routine' }
+const AI_TRADE_LABELS = {
+  plumbing: 'Plumbing',
+  electrical: 'Electrical',
+  hvac: 'HVAC',
+  appliance: 'Appliance',
+  structural: 'Structural',
+  pest_control: 'Pest control',
+  locksmith: 'Locksmith',
+  general: 'General',
+}
+
+function AiTag({ ticket }) {
+  if (ticket.ai_classification_status !== 'success') return null
+  return (
+    <div className="ai-tag" title={ticket.ai_reasoning || undefined}>
+      ⚡ {AI_URGENCY_LABELS[ticket.ai_urgency] || ticket.ai_urgency} · {AI_TRADE_LABELS[ticket.ai_trade] || ticket.ai_trade}
+    </div>
+  )
+}
+
 function formatTime(value) {
   return new Date(value).toLocaleString(undefined, {
     month: 'short',
@@ -182,6 +206,7 @@ function Maintenance() {
                         {t.property_name} · {t.unit_number}
                         {t.tenant_name ? ` · ${t.tenant_name}` : ''}
                       </div>
+                      <AiTag ticket={t} />
 
                       <div className="ticket-actions">
                         {col.status === 'new' && (
@@ -244,6 +269,12 @@ function Maintenance() {
                 {threadData.tenant_name ? ` · ${threadData.tenant_name}` : ''}
               </p>
               {threadData.description && <p className="ticket-thread-description">{threadData.description}</p>}
+              {threadData.ai_classification_status === 'success' && (
+                <p className="ticket-thread-ai-note">
+                  ⚡ AI read: {AI_URGENCY_LABELS[threadData.ai_urgency] || threadData.ai_urgency} ·{' '}
+                  {AI_TRADE_LABELS[threadData.ai_trade] || threadData.ai_trade} — {threadData.ai_reasoning}
+                </p>
+              )}
 
               <div className="ticket-thread-body" ref={threadBodyRef}>
                 {threadData.comments.length === 0 && (

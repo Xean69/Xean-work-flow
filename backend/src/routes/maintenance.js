@@ -3,6 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseMaintenanceBody, parseMessageBody } from "../utils/validate.js";
+import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 
 const router = Router();
 
@@ -67,7 +68,19 @@ router.post(
        RETURNING *`,
       [req.businessId, data.unit_id, data.tenant_id, data.title, data.description, data.priority]
     );
-    res.status(201).json(rows[0]);
+    const ticket = rows[0];
+
+    // Classification runs once, right here on creation — never on a later
+    // view or edit — to keep API costs down.
+    const result = await classifyMaintenanceRequest(ticket.title, ticket.description);
+    const { rows: updated } = await pool.query(
+      `UPDATE maintenance_requests
+       SET ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
+       WHERE id = $5
+       RETURNING *`,
+      [result.urgency, result.trade, result.reasoning, result.status, ticket.id]
+    );
+    res.status(201).json(updated[0]);
   })
 );
 

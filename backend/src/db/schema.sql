@@ -395,3 +395,32 @@ BEGIN
       CHECK (extraction_status IN ('not_run', 'success', 'failed', 'unsupported', 'manual'));
   END IF;
 END $$;
+
+-- AI maintenance triage: urgency/trade classification pulled from the
+-- title+description via the Anthropic API the moment a ticket is created,
+-- from either the manager dashboard or the tenant portal. Deliberately
+-- alongside the existing manual `priority` column, never replacing it —
+-- the manager sets priority themselves and can see the AI's read next to
+-- it. Runs once, at creation, never on a later view or edit (see
+-- ai_classification_status: PUT /:id never touches these columns).
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS ai_urgency TEXT;
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS ai_trade TEXT;
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS ai_reasoning TEXT;
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS ai_classification_status TEXT NOT NULL DEFAULT 'not_run';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_requests_ai_urgency_check') THEN
+    ALTER TABLE maintenance_requests ADD CONSTRAINT maintenance_requests_ai_urgency_check
+      CHECK (ai_urgency IS NULL OR ai_urgency IN ('high', 'medium', 'low'));
+  END IF;
+  -- Mirrors the TRADES list in services/maintenanceTriage.js.
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_requests_ai_trade_check') THEN
+    ALTER TABLE maintenance_requests ADD CONSTRAINT maintenance_requests_ai_trade_check
+      CHECK (ai_trade IS NULL OR ai_trade IN ('plumbing', 'electrical', 'hvac', 'appliance', 'structural', 'pest_control', 'locksmith', 'general'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_requests_ai_classification_status_check') THEN
+    ALTER TABLE maintenance_requests ADD CONSTRAINT maintenance_requests_ai_classification_status_check
+      CHECK (ai_classification_status IN ('not_run', 'success', 'failed'));
+  END IF;
+END $$;

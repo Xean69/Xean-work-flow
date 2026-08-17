@@ -7,6 +7,20 @@ const STATUS_META = {
   resolved: { label: 'Resolved', variant: 'green' },
 }
 
+// Same mapping as the dashboard's Maintenance.jsx — raw classifier tokens
+// to the "⚡ Urgent · Plumbing" mockup labels.
+const AI_URGENCY_LABELS = { high: 'Urgent', medium: 'Moderate', low: 'Routine' }
+const AI_TRADE_LABELS = {
+  plumbing: 'Plumbing',
+  electrical: 'Electrical',
+  hvac: 'HVAC',
+  appliance: 'Appliance',
+  structural: 'Structural',
+  pest_control: 'Pest control',
+  locksmith: 'Locksmith',
+  general: 'General',
+}
+
 function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -183,6 +197,11 @@ function Repairs() {
               <span className={`portal-badge portal-badge-${status.variant}`}>{status.label}</span>
             </div>
             {r.description && <p style={{ marginTop: 6 }}>{r.description}</p>}
+            {r.ai_classification_status === 'success' && (
+              <div className="portal-ai-tag">
+                ⚡ {AI_URGENCY_LABELS[r.ai_urgency] || r.ai_urgency} · {AI_TRADE_LABELS[r.ai_trade] || r.ai_trade}
+              </div>
+            )}
             <p style={{ marginTop: 8, fontSize: 11.5 }}>Submitted {formatDate(r.created_at)}</p>
 
             <button className="portal-ticket-toggle" onClick={() => toggleThread(r)}>

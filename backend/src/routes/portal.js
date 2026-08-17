@@ -6,6 +6,7 @@ import { ApiError } from "../utils/errors.js";
 import { verifyPassword, requireTenantAuth } from "../utils/auth.js";
 import { UPLOADS_DIR } from "../utils/upload.js";
 import { parsePortalRepairBody, parseMessageBody } from "../utils/validate.js";
+import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 
 const router = Router();
 
@@ -106,6 +107,7 @@ router.get(
     const { rows } = await pool.query(
       `SELECT
          m.id, m.title, m.description, m.status, m.priority, m.created_at, m.resolved_at,
+         m.ai_urgency, m.ai_trade, m.ai_reasoning, m.ai_classification_status,
          EXISTS (
            SELECT 1 FROM maintenance_comments c
            WHERE c.request_id = m.id
@@ -132,14 +134,35 @@ router.post(
       req.tenantId,
     ]);
     if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+    // units has no business_id of its own — it hangs off properties, which
+    // does. (Pre-existing bug found while wiring this up: this INSERT never
+    // set business_id before, and the column is NOT NULL — every portal
+    // repair submission was failing outright. Fixed here as part of the
+    // same change, since triage can't be tested through the portal without it.)
+    const { rows: businessRows } = await pool.query(
+      `SELECT p.business_id FROM units u JOIN properties p ON p.id = u.property_id WHERE u.id = $1`,
+      [tenantRows[0].unit_id]
+    );
 
     const { rows } = await pool.query(
-      `INSERT INTO maintenance_requests (unit_id, tenant_id, title, description, status, priority)
-       VALUES ($1, $2, $3, $4, 'new', $5)
+      `INSERT INTO maintenance_requests (business_id, unit_id, tenant_id, title, description, status, priority)
+       VALUES ($1, $2, $3, $4, $5, 'new', $6)
        RETURNING id, title, description, status, priority, created_at, resolved_at`,
-      [tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
+      [businessRows[0]?.business_id, tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
     );
-    res.status(201).json(rows[0]);
+    const ticket = rows[0];
+
+    // Same classification pass as the dashboard's create route — runs once,
+    // right here, regardless of which side opened the ticket.
+    const result = await classifyMaintenanceRequest(ticket.title, ticket.description);
+    const { rows: updated } = await pool.query(
+      `UPDATE maintenance_requests
+       SET ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
+       WHERE id = $5
+       RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status`,
+      [result.urgency, result.trade, result.reasoning, result.status, ticket.id]
+    );
+    res.status(201).json(updated[0]);
   })
 );
 
@@ -151,7 +174,8 @@ router.get(
   requireTenantAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT id, title, description, status, priority, created_at, resolved_at
+      `SELECT id, title, description, status, priority, created_at, resolved_at,
+              ai_urgency, ai_trade, ai_reasoning, ai_classification_status
        FROM maintenance_requests
        WHERE id = $1 AND tenant_id = $2`,
       [req.params.id, req.tenantId]

@@ -70,6 +70,33 @@
   background: var(--green);
 }
 
+.ai-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 9px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  background: var(--parchment);
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: var(--brass-deep);
+  cursor: default;
+}
+
+.ticket-thread-ai-note {
+  font-size: 12px;
+  color: var(--brass-deep);
+  background: var(--parchment);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
 .ticket-title-link {
   font-size: 13px;
   font-weight: 600;

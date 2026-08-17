@@ -324,6 +324,23 @@ body {
   color: var(--red);
 }
 
+/* Same "⚡ Urgent · Plumbing" AI classification tag as the dashboard's
+   .ai-tag (Maintenance.css), restyled with the portal's rounder corners. */
+.portal-ai-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  background: var(--parchment);
+  border: 1px solid var(--line);
+  padding: 4px 9px;
+  border-radius: 8px;
+  color: var(--brass-deep);
+}
+
 /* Chat (Messages screen) */
 .portal-chat {
   display: flex;
