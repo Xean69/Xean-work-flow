@@ -269,3 +269,23 @@ export function getRecentActivity() {
 export function updateDocumentStatus(id, status) {
   return request(`/documents/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
 }
+
+export function getComplianceChecks() {
+  return request("/compliance-checks");
+}
+
+export function createComplianceCheck(data) {
+  return request("/compliance-checks", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateComplianceCheck(id, data) {
+  return request(`/compliance-checks/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function updateComplianceCheckStatus(id, status) {
+  return request(`/compliance-checks/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
+}
+
+export function deleteComplianceCheck(id) {
+  return request(`/compliance-checks/${id}`, { method: "DELETE" });
+}

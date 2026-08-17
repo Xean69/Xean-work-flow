@@ -352,3 +352,21 @@ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
+
+-- Manual compliance tracking for now — no AI document-checking yet, so
+-- these are entered by hand. clause_reference stays optional (a check
+-- doesn't always cite one specific bylaw/RTA section).
+CREATE TABLE IF NOT EXISTS compliance_checks (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  clause_reference TEXT,
+  severity TEXT NOT NULL CHECK (severity IN ('high', 'medium', 'low')),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_compliance_checks_business_id ON compliance_checks(business_id);
+CREATE INDEX IF NOT EXISTS idx_compliance_checks_property_id ON compliance_checks(property_id);

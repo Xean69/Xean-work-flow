@@ -21,6 +21,7 @@ import teamRouter from "./routes/team.js";
 import ownerStatementsRouter from "./routes/ownerStatements.js";
 import strLicensesRouter from "./routes/strLicenses.js";
 import activityRouter from "./routes/activity.js";
+import complianceChecksRouter from "./routes/complianceChecks.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -86,6 +87,9 @@ app.use("/api/str-licenses", requireAdminAuth, staffOnly, strLicensesRouter);
 // gets surfaced somewhere an accountant can reach (it isn't yet; the
 // Dashboard page itself is owner/manager only).
 app.use("/api/activity", requireAdminAuth, anyRole, activityRouter);
+// Owner/manager only — compliance isn't financial, so it's not part of
+// the accountant's read-only allowance the way expenses/documents are.
+app.use("/api/compliance-checks", requireAdminAuth, staffOnly, complianceChecksRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

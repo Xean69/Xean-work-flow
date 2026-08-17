@@ -291,3 +291,27 @@ export function parseStrLicenseBody(body) {
     issued_date: body.issued_date,
   };
 }
+
+const COMPLIANCE_SEVERITIES = ["high", "medium", "low"];
+
+export function parseComplianceCheckBody(body) {
+  if (!COMPLIANCE_SEVERITIES.includes(body.severity)) {
+    throw new ApiError(400, `severity must be one of: ${COMPLIANCE_SEVERITIES.join(", ")}`);
+  }
+  return {
+    property_id: requireNumber(body.property_id, "property_id", { min: 1 }),
+    title: requireString(body.title, "title"),
+    description: optionalString(body.description),
+    clause_reference: optionalString(body.clause_reference),
+    severity: body.severity,
+  };
+}
+
+const COMPLIANCE_STATUSES = ["open", "resolved"];
+
+export function parseComplianceStatusBody(body) {
+  if (!COMPLIANCE_STATUSES.includes(body.status)) {
+    throw new ApiError(400, `status must be one of: ${COMPLIANCE_STATUSES.join(", ")}`);
+  }
+  return { status: body.status };
+}
