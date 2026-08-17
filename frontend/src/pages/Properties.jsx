@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getProperties, createProperty } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import PropertyCard from '../components/PropertyCard.jsx'
@@ -48,6 +49,9 @@ function Properties() {
             : `${properties.length} ${properties.length === 1 ? 'property' : 'properties'} · ${totalUnits} units · ${occupancyPct}% occupied`
         }
       >
+        <Link to="/import" className="btn btn-ghost">
+          Bulk import
+        </Link>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>
           + Add property
         </button>

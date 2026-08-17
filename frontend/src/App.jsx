@@ -15,6 +15,7 @@ import Signup from './pages/Signup.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Properties from './pages/Properties.jsx'
 import PropertyDetail from './pages/PropertyDetail.jsx'
+import BulkImport from './pages/BulkImport.jsx'
 import Tenants from './pages/Tenants.jsx'
 import GuestStays from './pages/GuestStays.jsx'
 import Maintenance from './pages/Maintenance.jsx'
@@ -55,6 +56,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} />
+        <Route path="/import" element={<BulkImport />} />
         <Route path="/tenants" element={<Tenants />} />
         <Route path="/stays" element={<GuestStays />} />
         <Route path="/maintenance" element={<Maintenance />} />

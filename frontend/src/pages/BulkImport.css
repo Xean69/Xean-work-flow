@@ -1,0 +1,136 @@
+.import-type-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.import-type-tab {
+  padding: 9px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--slate);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.import-type-tab.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.import-setup {
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+.import-desc {
+  font-size: 13px;
+  color: var(--slate);
+  margin-bottom: 16px;
+}
+.import-setup-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.import-setup-row:last-of-type {
+  margin-bottom: 0;
+}
+.import-setup-row input[type='file'] {
+  font-size: 13px;
+  font-family: var(--font-sans);
+}
+
+.import-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--slate);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.import-review-head strong {
+  color: var(--ink);
+  font-family: var(--font-mono);
+}
+.import-review-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.import-table-wrap {
+  overflow-x: auto;
+  padding: 0;
+  margin-bottom: 18px;
+}
+.import-table {
+  min-width: 100%;
+}
+.import-table th {
+  white-space: nowrap;
+}
+.import-table td {
+  vertical-align: top;
+  padding: 8px 10px;
+}
+.import-row-error {
+  background: var(--red-bg);
+}
+.import-cell-input {
+  width: 100%;
+  min-width: 100px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--ink);
+}
+.import-row-error .import-cell-input {
+  border-color: var(--red);
+}
+.import-cell-input:focus {
+  outline: 2px solid var(--brass);
+  outline-offset: -1px;
+}
+.import-issues-cell {
+  min-width: 220px;
+}
+.import-error-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11.5px;
+  color: var(--red);
+  line-height: 1.5;
+}
+
+.import-commit-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.import-summary {
+  padding: 24px 26px;
+}
+.import-summary h3 {
+  margin-bottom: 10px;
+}
+.import-summary p {
+  font-size: 13.5px;
+  color: var(--slate);
+  margin-bottom: 8px;
+}
+.import-summary-skipped-label {
+  font-weight: 600;
+  color: var(--ink) !important;
+  margin-top: 14px !important;
+}
+.import-summary .import-error-list {
+  margin-bottom: 18px;
+}

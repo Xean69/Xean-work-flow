@@ -1,13 +1,16 @@
 import { ApiError } from "./errors.js";
 
-function requireString(value, field) {
+// Exported (not just used internally) so the bulk-import validators in
+// importValidate.js can reuse the exact same field-level rules and error
+// messages as every manual form, instead of a second, drifting copy.
+export function requireString(value, field) {
   if (typeof value !== "string" || value.trim() === "") {
     throw new ApiError(400, `${field} is required`);
   }
   return value.trim();
 }
 
-function requireNumber(value, field, { min = -Infinity } = {}) {
+export function requireNumber(value, field, { min = -Infinity } = {}) {
   const num = Number(value);
   if (Number.isNaN(num) || num < min) {
     throw new ApiError(400, `${field} must be a number${min === -Infinity ? "" : ` >= ${min}`}`);
@@ -52,13 +55,13 @@ export function parsePropertyBody(body) {
   };
 }
 
-function optionalString(value) {
+export function optionalString(value) {
   if (value === undefined || value === null) return null;
   const trimmed = String(value).trim();
   return trimmed === "" ? null : trimmed;
 }
 
-function requireDate(value, field) {
+export function requireDate(value, field) {
   if (!value || Number.isNaN(new Date(value).getTime())) {
     throw new ApiError(400, `${field} must be a valid date`);
   }
@@ -83,7 +86,7 @@ export function parseTenantBody(body) {
   };
 }
 
-function optionalNumber(value, field) {
+export function optionalNumber(value, field) {
   if (value === undefined || value === null || value === "") return null;
   const num = Number(value);
   if (Number.isNaN(num)) {

@@ -209,3 +209,19 @@ export function updateGuideSection(id, data) {
 export function deleteGuideSection(id) {
   return request(`/guide-sections/${id}`, { method: "DELETE" });
 }
+
+export function previewPropertyImport(formData) {
+  return uploadRequest("/import/properties/preview", formData);
+}
+
+export function commitPropertyImport(rows) {
+  return request("/import/properties/commit", { method: "POST", body: JSON.stringify({ rows }) });
+}
+
+export function previewTenantImport(formData) {
+  return uploadRequest("/import/tenants/preview", formData);
+}
+
+export function commitTenantImport(rows) {
+  return request("/import/tenants/commit", { method: "POST", body: JSON.stringify({ rows }) });
+}
