@@ -74,7 +74,7 @@ function OwnerStatements() {
         )}
 
         {!loadError && statement && statement.properties.length > 0 && (
-          <div className="card">
+          <div className="card table-scroll">
             <div className="stmt-summary">
               {summary.map((s) => (
                 <div className="stmt-metric" key={s.label}>

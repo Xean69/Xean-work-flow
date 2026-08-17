@@ -139,9 +139,23 @@
   gap: 10px;
   flex-shrink: 0;
 }
+@media (max-width: 860px) {
+  .page-header {
+    padding: 16px;
+    flex-wrap: wrap;
+  }
+  .page-header-actions {
+    flex-wrap: wrap;
+  }
+}
 
 .content {
   padding: 28px 32px 60px 32px;
+}
+@media (max-width: 860px) {
+  .content {
+    padding: 18px 16px 40px 16px;
+  }
 }
 
 /* ---- Stat cards ---- */
@@ -192,6 +206,16 @@
 .stat-sub.warn {
   color: var(--amber);
 }
+@media (max-width: 860px) {
+  .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .stat-row {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ---- Section headers ---- */
 .section-head {
@@ -219,6 +243,12 @@
 }
 
 /* ---- Table ---- */
+/* Data tables aren't rebuilt for mobile — they scroll horizontally within
+   their own card instead of forcing the whole page to scroll sideways.
+   Add this class alongside .card on whatever div directly wraps a <table>. */
+.table-scroll {
+  overflow-x: auto;
+}
 table {
   width: 100%;
   border-collapse: collapse;
@@ -267,6 +297,16 @@ tr:last-child td {
   gap: 8px;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--line);
+}
+@media (max-width: 640px) {
+  /* Same horizontal-scroll-in-place pattern as .table-scroll — the tab
+     strip scrolls within itself instead of forcing the whole page wide. */
+  .subtabs {
+    overflow-x: auto;
+  }
+  .subtab {
+    flex-shrink: 0;
+  }
 }
 .subtab {
   display: flex;
@@ -380,6 +420,11 @@ tr:last-child td {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
+}
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 .form-error {
   color: var(--red);

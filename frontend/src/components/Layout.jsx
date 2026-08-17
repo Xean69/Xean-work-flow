@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import { getMe, logout } from '../api/client.js'
 import { canAccessPath, defaultRouteForRole } from '../utils/permissions.js'
+import './Layout.css'
 
 // Guards every dashboard route: fetches the logged-in admin once here (not
 // on the /login page) and redirects to /login if there isn't one. Mirrors
@@ -18,6 +19,9 @@ import { canAccessPath, defaultRouteForRole } from '../utils/permissions.js'
 function Layout() {
   const [admin, setAdmin] = useState(null)
   const [loading, setLoading] = useState(true)
+  // Sidebar is always visible at desktop width; below the mobile breakpoint
+  // (see Sidebar.css) it becomes an off-canvas drawer that this controls.
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -35,6 +39,12 @@ function Layout() {
     }
   }, [admin, location.pathname])
 
+  // Close the mobile drawer on every navigation — otherwise it stays open
+  // over the page you just picked.
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
+
   async function handleLogout() {
     await logout()
     navigate('/login', { replace: true })
@@ -50,8 +60,26 @@ function Layout() {
 
   return (
     <div className="shell">
-      <Sidebar admin={admin} onLogout={handleLogout} />
-      <div className="main">{allowed && <Outlet context={{ admin }} />}</div>
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
+      <Sidebar admin={admin} onLogout={handleLogout} open={sidebarOpen} />
+      <div className="main">
+        <div className="mobile-topbar">
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <div className="mobile-topbar-brand">
+            Xean <span>Intake</span>
+          </div>
+        </div>
+        {allowed && <Outlet context={{ admin }} />}
+      </div>
     </div>
   )
 }

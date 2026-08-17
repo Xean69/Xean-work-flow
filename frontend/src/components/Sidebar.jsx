@@ -180,11 +180,11 @@ function NavItems({ items, role }) {
     ))
 }
 
-function Sidebar({ admin, onLogout }) {
+function Sidebar({ admin, onLogout, open }) {
   const role = admin?.role
 
   return (
-    <aside className="sidebar">
+    <aside className={'sidebar' + (open ? ' sidebar-open' : '')}>
       <div className="brand">
         <div className="brand-mark">X</div>
         <div className="brand-name">

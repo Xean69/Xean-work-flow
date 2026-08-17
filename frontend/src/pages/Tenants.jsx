@@ -129,7 +129,7 @@ function Tenants() {
         )}
 
         {rows.length > 0 && (
-          <div className="card">
+          <div className="card table-scroll">
             <table>
               <thead>
                 <tr>

@@ -112,7 +112,7 @@ function Team() {
         {actionError && <p className="form-error">{actionError}</p>}
 
         {!loading && team.length > 0 && (
-          <div className="card">
+          <div className="card table-scroll">
             <table>
               <thead>
                 <tr>

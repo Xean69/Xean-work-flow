@@ -1,0 +1,59 @@
+/* Hidden entirely at desktop width — the sidebar is always visible there,
+   so there's nothing for this bar or the backdrop to do. See Sidebar.css
+   for the matching drawer behavior below the same breakpoint. */
+.mobile-topbar {
+  display: none;
+}
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--ink);
+    color: #f1eee7;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+  }
+  .mobile-topbar-brand {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .mobile-topbar-brand span {
+    color: var(--brass-light);
+  }
+  .mobile-menu-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: transparent;
+    color: #f1eee7;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .mobile-menu-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(27, 36, 48, 0.5);
+    z-index: 100;
+  }
+}

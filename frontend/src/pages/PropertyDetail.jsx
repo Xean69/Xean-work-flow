@@ -128,7 +128,7 @@ function PropertyDetail() {
             <p>Add this property's first unit to start tracking occupancy.</p>
           </div>
         ) : (
-          <div className="card">
+          <div className="card table-scroll">
             <table>
               <thead>
                 <tr>
