@@ -12,6 +12,7 @@ import {
 import PageHeader from '../components/PageHeader.jsx'
 import DocumentForm from '../components/DocumentForm.jsx'
 import Badge from '../components/Badge.jsx'
+import ExtractedData from '../components/ExtractedData.jsx'
 import { canWrite } from '../utils/permissions.js'
 import './Documents.css'
 
@@ -187,6 +188,7 @@ function Documents() {
                     {d.property_name ? ` · ${d.property_name}` : ''}
                     {d.tenant_name ? ` · ${d.tenant_name}` : ''}
                   </div>
+                  <ExtractedData doc={d} canWrite={!readOnly} onChange={load} />
                 </div>
                 <div className="doc-actions">
                   <label className="doc-reviewed-toggle">

@@ -10,6 +10,7 @@
     "create-admin": "node src/db/createAdmin.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
     "bcryptjs": "^3.0.3",
     "connect-pg-simple": "^10.0.0",
     "csv-parse": "^7.0.2",

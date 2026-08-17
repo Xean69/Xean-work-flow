@@ -162,6 +162,50 @@ export function parseDocumentStatusBody(body) {
   return { status: body.status };
 }
 
+// Field whitelist per extractable doc_type — mirrors the tool schemas in
+// services/extraction.js so manual entry (when AI extraction fails, is
+// unsupported, or just needs a correction) can only set the same fields the
+// AI would have.
+const EXTRACTED_FIELD_SCHEMAS = {
+  lease: ["tenant_name", "rent_amount", "deposit_amount", "lease_start_date", "lease_end_date"],
+  invoice: ["vendor_name", "amount", "due_date"],
+  inspection: ["deductions", "total_amount"],
+};
+
+const NUMERIC_EXTRACTED_FIELDS = new Set(["rent_amount", "deposit_amount", "amount", "total_amount"]);
+
+export function parseExtractedDataBody(docType, body) {
+  const fields = EXTRACTED_FIELD_SCHEMAS[docType];
+  if (!fields) {
+    throw new ApiError(400, "This document type doesn't support extracted data");
+  }
+
+  const data = {};
+  for (const field of fields) {
+    if (field === "deductions") {
+      const value = body.deductions;
+      if (value !== undefined && !Array.isArray(value)) {
+        throw new ApiError(400, "deductions must be an array");
+      }
+      data.deductions = Array.isArray(value)
+        ? value.map((item) => ({
+            description: requireString(item.description, "deductions[].description"),
+            amount: optionalNumber(item.amount, "deductions[].amount"),
+          }))
+        : [];
+      continue;
+    }
+
+    const value = body[field];
+    if (value === undefined || value === null || value === "") {
+      data[field] = null;
+      continue;
+    }
+    data[field] = NUMERIC_EXTRACTED_FIELDS.has(field) ? optionalNumber(value, field) : String(value).trim();
+  }
+  return data;
+}
+
 const PLATFORMS = ["airbnb", "vrbo", "booking", "direct"];
 const TURNOVER_STATUSES = ["checkout_done", "inspection_done", "cleaning_done", "checkin_ready"];
 

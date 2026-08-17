@@ -142,6 +142,14 @@ export function getDocumentUrl(id) {
   return `${BASE_URL}/documents/${id}/download`;
 }
 
+export function extractDocument(id) {
+  return request(`/documents/${id}/extract`, { method: "POST" });
+}
+
+export function updateExtractedData(id, data) {
+  return request(`/documents/${id}/extracted-data`, { method: "PUT", body: JSON.stringify(data) });
+}
+
 export function getStays() {
   return request("/stays");
 }

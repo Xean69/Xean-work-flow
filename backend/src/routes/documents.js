@@ -3,9 +3,10 @@ import path from "node:path";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseDocumentBody, parseDocumentStatusBody } from "../utils/validate.js";
+import { parseDocumentBody, parseDocumentStatusBody, parseExtractedDataBody } from "../utils/validate.js";
 import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
+import { extractDocumentData, isExtractableDocType } from "../services/extraction.js";
 
 const router = Router();
 
@@ -76,7 +77,86 @@ router.post(
        RETURNING *`,
       [req.businessId, data.property_id, data.tenant_id, req.file.originalname, req.file.filename, data.doc_type, data.notes]
     );
-    res.status(201).json(rows[0]);
+    const doc = rows[0];
+
+    // Extraction runs once, right here on upload — never on a later view —
+    // to keep API costs down. doc_types with no extractor (application,
+    // other) are marked unsupported without ever calling the API.
+    if (isExtractableDocType(doc.doc_type)) {
+      const result = await extractDocumentData(path.join(UPLOADS_DIR, doc.file_path), doc.doc_type);
+      const { rows: updated } = await pool.query(
+        `UPDATE documents
+         SET extracted_data = $1, extraction_confidence = $2, extraction_status = $3, extracted_at = now()
+         WHERE id = $4
+         RETURNING *`,
+        [result.data, result.confidence, result.status, doc.id]
+      );
+      return res.status(201).json(updated[0]);
+    }
+
+    const { rows: updated } = await pool.query(
+      `UPDATE documents SET extraction_status = 'unsupported' WHERE id = $1 RETURNING *`,
+      [doc.id]
+    );
+    res.status(201).json(updated[0]);
+  })
+);
+
+// Re-runs extraction on demand (first extraction for older rows that
+// predate this feature, or a deliberate re-try). Staff-only, same as
+// upload — accountants can view extracted data but can't trigger a paid
+// API call.
+router.post(
+  "/:id/extract",
+  staffOnly,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      "SELECT * FROM documents WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
+    const doc = rows[0];
+    if (!doc) throw new ApiError(404, "Document not found");
+    if (!isExtractableDocType(doc.doc_type)) {
+      throw new ApiError(400, "This document type doesn't support AI extraction");
+    }
+
+    const result = await extractDocumentData(path.join(UPLOADS_DIR, doc.file_path), doc.doc_type);
+    const { rows: updated } = await pool.query(
+      `UPDATE documents
+       SET extracted_data = $1, extraction_confidence = $2, extraction_status = $3, extracted_at = now()
+       WHERE id = $4 AND business_id = $5
+       RETURNING *`,
+      [result.data, result.confidence, result.status, doc.id, req.businessId]
+    );
+    res.json(updated[0]);
+  })
+);
+
+// Manual fallback for when extraction failed, is unsupported, or just needs
+// a correction — same staff-only gate as upload/re-extract. Overwrites
+// extracted_data wholesale and clears the confidence signal, since a human
+// entry isn't "high" or "low" confidence, it's just entered.
+router.put(
+  "/:id/extracted-data",
+  staffOnly,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      "SELECT * FROM documents WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
+    const doc = rows[0];
+    if (!doc) throw new ApiError(404, "Document not found");
+
+    const data = parseExtractedDataBody(doc.doc_type, req.body);
+
+    const { rows: updated } = await pool.query(
+      `UPDATE documents
+       SET extracted_data = $1, extraction_confidence = NULL, extraction_status = 'manual', extracted_at = now()
+       WHERE id = $2 AND business_id = $3
+       RETURNING *`,
+      [data, doc.id, req.businessId]
+    );
+    res.json(updated[0]);
   })
 );
 

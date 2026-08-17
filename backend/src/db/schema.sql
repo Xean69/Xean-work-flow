@@ -370,3 +370,28 @@ CREATE TABLE IF NOT EXISTS compliance_checks (
 
 CREATE INDEX IF NOT EXISTS idx_compliance_checks_business_id ON compliance_checks(business_id);
 CREATE INDEX IF NOT EXISTS idx_compliance_checks_property_id ON compliance_checks(property_id);
+
+-- AI document extraction: structured fields pulled from lease/invoice/
+-- inspection uploads via the Anthropic API, plus a confidence signal so the
+-- UI can flag anything ambiguous rather than silently guessing. Extraction
+-- runs once, on upload (or on a manual re-extract), never on every view —
+-- extraction_status distinguishes "never attempted" from "tried and
+-- failed" from "the user typed it in by hand" from "AI succeeded". Doc
+-- types with no extractor (application, other) get 'unsupported' and never
+-- call the API at all.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS extracted_data JSONB;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS extraction_confidence TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS extraction_status TEXT NOT NULL DEFAULT 'not_run';
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS extracted_at TIMESTAMPTZ;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'documents_extraction_confidence_check') THEN
+    ALTER TABLE documents ADD CONSTRAINT documents_extraction_confidence_check
+      CHECK (extraction_confidence IS NULL OR extraction_confidence IN ('high', 'low'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'documents_extraction_status_check') THEN
+    ALTER TABLE documents ADD CONSTRAINT documents_extraction_status_check
+      CHECK (extraction_status IN ('not_run', 'success', 'failed', 'unsupported', 'manual'));
+  END IF;
+END $$;
