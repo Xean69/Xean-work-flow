@@ -5,8 +5,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseExpenseBody } from "../utils/validate.js";
 import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
+import { requireRole } from "../utils/auth.js";
 
 const router = Router();
+
+// Mounted for owner/manager/accountant alike (see index.js) so accountants
+// can read expenses — but creating, editing, and deleting are staff-only,
+// applied per-route here rather than at the mount level.
+const staffOnly = requireRole("owner", "manager");
 
 async function assertPropertyInBusiness(propertyId, businessId) {
   if (propertyId == null) return;
@@ -50,6 +56,7 @@ router.get(
 // works fine without it.
 router.post(
   "/",
+  staffOnly,
   upload.single("receipt"),
   asyncHandler(async (req, res) => {
     let data;
@@ -86,6 +93,7 @@ router.post(
 // is sent, whatever receipt was already on the expense is left alone.
 router.put(
   "/:id",
+  staffOnly,
   upload.single("receipt"),
   asyncHandler(async (req, res) => {
     const { rows: existingRows } = await pool.query(
@@ -158,6 +166,7 @@ router.get(
 
 router.delete(
   "/:id",
+  staffOnly,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       "DELETE FROM expenses WHERE id = $1 AND business_id = $2 RETURNING receipt_file_path",

@@ -35,6 +35,28 @@ export function requireAdminPassword(value) {
   return value;
 }
 
+// Invite-only roles — 'owner' is never assignable through the team API.
+// There's always exactly one owner per business, created at signup (see
+// schema.sql's idx_admins_one_owner_per_business).
+const INVITABLE_ROLES = ["manager", "accountant"];
+
+export function parseInviteBody(body) {
+  if (!INVITABLE_ROLES.includes(body.role)) {
+    throw new ApiError(400, `role must be one of: ${INVITABLE_ROLES.join(", ")}`);
+  }
+  return {
+    email: requireString(body.email, "email"),
+    role: body.role,
+  };
+}
+
+export function parseRoleChangeBody(body) {
+  if (!INVITABLE_ROLES.includes(body.role)) {
+    throw new ApiError(400, `role must be one of: ${INVITABLE_ROLES.join(", ")}`);
+  }
+  return { role: body.role };
+}
+
 // Used by the business signup flow — creates a business and its first
 // admin account together.
 export function parseSignupBody(body) {

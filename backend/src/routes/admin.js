@@ -23,7 +23,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.password_hash, a.business_id, b.business_name
+      `SELECT a.id, a.email, a.password_hash, a.role, a.business_id, b.business_name
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE lower(a.email) = lower($1)`,
@@ -42,6 +42,7 @@ router.post(
     res.json({
       id: admin.id,
       email: admin.email,
+      role: admin.role,
       business_id: admin.business_id,
       business_name: admin.business_name,
     });
@@ -59,7 +60,7 @@ router.get(
   requireAdminAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.business_id, b.business_name
+      `SELECT a.id, a.email, a.role, a.business_id, b.business_name
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,
@@ -92,7 +93,7 @@ router.post(
       const business = businessRows[0];
 
       const { rows: adminRows } = await client.query(
-        "INSERT INTO admins (email, password_hash, business_id) VALUES ($1, $2, $3) RETURNING id, email",
+        "INSERT INTO admins (email, password_hash, business_id, role) VALUES ($1, $2, $3, 'owner') RETURNING id, email, role",
         [data.email, passwordHash, business.id]
       );
       const admin = adminRows[0];
@@ -111,6 +112,7 @@ router.post(
       res.status(201).json({
         id: admin.id,
         email: admin.email,
+        role: admin.role,
         business_id: business.id,
         business_name: business.business_name,
       });

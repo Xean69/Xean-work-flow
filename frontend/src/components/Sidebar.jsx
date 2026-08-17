@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { ROUTE_ROLES, ROLE_LABELS } from '../utils/permissions.js'
 import './Sidebar.css'
 
 const mainNav = [
@@ -146,22 +147,42 @@ const aiToolsNav = [
   },
 ]
 
-function NavItems({ items }) {
-  return items.map((item) => (
-    <NavLink
-      key={item.to}
-      to={item.to}
-      end={item.end}
-      className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
-    >
-      {item.icon}
-      {item.label}
-      {item.badge != null && <span className="nav-badge">{item.badge}</span>}
-    </NavLink>
-  ))
+const teamNav = {
+  to: '/team',
+  label: 'Team',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
+      <path d="M16 4.5a3.2 3.2 0 0 1 0 6.3" />
+      <path d="M18.5 14.3c2.4.6 3.9 2.5 3.9 5.7" />
+    </svg>
+  ),
+}
+
+// Every nav item's visibility is driven by the same ROUTE_ROLES map the
+// backend's role checks mirror — so a role that can't reach a page never
+// even sees a link to it, instead of clicking through to a redirect.
+function NavItems({ items, role }) {
+  return items
+    .filter((item) => ROUTE_ROLES[item.to]?.includes(role))
+    .map((item) => (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={item.end}
+        className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
+      >
+        {item.icon}
+        {item.label}
+        {item.badge != null && <span className="nav-badge">{item.badge}</span>}
+      </NavLink>
+    ))
 }
 
 function Sidebar({ admin, onLogout }) {
+  const role = admin?.role
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -172,12 +193,13 @@ function Sidebar({ admin, onLogout }) {
       </div>
 
       <nav>
-        <NavItems items={mainNav} />
+        <NavItems items={mainNav} role={role} />
 
         <div className="nav-section-label">AI Tools</div>
-        <NavItems items={aiToolsNav} />
+        <NavItems items={aiToolsNav} role={role} />
 
         <div className="nav-section-label">Workspace</div>
+        {role === 'owner' && <NavItems items={[teamNav]} role={role} />}
         <div className="nav-item nav-item-inert">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3.2" />
@@ -193,7 +215,8 @@ function Sidebar({ admin, onLogout }) {
         </div>
         <div className="sidebar-account">
           <strong>{admin?.business_name ?? 'Account'}</strong>
-          {admin?.email ?? ''}
+          <div className="sidebar-email">{admin?.email ?? ''}</div>
+          {role && <span className="sidebar-role-badge">{ROLE_LABELS[role]}</span>}
         </div>
         <button type="button" className="sidebar-logout" onClick={onLogout} title="Log out">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

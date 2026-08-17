@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   getExpenses,
   createExpense,
@@ -12,6 +13,7 @@ import PageHeader from '../components/PageHeader.jsx'
 import StatCard from '../components/StatCard.jsx'
 import Modal from '../components/Modal.jsx'
 import ExpenseForm from '../components/ExpenseForm.jsx'
+import { canWrite } from '../utils/permissions.js'
 import './Expenses.css'
 
 const CATEGORY_LABELS = {
@@ -41,6 +43,9 @@ function isImageReceipt(filePath) {
 }
 
 function Expenses() {
+  const { admin } = useOutletContext()
+  const readOnly = !canWrite(admin.role)
+
   const [expenses, setExpenses] = useState([])
   const [properties, setProperties] = useState([])
   const [unitRows, setUnitRows] = useState([])
@@ -57,10 +62,18 @@ function Expenses() {
     setLoading(true)
     setLoadError('')
     try {
-      const [expenseRows, propRows, units] = await Promise.all([getExpenses(), getProperties(), getTenants()])
-      setExpenses(expenseRows)
-      setProperties(propRows)
-      setUnitRows(units)
+      // Accountants can't reach /api/properties or /api/tenants at all
+      // (403) — the property/unit picker in the create/edit form is the
+      // only thing that needs them, and that form is hidden for
+      // read-only users, so there's nothing to fetch.
+      if (readOnly) {
+        setExpenses(await getExpenses())
+      } else {
+        const [expenseRows, propRows, units] = await Promise.all([getExpenses(), getProperties(), getTenants()])
+        setExpenses(expenseRows)
+        setProperties(propRows)
+        setUnitRows(units)
+      }
     } catch (err) {
       setLoadError(err.message)
     } finally {
@@ -124,9 +137,11 @@ function Expenses() {
   return (
     <div>
       <PageHeader title="Expenses" subtitle="Log a receipt — amount, category, and property, all in one place">
-        <button className="btn btn-primary" onClick={() => setFormState({})}>
-          Upload receipt
-        </button>
+        {!readOnly && (
+          <button className="btn btn-primary" onClick={() => setFormState({})}>
+            Upload receipt
+          </button>
+        )}
       </PageHeader>
 
       <div className="content">
@@ -159,7 +174,7 @@ function Expenses() {
         {!loading && !loadError && expenses.length === 0 && (
           <div className="empty-state card">
             <h3>No expenses yet</h3>
-            <p>Upload your first receipt above to start tracking spending.</p>
+            <p>{readOnly ? 'Nothing has been logged yet.' : 'Upload your first receipt above to start tracking spending.'}</p>
           </div>
         )}
 
@@ -186,14 +201,16 @@ function Expenses() {
                       .filter(Boolean)
                       .join(' · ')}
                   </div>
-                  <div className="exp-actions">
-                    <button className="btn btn-ghost btn-sm" onClick={() => setFormState({ expense: e })}>
-                      Edit
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e)}>
-                      Delete
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="exp-actions">
+                      <button className="btn btn-ghost btn-sm" onClick={() => setFormState({ expense: e })}>
+                        Edit
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e)}>
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

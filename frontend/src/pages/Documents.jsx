@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   getDocuments,
   uploadDocument,
@@ -9,6 +10,7 @@ import {
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import DocumentForm from '../components/DocumentForm.jsx'
+import { canWrite } from '../utils/permissions.js'
 import './Documents.css'
 
 const DOC_TYPE_LABELS = {
@@ -28,6 +30,9 @@ function formatDate(value) {
 }
 
 function Documents() {
+  const { admin } = useOutletContext()
+  const readOnly = !canWrite(admin.role)
+
   const [documents, setDocuments] = useState([])
   const [properties, setProperties] = useState([])
   const [unitRows, setUnitRows] = useState([])
@@ -45,10 +50,18 @@ function Documents() {
     setLoading(true)
     setLoadError('')
     try {
-      const [docs, props, units] = await Promise.all([getDocuments(), getProperties(), getTenants()])
-      setDocuments(docs)
-      setProperties(props)
-      setUnitRows(units)
+      // Accountants can't reach /api/properties or /api/tenants at all
+      // (403) — the property/tenant picker in the upload form is the only
+      // thing that needs them, and uploading is hidden for read-only
+      // users, so there's nothing to fetch.
+      if (readOnly) {
+        setDocuments(await getDocuments())
+      } else {
+        const [docs, props, units] = await Promise.all([getDocuments(), getProperties(), getTenants()])
+        setDocuments(docs)
+        setProperties(props)
+        setUnitRows(units)
+      }
     } catch (err) {
       setLoadError(err.message)
     } finally {
@@ -98,38 +111,39 @@ function Documents() {
       <PageHeader title="Documents" subtitle="Upload a lease, invoice, or inspection report to keep on file" />
 
       <div className="content">
-        {selectedFile ? (
-          <div className="card doc-upload-panel">
-            <DocumentForm
-              file={selectedFile}
-              properties={properties}
-              tenants={tenantOptions}
-              onSubmit={handleUpload}
-              onCancel={() => setSelectedFile(null)}
-            />
-          </div>
-        ) : (
-          <div
-            className={'dropzone' + (dragActive ? ' dropzone-active' : '')}
-            onDragOver={handleDragOver}
-            onDragLeave={() => setDragActive(false)}
-            onDrop={handleDrop}
-          >
-            <div className="dropzone-icon">↑</div>
-            <h3>Drag a file here, or click to upload</h3>
-            <p>PDF, JPG, or PNG — leases, invoices, applications, inspection reports</p>
-            <button type="button" className="btn btn-ghost" onClick={() => fileInputRef.current?.click()}>
-              Browse files
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileInputChange}
-              style={{ display: 'none' }}
-            />
-          </div>
-        )}
+        {!readOnly &&
+          (selectedFile ? (
+            <div className="card doc-upload-panel">
+              <DocumentForm
+                file={selectedFile}
+                properties={properties}
+                tenants={tenantOptions}
+                onSubmit={handleUpload}
+                onCancel={() => setSelectedFile(null)}
+              />
+            </div>
+          ) : (
+            <div
+              className={'dropzone' + (dragActive ? ' dropzone-active' : '')}
+              onDragOver={handleDragOver}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={handleDrop}
+            >
+              <div className="dropzone-icon">↑</div>
+              <h3>Drag a file here, or click to upload</h3>
+              <p>PDF, JPG, or PNG — leases, invoices, applications, inspection reports</p>
+              <button type="button" className="btn btn-ghost" onClick={() => fileInputRef.current?.click()}>
+                Browse files
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileInputChange}
+                style={{ display: 'none' }}
+              />
+            </div>
+          ))}
 
         <div className="section-head">
           <h2>Uploaded documents</h2>
@@ -140,7 +154,7 @@ function Documents() {
         {!loading && !loadError && documents.length === 0 && (
           <div className="empty-state card">
             <h3>No documents yet</h3>
-            <p>Upload your first file above to keep it on record.</p>
+            <p>{readOnly ? 'Nothing has been uploaded yet.' : 'Upload your first file above to keep it on record.'}</p>
           </div>
         )}
 
@@ -159,9 +173,11 @@ function Documents() {
                     {d.tenant_name ? ` · ${d.tenant_name}` : ''}
                   </div>
                 </div>
-                <button className="btn btn-danger btn-sm doc-delete" onClick={() => handleDelete(d)}>
-                  Delete
-                </button>
+                {!readOnly && (
+                  <button className="btn btn-danger btn-sm doc-delete" onClick={() => handleDelete(d)}>
+                    Delete
+                  </button>
+                )}
               </div>
             ))}
           </div>

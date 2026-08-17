@@ -5,8 +5,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseDocumentBody } from "../utils/validate.js";
 import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
+import { requireRole } from "../utils/auth.js";
 
 const router = Router();
+
+// Mounted for owner/manager/accountant alike (see index.js) so accountants
+// can read documents — but uploading and deleting are staff-only, applied
+// per-route here rather than at the mount level.
+const staffOnly = requireRole("owner", "manager");
 
 async function assertPropertyInBusiness(propertyId, businessId) {
   if (propertyId == null) return;
@@ -47,6 +53,7 @@ router.get(
 
 router.post(
   "/",
+  staffOnly,
   upload.single("file"),
   asyncHandler(async (req, res) => {
     if (!req.file) throw new ApiError(400, "file is required");
@@ -97,6 +104,7 @@ router.get(
 
 router.delete(
   "/:id",
+  staffOnly,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       "DELETE FROM documents WHERE id = $1 AND business_id = $2 RETURNING file_path",

@@ -225,3 +225,19 @@ export function previewTenantImport(formData) {
 export function commitTenantImport(rows) {
   return request("/import/tenants/commit", { method: "POST", body: JSON.stringify({ rows }) });
 }
+
+export function getTeam() {
+  return request("/team");
+}
+
+export function inviteTeamMember(email, role) {
+  return request("/team", { method: "POST", body: JSON.stringify({ email, role }) });
+}
+
+export function updateTeamMemberRole(id, role) {
+  return request(`/team/${id}/role`, { method: "PUT", body: JSON.stringify({ role }) });
+}
+
+export function removeTeamMember(id) {
+  return request(`/team/${id}`, { method: "DELETE" });
+}

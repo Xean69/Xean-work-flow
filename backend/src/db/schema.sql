@@ -277,3 +277,34 @@ ALTER TABLE stays ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE scheduled_messages ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE messages ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE property_guides ALTER COLUMN business_id SET NOT NULL;
+
+-- ============================================================================
+-- Team roles
+--
+-- Each business can now have more than one admin login. Every admin has a
+-- role — 'owner', 'manager', or 'accountant' — that's what the backend
+-- authorizes API requests against (see requireRole in utils/auth.js), not
+-- just something the frontend reads to decide what to show.
+-- ============================================================================
+
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS role TEXT;
+
+-- Every admin that existed before roles did was, by definition, the sole
+-- admin of their business — i.e. its owner. Safe to re-run: nothing left
+-- with a NULL role after the first time.
+UPDATE admins SET role = 'owner' WHERE role IS NULL;
+
+ALTER TABLE admins ALTER COLUMN role SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admins_role_check') THEN
+    ALTER TABLE admins ADD CONSTRAINT admins_role_check CHECK (role IN ('owner', 'manager', 'accountant'));
+  END IF;
+END $$;
+
+-- Exactly one owner per business, enforced at the database level (not just
+-- app logic) — signup creates the one owner row, and the team invite/role
+-- endpoints never allow assigning the 'owner' role, so nothing should ever
+-- violate this, but the constraint is what actually guarantees it.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_one_owner_per_business ON admins(business_id) WHERE role = 'owner';

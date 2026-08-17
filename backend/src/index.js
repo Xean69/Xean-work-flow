@@ -17,8 +17,9 @@ import portalRouter from "./routes/portal.js";
 import messagesRouter from "./routes/messages.js";
 import guideSectionsRouter from "./routes/guideSections.js";
 import importsRouter from "./routes/imports.js";
+import teamRouter from "./routes/team.js";
 import { ApiError } from "./utils/errors.js";
-import { requireAdminAuth } from "./utils/auth.js";
+import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -54,17 +55,26 @@ app.get("/health", (req, res) => {
 app.use("/api/admin", adminRouter);
 app.use("/api/portal", portalRouter);
 
-app.use("/api/properties", requireAdminAuth, propertiesRouter);
-app.use("/api/units", requireAdminAuth, unitsRouter);
-app.use("/api/tenants", requireAdminAuth, tenantsRouter);
-app.use("/api/maintenance", requireAdminAuth, maintenanceRouter);
-app.use("/api/documents", requireAdminAuth, documentsRouter);
-app.use("/api/stays", requireAdminAuth, staysRouter);
-app.use("/api/scheduled-messages", requireAdminAuth, scheduledMessagesRouter);
-app.use("/api/expenses", requireAdminAuth, expensesRouter);
-app.use("/api/messages", requireAdminAuth, messagesRouter);
-app.use("/api/guide-sections", requireAdminAuth, guideSectionsRouter);
-app.use("/api/import", requireAdminAuth, importsRouter);
+// Accountants are read-only on documents/expenses and have no access at
+// all to anything else here — the mount-level check below only covers the
+// "no access at all" half for the other routers; documents.js and
+// expenses.js each additionally gate their own write routes (POST/PUT/
+// DELETE) to owner/manager, since GET stays open to accountants too.
+const staffOnly = requireRole("owner", "manager");
+const anyRole = requireRole("owner", "manager", "accountant");
+
+app.use("/api/properties", requireAdminAuth, staffOnly, propertiesRouter);
+app.use("/api/units", requireAdminAuth, staffOnly, unitsRouter);
+app.use("/api/tenants", requireAdminAuth, staffOnly, tenantsRouter);
+app.use("/api/maintenance", requireAdminAuth, staffOnly, maintenanceRouter);
+app.use("/api/documents", requireAdminAuth, anyRole, documentsRouter);
+app.use("/api/stays", requireAdminAuth, staffOnly, staysRouter);
+app.use("/api/scheduled-messages", requireAdminAuth, staffOnly, scheduledMessagesRouter);
+app.use("/api/expenses", requireAdminAuth, anyRole, expensesRouter);
+app.use("/api/messages", requireAdminAuth, staffOnly, messagesRouter);
+app.use("/api/guide-sections", requireAdminAuth, staffOnly, guideSectionsRouter);
+app.use("/api/import", requireAdminAuth, staffOnly, importsRouter);
+app.use("/api/team", requireAdminAuth, requireRole("owner"), teamRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is
