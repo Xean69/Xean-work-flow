@@ -4,6 +4,7 @@ import multer from "multer";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pool from "./db.js";
+import adminRouter from "./routes/admin.js";
 import propertiesRouter from "./routes/properties.js";
 import unitsRouter from "./routes/units.js";
 import tenantsRouter from "./routes/tenants.js";
@@ -16,6 +17,7 @@ import portalRouter from "./routes/portal.js";
 import messagesRouter from "./routes/messages.js";
 import guideSectionsRouter from "./routes/guideSections.js";
 import { ApiError } from "./utils/errors.js";
+import { requireAdminAuth } from "./utils/auth.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -43,17 +45,24 @@ app.get("/health", (req, res) => {
   res.send("Xean Intake API is running");
 });
 
-app.use("/api/properties", propertiesRouter);
-app.use("/api/units", unitsRouter);
-app.use("/api/tenants", tenantsRouter);
-app.use("/api/maintenance", maintenanceRouter);
-app.use("/api/documents", documentsRouter);
-app.use("/api/stays", staysRouter);
-app.use("/api/scheduled-messages", scheduledMessagesRouter);
-app.use("/api/expenses", expensesRouter);
+// /api/admin (login/logout) and /api/portal (tenant login) each guard their
+// own sub-routes internally, since both need at least one route (login)
+// reachable while logged out. Every other manager-dashboard route below
+// requires an admin session up front — previously none of these had any
+// auth check at all.
+app.use("/api/admin", adminRouter);
 app.use("/api/portal", portalRouter);
-app.use("/api/messages", messagesRouter);
-app.use("/api/guide-sections", guideSectionsRouter);
+
+app.use("/api/properties", requireAdminAuth, propertiesRouter);
+app.use("/api/units", requireAdminAuth, unitsRouter);
+app.use("/api/tenants", requireAdminAuth, tenantsRouter);
+app.use("/api/maintenance", requireAdminAuth, maintenanceRouter);
+app.use("/api/documents", requireAdminAuth, documentsRouter);
+app.use("/api/stays", requireAdminAuth, staysRouter);
+app.use("/api/scheduled-messages", requireAdminAuth, scheduledMessagesRouter);
+app.use("/api/expenses", requireAdminAuth, expensesRouter);
+app.use("/api/messages", requireAdminAuth, messagesRouter);
+app.use("/api/guide-sections", requireAdminAuth, guideSectionsRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

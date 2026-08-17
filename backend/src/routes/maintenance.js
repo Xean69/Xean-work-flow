@@ -6,6 +6,24 @@ import { parseMaintenanceBody, parseMessageBody } from "../utils/validate.js";
 
 const router = Router();
 
+async function assertUnitInBusiness(unitId, businessId) {
+  const { rows } = await pool.query(
+    `SELECT u.id FROM units u JOIN properties p ON p.id = u.property_id
+     WHERE u.id = $1 AND p.business_id = $2`,
+    [unitId, businessId]
+  );
+  if (!rows[0]) throw new ApiError(400, "unit_id does not belong to a property in your business");
+}
+
+async function assertTenantInBusiness(tenantId, businessId) {
+  if (tenantId == null) return;
+  const { rows } = await pool.query("SELECT id FROM tenants WHERE id = $1 AND business_id = $2", [
+    tenantId,
+    businessId,
+  ]);
+  if (!rows[0]) throw new ApiError(400, "tenant_id does not belong to your business");
+}
+
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -26,7 +44,9 @@ router.get(
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN tenants t ON t.id = m.tenant_id
-       ORDER BY m.created_at DESC`
+       WHERE m.business_id = $1
+       ORDER BY m.created_at DESC`,
+      [req.businessId]
     );
     res.json(rows);
   })
@@ -38,11 +58,14 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const data = parseMaintenanceBody({ ...req.body, status: "new" });
+    await assertUnitInBusiness(data.unit_id, req.businessId);
+    await assertTenantInBusiness(data.tenant_id, req.businessId);
+
     const { rows } = await pool.query(
-      `INSERT INTO maintenance_requests (unit_id, tenant_id, title, description, status, priority)
-       VALUES ($1, $2, $3, $4, 'new', $5)
+      `INSERT INTO maintenance_requests (business_id, unit_id, tenant_id, title, description, status, priority)
+       VALUES ($1, $2, $3, $4, $5, 'new', $6)
        RETURNING *`,
-      [data.unit_id, data.tenant_id, data.title, data.description, data.priority]
+      [req.businessId, data.unit_id, data.tenant_id, data.title, data.description, data.priority]
     );
     res.status(201).json(rows[0]);
   })
@@ -64,8 +87,8 @@ router.get(
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN tenants t ON t.id = m.tenant_id
-       WHERE m.id = $1`,
-      [req.params.id]
+       WHERE m.id = $1 AND m.business_id = $2`,
+      [req.params.id, req.businessId]
     );
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
 
@@ -86,16 +109,17 @@ router.post(
   "/:id/comments",
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
-    const { rows: ticketRows } = await pool.query("SELECT id FROM maintenance_requests WHERE id = $1", [
-      req.params.id,
-    ]);
+    const { rows: ticketRows } = await pool.query(
+      "SELECT id FROM maintenance_requests WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
 
     const { rows } = await pool.query(
-      `INSERT INTO maintenance_comments (request_id, sender, body)
-       VALUES ($1, 'manager', $2)
+      `INSERT INTO maintenance_comments (business_id, request_id, sender, body)
+       VALUES ($1, $2, 'manager', $3)
        RETURNING id, sender, body, created_at`,
-      [req.params.id, data.body]
+      [req.businessId, req.params.id, data.body]
     );
     // Sending a comment implies you've seen the thread up to now too.
     await pool.query("UPDATE maintenance_requests SET manager_last_read_at = now() WHERE id = $1", [
@@ -112,6 +136,9 @@ router.put(
   "/:id",
   asyncHandler(async (req, res) => {
     const data = parseMaintenanceBody(req.body);
+    await assertUnitInBusiness(data.unit_id, req.businessId);
+    await assertTenantInBusiness(data.tenant_id, req.businessId);
+
     const { rows } = await pool.query(
       `UPDATE maintenance_requests
        SET unit_id = $1,
@@ -125,9 +152,9 @@ router.put(
              WHEN $5 != 'resolved' THEN NULL
              ELSE resolved_at
            END
-       WHERE id = $7
+       WHERE id = $7 AND business_id = $8
        RETURNING *`,
-      [data.unit_id, data.tenant_id, data.title, data.description, data.status, data.priority, req.params.id]
+      [data.unit_id, data.tenant_id, data.title, data.description, data.status, data.priority, req.params.id, req.businessId]
     );
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
     res.json(rows[0]);
@@ -137,9 +164,10 @@ router.put(
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    const { rowCount } = await pool.query("DELETE FROM maintenance_requests WHERE id = $1", [
-      req.params.id,
-    ]);
+    const { rowCount } = await pool.query(
+      "DELETE FROM maintenance_requests WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
     if (!rowCount) throw new ApiError(404, "Maintenance request not found");
     res.status(204).end();
   })

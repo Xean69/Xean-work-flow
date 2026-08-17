@@ -22,6 +22,26 @@ export function requirePassword(value) {
   return value;
 }
 
+// Dashboard admin accounts hold the keys to an entire business's data, so
+// they get a higher bar than tenant portal passwords — same minimum the
+// create-admin CLI script has enforced from the start.
+export function requireAdminPassword(value) {
+  if (typeof value !== "string" || value.length < 12) {
+    throw new ApiError(400, "password must be at least 12 characters");
+  }
+  return value;
+}
+
+// Used by the business signup flow — creates a business and its first
+// admin account together.
+export function parseSignupBody(body) {
+  return {
+    business_name: requireString(body.business_name, "business_name"),
+    email: requireString(body.email, "email"),
+    password: requireAdminPassword(body.password),
+  };
+}
+
 export function parsePropertyBody(body) {
   return {
     name: requireString(body.name, "name"),

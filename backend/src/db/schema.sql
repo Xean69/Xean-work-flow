@@ -120,19 +120,12 @@ CREATE TABLE IF NOT EXISTS scheduled_messages (
 
 CREATE INDEX IF NOT EXISTS idx_scheduled_messages_stay_id ON scheduled_messages(stay_id);
 
--- Only one global template (stay_id IS NULL) per message type — the
--- portfolio-wide toggle panel assumes exactly one row per type.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_scheduled_messages_global_type
-  ON scheduled_messages(message_type) WHERE stay_id IS NULL;
-
--- Seeds the 4 default global templates once; safe to re-run.
-INSERT INTO scheduled_messages (message_type, send_timing, is_active)
-VALUES
-  ('checkin_instructions', '24h_before_checkin', true),
-  ('welcome', 'on_arrival', true),
-  ('checkout_reminder', '8am_checkout_day', true),
-  ('review_request', '2h_after_checkout', false)
-ON CONFLICT (message_type) WHERE stay_id IS NULL DO NOTHING;
+-- Only one global template (stay_id IS NULL) per message type, per
+-- business — the portfolio-wide toggle panel assumes exactly one row per
+-- type. Each business gets its own 4 default rows seeded when the business
+-- is created (see routes/admin.js's signup handler and the backfill below
+-- for existing data), not here — a fresh install has zero businesses, so
+-- there's nothing to seed until someone signs up.
 
 CREATE TABLE IF NOT EXISTS expenses (
   id SERIAL PRIMARY KEY,
@@ -163,6 +156,19 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_tenant_id ON messages(tenant_id);
 
+-- Property manager dashboard account, separate from the tenants table used
+-- by the tenant portal login. Each admin belongs to exactly one business
+-- (see the multi-business section below) — this is what scopes everything
+-- an admin can see to their own business's data.
+CREATE TABLE IF NOT EXISTS admins (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_email ON admins(lower(email));
+
 CREATE TABLE IF NOT EXISTS property_guides (
   id SERIAL PRIMARY KEY,
   property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
@@ -173,3 +179,101 @@ CREATE TABLE IF NOT EXISTS property_guides (
 );
 
 CREATE INDEX IF NOT EXISTS idx_property_guides_property_id ON property_guides(property_id);
+
+-- ============================================================================
+-- Multi-business support
+--
+-- Turns this from a single-property-manager app into one where many
+-- property management businesses each use their own login and only ever
+-- see their own data. Every table a business's data lives in gets a
+-- business_id column; every admin belongs to exactly one business.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS businesses (
+  id SERIAL PRIMARY KEY,
+  business_name TEXT NOT NULL,
+  contact_email TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_businesses_contact_email ON businesses(lower(contact_email));
+
+-- Columns start nullable so this is safe to run against a database that
+-- already has rows in it — the backfill below fills them in, then the
+-- NOT NULL constraints at the bottom lock the column down for good.
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE stays ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE scheduled_messages ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+ALTER TABLE property_guides ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_admins_business_id ON admins(business_id);
+CREATE INDEX IF NOT EXISTS idx_properties_business_id ON properties(business_id);
+CREATE INDEX IF NOT EXISTS idx_tenants_business_id ON tenants(business_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_requests_business_id ON maintenance_requests(business_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_comments_business_id ON maintenance_comments(business_id);
+CREATE INDEX IF NOT EXISTS idx_documents_business_id ON documents(business_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_business_id ON expenses(business_id);
+CREATE INDEX IF NOT EXISTS idx_stays_business_id ON stays(business_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_messages_business_id ON scheduled_messages(business_id);
+CREATE INDEX IF NOT EXISTS idx_messages_business_id ON messages(business_id);
+CREATE INDEX IF NOT EXISTS idx_property_guides_business_id ON property_guides(business_id);
+
+-- Replaces the old single-column version of this index (one global template
+-- per message_type across the whole app) now that business_id exists — each
+-- business needs its own 4 defaults.
+DROP INDEX IF EXISTS idx_scheduled_messages_global_type;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_scheduled_messages_global_type
+  ON scheduled_messages(business_id, message_type) WHERE stay_id IS NULL;
+
+-- One-time backfill: if this database already had data before business_id
+-- existed (i.e. any row is still missing one), attribute all of it to a
+-- single "Aalion Properties" business so nothing gets orphaned. Guarded so
+-- it's a no-op on a fresh database (nothing to backfill) and a no-op the
+-- second time it runs (nothing left with a NULL business_id).
+DO $$
+DECLARE
+  legacy_business_id INTEGER;
+BEGIN
+  IF EXISTS (SELECT 1 FROM admins WHERE business_id IS NULL)
+     OR EXISTS (SELECT 1 FROM properties WHERE business_id IS NULL) THEN
+
+    SELECT id INTO legacy_business_id FROM businesses WHERE business_name = 'Aalion Properties';
+
+    IF legacy_business_id IS NULL THEN
+      INSERT INTO businesses (business_name, contact_email)
+      VALUES ('Aalion Properties', COALESCE((SELECT email FROM admins ORDER BY id LIMIT 1), 'owner@aalion.example'))
+      RETURNING id INTO legacy_business_id;
+    END IF;
+
+    UPDATE admins SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE properties SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE tenants SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE maintenance_requests SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE maintenance_comments SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE documents SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE expenses SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE stays SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE scheduled_messages SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE messages SET business_id = legacy_business_id WHERE business_id IS NULL;
+    UPDATE property_guides SET business_id = legacy_business_id WHERE business_id IS NULL;
+  END IF;
+END $$;
+
+ALTER TABLE admins ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE properties ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE tenants ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE maintenance_requests ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE maintenance_comments ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE documents ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE expenses ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE stays ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE scheduled_messages ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE messages ALTER COLUMN business_id SET NOT NULL;
+ALTER TABLE property_guides ALTER COLUMN business_id SET NOT NULL;

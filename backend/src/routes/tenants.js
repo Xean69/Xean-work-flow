@@ -35,6 +35,19 @@ async function syncUnitStatus(unitId) {
   ]);
 }
 
+// A tenant's unit_id must belong to a property in the admin's own business
+// — otherwise a request could attach a tenant to (or move one into) another
+// business's unit by guessing its id. Returns nothing; throws 400 if the
+// unit isn't found in this business.
+async function assertUnitInBusiness(unitId, businessId) {
+  const { rows } = await pool.query(
+    `SELECT u.id FROM units u JOIN properties p ON p.id = u.property_id
+     WHERE u.id = $1 AND p.business_id = $2`,
+    [unitId, businessId]
+  );
+  if (!rows[0]) throw new ApiError(400, "unit_id does not belong to a property in your business");
+}
+
 // GET /api/tenants - one row per unit across the whole portfolio: the
 // unit's most recent tenant if it has one, or vacant if it doesn't.
 router.get(
@@ -64,7 +77,9 @@ router.get(
          ORDER BY t2.lease_end DESC, t2.created_at DESC
          LIMIT 1
        ) t ON true
-       ORDER BY p.name, u.unit_number`
+       WHERE p.business_id = $1
+       ORDER BY p.name, u.unit_number`,
+      [req.businessId]
     );
 
     res.json(
@@ -80,11 +95,14 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const data = parseTenantBody(req.body);
+    await assertUnitInBusiness(data.unit_id, req.businessId);
+
     const { rows } = await pool.query(
-      `INSERT INTO tenants (unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO tenants (business_id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
       [
+        req.businessId,
         data.unit_id,
         data.full_name,
         data.email,
@@ -104,17 +122,19 @@ router.put(
   "/:id",
   asyncHandler(async (req, res) => {
     const { rows: existingRows } = await pool.query(
-      "SELECT unit_id FROM tenants WHERE id = $1",
-      [req.params.id]
+      "SELECT unit_id FROM tenants WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
     );
     if (!existingRows[0]) throw new ApiError(404, "Tenant not found");
     const previousUnitId = existingRows[0].unit_id;
 
     const data = parseTenantBody(req.body);
+    await assertUnitInBusiness(data.unit_id, req.businessId);
+
     const { rows } = await pool.query(
       `UPDATE tenants
        SET unit_id = $1, full_name = $2, email = $3, phone = $4, lease_start = $5, lease_end = $6, rent_amount = $7, deposit_amount = $8
-       WHERE id = $9
+       WHERE id = $9 AND business_id = $10
        RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
       [
         data.unit_id,
@@ -126,6 +146,7 @@ router.put(
         data.rent_amount,
         data.deposit_amount,
         req.params.id,
+        req.businessId,
       ]
     );
 
@@ -139,9 +160,10 @@ router.put(
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    const { rows } = await pool.query("DELETE FROM tenants WHERE id = $1 RETURNING unit_id", [
-      req.params.id,
-    ]);
+    const { rows } = await pool.query(
+      "DELETE FROM tenants WHERE id = $1 AND business_id = $2 RETURNING unit_id",
+      [req.params.id, req.businessId]
+    );
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
     await syncUnitStatus(rows[0].unit_id);
     res.status(204).end();
@@ -155,8 +177,8 @@ router.put(
   asyncHandler(async (req, res) => {
     const password = requirePassword(req.body.password);
     const { rows } = await pool.query(
-      "UPDATE tenants SET password_hash = $1 WHERE id = $2 RETURNING id",
-      [await hashPassword(password), req.params.id]
+      "UPDATE tenants SET password_hash = $1 WHERE id = $2 AND business_id = $3 RETURNING id",
+      [await hashPassword(password), req.params.id, req.businessId]
     );
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
     res.status(204).end();

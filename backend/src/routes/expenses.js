@@ -8,6 +8,25 @@ import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
 
 const router = Router();
 
+async function assertPropertyInBusiness(propertyId, businessId) {
+  if (propertyId == null) return;
+  const { rows } = await pool.query("SELECT id FROM properties WHERE id = $1 AND business_id = $2", [
+    propertyId,
+    businessId,
+  ]);
+  if (!rows[0]) throw new ApiError(400, "property_id does not belong to your business");
+}
+
+async function assertUnitInBusiness(unitId, businessId) {
+  if (unitId == null) return;
+  const { rows } = await pool.query(
+    `SELECT u.id FROM units u JOIN properties p ON p.id = u.property_id
+     WHERE u.id = $1 AND p.business_id = $2`,
+    [unitId, businessId]
+  );
+  if (!rows[0]) throw new ApiError(400, "unit_id does not belong to a property in your business");
+}
+
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -19,7 +38,9 @@ router.get(
        FROM expenses e
        LEFT JOIN properties p ON p.id = e.property_id
        LEFT JOIN units u ON u.id = e.unit_id
-       ORDER BY e.expense_date DESC`
+       WHERE e.business_id = $1
+       ORDER BY e.expense_date DESC`,
+      [req.businessId]
     );
     res.json(rows);
   })
@@ -34,16 +55,19 @@ router.post(
     let data;
     try {
       data = parseExpenseBody(req.body);
+      await assertPropertyInBusiness(data.property_id, req.businessId);
+      await assertUnitInBusiness(data.unit_id, req.businessId);
     } catch (err) {
       if (req.file) deleteUploadedFile(req.file.filename);
       throw err;
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO expenses (property_id, unit_id, amount, category, vendor_name, expense_date, receipt_file_path, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO expenses (business_id, property_id, unit_id, amount, category, vendor_name, expense_date, receipt_file_path, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
+        req.businessId,
         data.property_id,
         data.unit_id,
         data.amount,
@@ -64,9 +88,10 @@ router.put(
   "/:id",
   upload.single("receipt"),
   asyncHandler(async (req, res) => {
-    const { rows: existingRows } = await pool.query("SELECT receipt_file_path FROM expenses WHERE id = $1", [
-      req.params.id,
-    ]);
+    const { rows: existingRows } = await pool.query(
+      "SELECT receipt_file_path FROM expenses WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
     if (!existingRows[0]) {
       if (req.file) deleteUploadedFile(req.file.filename);
       throw new ApiError(404, "Expense not found");
@@ -75,6 +100,8 @@ router.put(
     let data;
     try {
       data = parseExpenseBody(req.body);
+      await assertPropertyInBusiness(data.property_id, req.businessId);
+      await assertUnitInBusiness(data.unit_id, req.businessId);
     } catch (err) {
       if (req.file) deleteUploadedFile(req.file.filename);
       throw err;
@@ -86,7 +113,7 @@ router.put(
       `UPDATE expenses
        SET property_id = $1, unit_id = $2, amount = $3, category = $4,
            vendor_name = $5, expense_date = $6, receipt_file_path = $7, notes = $8
-       WHERE id = $9
+       WHERE id = $9 AND business_id = $10
        RETURNING *`,
       [
         data.property_id,
@@ -98,6 +125,7 @@ router.put(
         receiptFilePath,
         data.notes,
         req.params.id,
+        req.businessId,
       ]
     );
 
@@ -112,9 +140,10 @@ router.put(
 router.get(
   "/:id/receipt",
   asyncHandler(async (req, res) => {
-    const { rows } = await pool.query("SELECT receipt_file_path FROM expenses WHERE id = $1", [
-      req.params.id,
-    ]);
+    const { rows } = await pool.query(
+      "SELECT receipt_file_path FROM expenses WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
     const filePath = rows[0]?.receipt_file_path;
     if (!filePath) throw new ApiError(404, "This expense has no receipt attached");
 
@@ -130,9 +159,10 @@ router.get(
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    const { rows } = await pool.query("DELETE FROM expenses WHERE id = $1 RETURNING receipt_file_path", [
-      req.params.id,
-    ]);
+    const { rows } = await pool.query(
+      "DELETE FROM expenses WHERE id = $1 AND business_id = $2 RETURNING receipt_file_path",
+      [req.params.id, req.businessId]
+    );
     if (!rows[0]) throw new ApiError(404, "Expense not found");
     deleteUploadedFile(rows[0].receipt_file_path);
     res.status(204).end();

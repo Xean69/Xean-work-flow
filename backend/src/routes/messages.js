@@ -31,8 +31,9 @@ router.get(
          ORDER BY created_at DESC
          LIMIT 1
        ) m ON true
-       WHERE t.password_hash IS NOT NULL
-       ORDER BY COALESCE(m.created_at, t.created_at) DESC`
+       WHERE t.password_hash IS NOT NULL AND t.business_id = $1
+       ORDER BY COALESCE(m.created_at, t.created_at) DESC`,
+      [req.businessId]
     );
     res.json(rows);
   })
@@ -41,6 +42,12 @@ router.get(
 router.get(
   "/:tenantId",
   asyncHandler(async (req, res) => {
+    const { rows: tenantRows } = await pool.query(
+      "SELECT id FROM tenants WHERE id = $1 AND business_id = $2",
+      [req.params.tenantId, req.businessId]
+    );
+    if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+
     const { rows } = await pool.query(
       "SELECT id, sender, body, created_at FROM messages WHERE tenant_id = $1 ORDER BY created_at ASC",
       [req.params.tenantId]
@@ -53,16 +60,17 @@ router.post(
   "/:tenantId",
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
-    const { rows: tenantRows } = await pool.query("SELECT id FROM tenants WHERE id = $1", [
-      req.params.tenantId,
-    ]);
+    const { rows: tenantRows } = await pool.query(
+      "SELECT id FROM tenants WHERE id = $1 AND business_id = $2",
+      [req.params.tenantId, req.businessId]
+    );
     if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
 
     const { rows } = await pool.query(
-      `INSERT INTO messages (tenant_id, sender, body)
-       VALUES ($1, 'manager', $2)
+      `INSERT INTO messages (business_id, tenant_id, sender, body)
+       VALUES ($1, $2, 'manager', $3)
        RETURNING id, sender, body, created_at`,
-      [req.params.tenantId, data.body]
+      [req.businessId, req.params.tenantId, data.body]
     );
     res.status(201).json(rows[0]);
   })
