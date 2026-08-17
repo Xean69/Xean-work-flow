@@ -245,3 +245,19 @@ export function removeTeamMember(id) {
 export function getOwnerStatements(month) {
   return request(`/owner-statements?month=${encodeURIComponent(month)}`);
 }
+
+export function getStrLicenses() {
+  return request("/str-licenses");
+}
+
+export function createStrLicense(data) {
+  return request("/str-licenses", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateStrLicense(id, data) {
+  return request(`/str-licenses/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteStrLicense(id) {
+  return request(`/str-licenses/${id}`, { method: "DELETE" });
+}

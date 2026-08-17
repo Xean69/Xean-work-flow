@@ -265,3 +265,20 @@ export function parseUnitBody(body) {
     status,
   };
 }
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Stricter than requireDate (YYYY-MM-DD specifically, not anything
+// `new Date()` can parse) — routes/strLicenses.js does its own Y/M/D
+// arithmetic on issued_date to compute expiry_date, which needs that
+// exact shape to stay correct.
+export function parseStrLicenseBody(body) {
+  if (typeof body.issued_date !== "string" || !ISO_DATE_RE.test(body.issued_date) || Number.isNaN(new Date(body.issued_date).getTime())) {
+    throw new ApiError(400, "issued_date must be a valid date (YYYY-MM-DD)");
+  }
+  return {
+    property_id: requireNumber(body.property_id, "property_id", { min: 1 }),
+    license_number: requireString(body.license_number, "license_number"),
+    issued_date: body.issued_date,
+  };
+}

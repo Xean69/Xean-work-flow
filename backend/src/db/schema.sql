@@ -308,3 +308,23 @@ END $$;
 -- endpoints never allow assigning the 'owner' role, so nothing should ever
 -- violate this, but the constraint is what actually guarantees it.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_one_owner_per_business ON admins(business_id) WHERE role = 'owner';
+
+-- Edmonton short-term rental business licenses. One property can have many
+-- rows over time (each renewal is a new row, preserving history) — the
+-- "current" license for a property is whichever has the latest issued_date.
+-- Deliberately no status column: like tenants' lease status, it's derived
+-- from expiry_date at request time (see computeStatus in
+-- routes/strLicenses.js) rather than stored, so it can never go stale
+-- sitting untouched in a row after the expiry date passes.
+CREATE TABLE IF NOT EXISTS str_licenses (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  license_number TEXT NOT NULL,
+  issued_date DATE NOT NULL,
+  expiry_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_str_licenses_business_id ON str_licenses(business_id);
+CREATE INDEX IF NOT EXISTS idx_str_licenses_property_id ON str_licenses(property_id);
