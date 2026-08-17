@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getProperties, createProperty, getMaintenanceRequests, getTenants, getRecentActivity } from '../api/client.js'
+import { getProperties, createProperty, getMaintenanceRequests, getTenants, getRecentActivity, getDocuments } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import StatCard from '../components/StatCard.jsx'
 import Modal from '../components/Modal.jsx'
@@ -38,6 +38,7 @@ function Dashboard() {
   const [maintenance, setMaintenance] = useState([])
   const [tenantRows, setTenantRows] = useState([])
   const [activity, setActivity] = useState([])
+  const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
 
@@ -48,16 +49,18 @@ function Dashboard() {
   async function load() {
     setLoading(true)
     try {
-      const [props, maintenanceRows, tenants, activityRows] = await Promise.all([
+      const [props, maintenanceRows, tenants, activityRows, documentRows] = await Promise.all([
         getProperties(),
         getMaintenanceRequests(),
         getTenants(),
         getRecentActivity(),
+        getDocuments(),
       ])
       setProperties(props)
       setMaintenance(maintenanceRows)
       setTenantRows(tenants)
       setActivity(activityRows)
+      setDocuments(documentRows)
     } finally {
       setLoading(false)
     }
@@ -85,6 +88,8 @@ function Dashboard() {
   const upcomingRenewals = [...leasedTenants]
     .sort((a, b) => new Date(a.lease_end) - new Date(b.lease_end))
     .slice(0, 3)
+
+  const needsReviewCount = documents.filter((d) => d.status === 'needs_review').length
 
   return (
     <div>
@@ -173,9 +178,15 @@ function Dashboard() {
               <Link to="/documents">Open</Link>
             </div>
             <div className="card intake-card">
-              <div className="intake-note">2 documents waiting for review</div>
+              <div className="intake-note">
+                {loading
+                  ? 'Loading…'
+                  : needsReviewCount > 0
+                    ? `${needsReviewCount} document${needsReviewCount === 1 ? '' : 's'} waiting for review`
+                    : 'All documents reviewed'}
+              </div>
               <Link to="/documents" className="btn btn-ghost intake-btn">
-                Review extracted data
+                {needsReviewCount > 0 ? 'Review documents' : 'View documents'}
               </Link>
             </div>
           </div>

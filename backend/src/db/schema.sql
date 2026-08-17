@@ -336,3 +336,19 @@ CREATE INDEX IF NOT EXISTS idx_str_licenses_property_id ON str_licenses(property
 -- actually edits it; the feed uses that equality to mean "never updated".
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE stays ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+-- Drives the Documents page's "needs review" badge/checkbox and the
+-- Dashboard's Intake queue count. New uploads start at 'needs_review';
+-- existing documents from before this column existed also backfill to
+-- 'needs_review' via the same DEFAULT, which is the honest state for them
+-- (nothing has actually reviewed them either).
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'needs_review';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'documents_status_check') THEN
+    ALTER TABLE documents ADD CONSTRAINT documents_status_check CHECK (status IN ('needs_review', 'reviewed'));
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);

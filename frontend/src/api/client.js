@@ -265,3 +265,7 @@ export function deleteStrLicense(id) {
 export function getRecentActivity() {
   return request("/activity");
 }
+
+export function updateDocumentStatus(id, status) {
+  return request(`/documents/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
+}

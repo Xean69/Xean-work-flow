@@ -3,7 +3,7 @@ import path from "node:path";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseDocumentBody } from "../utils/validate.js";
+import { parseDocumentBody, parseDocumentStatusBody } from "../utils/validate.js";
 import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
 
@@ -99,6 +99,24 @@ router.get(
         res.status(404).json({ error: "File not found on disk" });
       }
     });
+  })
+);
+
+// Deliberately NOT staffOnly — marking a document reviewed is closer to
+// bookkeeping/triage than to uploading or deleting, and accountants are
+// allowed to do it even though they're read-only on everything else here
+// (falls through to the anyRole check already applied where this router
+// is mounted in index.js).
+router.put(
+  "/:id/status",
+  asyncHandler(async (req, res) => {
+    const data = parseDocumentStatusBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE documents SET status = $1 WHERE id = $2 AND business_id = $3 RETURNING *",
+      [data.status, req.params.id, req.businessId]
+    );
+    if (!rows[0]) throw new ApiError(404, "Document not found");
+    res.json(rows[0]);
   })
 );
 

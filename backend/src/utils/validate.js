@@ -153,6 +153,15 @@ export function parseDocumentBody(body) {
   };
 }
 
+const DOCUMENT_STATUSES = ["needs_review", "reviewed"];
+
+export function parseDocumentStatusBody(body) {
+  if (!DOCUMENT_STATUSES.includes(body.status)) {
+    throw new ApiError(400, `status must be one of: ${DOCUMENT_STATUSES.join(", ")}`);
+  }
+  return { status: body.status };
+}
+
 const PLATFORMS = ["airbnb", "vrbo", "booking", "direct"];
 const TURNOVER_STATUSES = ["checkout_done", "inspection_done", "cleaning_done", "checkin_ready"];
 

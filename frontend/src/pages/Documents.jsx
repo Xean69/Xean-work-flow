@@ -4,12 +4,14 @@ import {
   getDocuments,
   uploadDocument,
   deleteDocument,
+  updateDocumentStatus,
   getDocumentUrl,
   getProperties,
   getTenants,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import DocumentForm from '../components/DocumentForm.jsx'
+import Badge from '../components/Badge.jsx'
 import { canWrite } from '../utils/permissions.js'
 import './Documents.css'
 
@@ -106,6 +108,16 @@ function Documents() {
     await load()
   }
 
+  // Marking a document reviewed is allowed for every role that can reach
+  // this page at all — including accountants, who are otherwise read-only
+  // here (can't upload or delete). Reviewing is closer to bookkeeping
+  // triage than to managing the file itself, so it's not gated by
+  // canWrite/readOnly the way upload and delete are.
+  async function handleToggleReviewed(doc) {
+    await updateDocumentStatus(doc.id, doc.status === 'reviewed' ? 'needs_review' : 'reviewed')
+    await load()
+  }
+
   return (
     <div>
       <PageHeader title="Documents" subtitle="Upload a lease, invoice, or inspection report to keep on file" />
@@ -164,20 +176,33 @@ function Documents() {
               <div className="doc-row" key={d.id}>
                 <div className="doc-icon">📄</div>
                 <div>
-                  <a href={getDocumentUrl(d.id)} target="_blank" rel="noreferrer" className="doc-name">
-                    {d.file_name}
-                  </a>
+                  <div className="doc-name-row">
+                    <a href={getDocumentUrl(d.id)} target="_blank" rel="noreferrer" className="doc-name">
+                      {d.file_name}
+                    </a>
+                    {d.status === 'needs_review' && <Badge variant="amber">Needs review</Badge>}
+                  </div>
                   <div className="doc-sub">
                     {DOC_TYPE_LABELS[d.doc_type]} · {formatDate(d.uploaded_at)}
                     {d.property_name ? ` · ${d.property_name}` : ''}
                     {d.tenant_name ? ` · ${d.tenant_name}` : ''}
                   </div>
                 </div>
-                {!readOnly && (
-                  <button className="btn btn-danger btn-sm doc-delete" onClick={() => handleDelete(d)}>
-                    Delete
-                  </button>
-                )}
+                <div className="doc-actions">
+                  <label className="doc-reviewed-toggle">
+                    <input
+                      type="checkbox"
+                      checked={d.status === 'reviewed'}
+                      onChange={() => handleToggleReviewed(d)}
+                    />
+                    Reviewed
+                  </label>
+                  {!readOnly && (
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d)}>
+                      Delete
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
