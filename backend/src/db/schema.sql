@@ -396,6 +396,34 @@ BEGIN
   END IF;
 END $$;
 
+-- Manual rent payment tracking. Recording is deliberate (owner/manager
+-- marks a payment received) rather than automatic — there's no online
+-- payment processing yet, this is just the record-keeping layer. A
+-- tenant's current-period status (Tenants page, portal Home) is derived
+-- by summing rows here for period_covered = the current month, not stored
+-- anywhere, so it can never go stale independent of the payments it's
+-- based on.
+CREATE TABLE IF NOT EXISTS rent_payments (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+  payment_date DATE NOT NULL,
+  method TEXT NOT NULL CHECK (method IN ('e_transfer', 'cash', 'cheque', 'other')),
+  -- "YYYY-MM" — which month's rent this payment counts toward, independent
+  -- of when it was actually paid (e.g. paid a few days early or late).
+  period_covered TEXT NOT NULL CHECK (period_covered ~ '^\d{4}-(0[1-9]|1[0-2])$'),
+  notes TEXT,
+  -- Who recorded it, for accountability — kept even if that admin is later
+  -- removed from the team, so the payment record itself never disappears.
+  recorded_by INTEGER REFERENCES admins(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_rent_payments_business_id ON rent_payments(business_id);
+CREATE INDEX IF NOT EXISTS idx_rent_payments_tenant_id ON rent_payments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_rent_payments_period_covered ON rent_payments(period_covered);
+
 -- AI maintenance triage: urgency/trade classification pulled from the
 -- title+description via the Anthropic API the moment a ticket is created,
 -- from either the manager dashboard or the tenant portal. Deliberately

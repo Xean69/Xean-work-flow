@@ -1,43 +1,24 @@
 import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/errors.js";
+import { currentPeriod, parsePeriod } from "../utils/period.js";
 
 const router = Router();
 
-function currentMonthParam() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-// "YYYY-MM" (what <input type="month"> sends) -> the calendar-day range
-// that month actually spans, for a lease/expense-date overlap check.
-function parseMonthParam(value) {
-  if (!/^\d{4}-\d{2}$/.test(value)) {
-    throw new ApiError(400, "month must be in YYYY-MM format");
-  }
-  const [year, month] = value.split("-").map(Number);
-  if (month < 1 || month > 12) throw new ApiError(400, "month must be between 01 and 12");
-
-  const start = `${value}-01`;
-  const lastDay = new Date(year, month, 0).getDate(); // day 0 of next month = last day of this one
-  const end = `${value}-${String(lastDay).padStart(2, "0")}`;
-  return { start, end, label: value };
-}
-
 // GET /api/owner-statements?month=YYYY-MM
 //
-// Rent collected is a stand-in for real payment tracking (which doesn't
-// exist yet): a tenant counts as having paid rent for the month if their
-// lease overlaps it at all, no proration for a lease starting/ending
-// mid-month. Expenses are real — summed straight from what's on file for
-// that property and month. Everything is computed live from existing
-// data on every request; nothing is stored, so there's no separate
-// "generate" step.
+// Rent collected is real now: it's summed straight from rent_payments for
+// whatever period the requested month covers — not assumed from an active
+// lease the way it was before real payment tracking existed. A tenant who
+// hasn't been marked paid yet simply doesn't count, same as an unpaid
+// invoice wouldn't. Expenses are summed the same way they always were,
+// straight from what's on file for that property and month. Everything is
+// computed live from existing data on every request; nothing is stored,
+// so there's no separate "generate" step.
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const month = parseMonthParam(req.query.month || currentMonthParam());
+    const month = parsePeriod(req.query.month || currentPeriod());
 
     const { rows: properties } = await pool.query(
       "SELECT id, name FROM properties WHERE business_id = $1 ORDER BY name",
@@ -49,15 +30,15 @@ router.get(
     // (every tenant row paired with every expense row for the same
     // property) and double-count both sums.
     const { rows: rentRows } = await pool.query(
-      `SELECT u.property_id, COALESCE(SUM(t.rent_amount), 0) AS rent_collected
-       FROM tenants t
+      `SELECT u.property_id, COALESCE(SUM(rp.amount), 0) AS rent_collected
+       FROM rent_payments rp
+       JOIN tenants t ON t.id = rp.tenant_id
        JOIN units u ON u.id = t.unit_id
        JOIN properties p ON p.id = u.property_id
        WHERE p.business_id = $1
-         AND t.lease_start <= $3
-         AND t.lease_end >= $2
+         AND rp.period_covered = $2
        GROUP BY u.property_id`,
-      [req.businessId, month.start, month.end]
+      [req.businessId, month.label]
     );
 
     const { rows: expenseRows } = await pool.query(

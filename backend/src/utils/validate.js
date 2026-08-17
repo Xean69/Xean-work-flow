@@ -108,6 +108,27 @@ export function parseTenantBody(body) {
   };
 }
 
+const PAYMENT_METHODS = ["e_transfer", "cash", "cheque", "other"];
+const PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export function parseRentPaymentBody(body) {
+  if (!PAYMENT_METHODS.includes(body.method)) {
+    throw new ApiError(400, `method must be one of: ${PAYMENT_METHODS.join(", ")}`);
+  }
+  if (typeof body.period_covered !== "string" || !PERIOD_RE.test(body.period_covered)) {
+    throw new ApiError(400, "period_covered must be in YYYY-MM format");
+  }
+  requireDate(body.payment_date, "payment_date");
+  return {
+    tenant_id: requireNumber(body.tenant_id, "tenant_id", { min: 1 }),
+    amount: requireNumber(body.amount, "amount", { min: 0.01 }),
+    payment_date: body.payment_date,
+    method: body.method,
+    period_covered: body.period_covered,
+    notes: optionalString(body.notes),
+  };
+}
+
 export function optionalNumber(value, field) {
   if (value === undefined || value === null || value === "") return null;
   const num = Number(value);

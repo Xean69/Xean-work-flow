@@ -90,6 +90,22 @@ export function setTenantPassword(id, password) {
   return request(`/tenants/${id}/password`, { method: "PUT", body: JSON.stringify({ password }) });
 }
 
+export function getRentPayments(tenantId) {
+  return request(`/rent-payments?tenant_id=${tenantId}`);
+}
+
+export function createRentPayment(data) {
+  return request("/rent-payments", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateRentPayment(id, data) {
+  return request(`/rent-payments/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteRentPayment(id) {
+  return request(`/rent-payments/${id}`, { method: "DELETE" });
+}
+
 export function getMaintenanceRequests() {
   return request("/maintenance");
 }

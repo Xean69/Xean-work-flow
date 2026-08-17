@@ -7,6 +7,7 @@ import { verifyPassword, requireTenantAuth } from "../utils/auth.js";
 import { UPLOADS_DIR } from "../utils/upload.js";
 import { parsePortalRepairBody, parseMessageBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
+import { currentPeriod } from "../utils/period.js";
 
 const router = Router();
 
@@ -41,6 +42,19 @@ router.post("/logout", (req, res) => {
   });
 });
 
+// Same paid-vs-rent-for-the-current-period logic as GET /api/tenants on the
+// manager side (tenants.js) — kept as its own small copy here rather than a
+// shared import since the two routes' surrounding queries don't otherwise
+// overlap. paid >= rent covers $0 rent as trivially "paid" with no
+// special-casing needed.
+function computePaymentStatus(rentAmount, paidAmount) {
+  const rent = Number(rentAmount) || 0;
+  const paid = Number(paidAmount) || 0;
+  if (paid >= rent) return "paid";
+  if (paid <= 0) return "unpaid";
+  return "partial";
+}
+
 router.get(
   "/me",
   requireTenantAuth,
@@ -50,15 +64,24 @@ router.get(
          t.id, t.full_name, t.email, t.rent_amount, t.deposit_amount,
          t.lease_start, t.lease_end,
          u.unit_number,
-         p.name AS property_name, p.address, p.city, p.province, p.postal_code
+         p.name AS property_name, p.address, p.city, p.province, p.postal_code,
+         COALESCE((
+           SELECT SUM(amount) FROM rent_payments
+           WHERE tenant_id = t.id AND period_covered = $2
+         ), 0) AS current_period_paid
        FROM tenants t
        JOIN units u ON u.id = t.unit_id
        JOIN properties p ON p.id = u.property_id
        WHERE t.id = $1`,
-      [req.tenantId]
+      [req.tenantId, currentPeriod()]
     );
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
-    res.json(rows[0]);
+    const tenant = rows[0];
+    res.json({
+      ...tenant,
+      current_period: currentPeriod(),
+      payment_status: computePaymentStatus(tenant.rent_amount, tenant.current_period_paid),
+    });
   })
 );
 

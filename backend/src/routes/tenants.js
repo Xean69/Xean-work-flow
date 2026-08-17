@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseTenantBody, requirePassword } from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
+import { currentPeriod } from "../utils/period.js";
 
 const router = Router();
 
@@ -21,6 +22,16 @@ function computeStatus(leaseEnd) {
   if (daysLeft <= URGENT_DAYS) return "urgent_renewal";
   if (daysLeft <= RENEWAL_DAYS) return "renewal_due";
   return "active";
+}
+
+// Same derive-don't-store approach as computeStatus: paid >= rent covers
+// $0 rent as trivially "paid" with no special-casing needed.
+function computePaymentStatus(rentAmount, paidAmount) {
+  const rent = Number(rentAmount) || 0;
+  const paid = Number(paidAmount) || 0;
+  if (paid >= rent) return "paid";
+  if (paid <= 0) return "unpaid";
+  return "partial";
 }
 
 // Keeps units.status in sync with whether the unit currently has a tenant,
@@ -67,7 +78,8 @@ router.get(
          t.lease_end,
          t.rent_amount,
          t.deposit_amount,
-         (t.password_hash IS NOT NULL) AS has_login
+         (t.password_hash IS NOT NULL) AS has_login,
+         COALESCE(rp.paid_amount, 0) AS current_period_paid
        FROM units u
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN LATERAL (
@@ -77,15 +89,21 @@ router.get(
          ORDER BY t2.lease_end DESC, t2.created_at DESC
          LIMIT 1
        ) t ON true
+       LEFT JOIN LATERAL (
+         SELECT SUM(amount) AS paid_amount
+         FROM rent_payments rp2
+         WHERE rp2.tenant_id = t.id AND rp2.period_covered = $2
+       ) rp ON true
        WHERE p.business_id = $1
        ORDER BY p.name, u.unit_number`,
-      [req.businessId]
+      [req.businessId, currentPeriod()]
     );
 
     res.json(
       rows.map((row) => ({
         ...row,
         status: row.tenant_id ? computeStatus(row.lease_end) : "vacant",
+        payment_status: row.tenant_id ? computePaymentStatus(row.rent_amount, row.current_period_paid) : null,
       }))
     );
   })

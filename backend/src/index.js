@@ -8,6 +8,7 @@ import adminRouter from "./routes/admin.js";
 import propertiesRouter from "./routes/properties.js";
 import unitsRouter from "./routes/units.js";
 import tenantsRouter from "./routes/tenants.js";
+import rentPaymentsRouter from "./routes/rentPayments.js";
 import maintenanceRouter from "./routes/maintenance.js";
 import documentsRouter from "./routes/documents.js";
 import staysRouter from "./routes/stays.js";
@@ -70,6 +71,11 @@ const anyRole = requireRole("owner", "manager", "accountant");
 app.use("/api/properties", requireAdminAuth, staffOnly, propertiesRouter);
 app.use("/api/units", requireAdminAuth, staffOnly, unitsRouter);
 app.use("/api/tenants", requireAdminAuth, staffOnly, tenantsRouter);
+// Read access for accountants (they don't reach the Tenants page itself,
+// but do need this to make sense of Expenses/Owner Statements) — write
+// routes are gated staff-only inside rentPayments.js, same pattern as
+// documents.js and expenses.js.
+app.use("/api/rent-payments", requireAdminAuth, anyRole, rentPaymentsRouter);
 app.use("/api/maintenance", requireAdminAuth, staffOnly, maintenanceRouter);
 app.use("/api/documents", requireAdminAuth, anyRole, documentsRouter);
 app.use("/api/stays", requireAdminAuth, staffOnly, staysRouter);
