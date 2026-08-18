@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseMaintenanceBody, parseMessageBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
+import { notifyManagersOfMaintenanceRequest, notifyTenantOfMaintenanceReply } from "../services/email.js";
 
 const router = Router();
 
@@ -80,6 +81,28 @@ router.post(
        RETURNING *`,
       [result.urgency, result.trade, result.reasoning, result.status, ticket.id]
     );
+
+    // A ticket added directly on the dashboard still notifies the other
+    // managers/owner on the team — not just the one who created it.
+    const { rows: contextRows } = await pool.query(
+      `SELECT p.name AS property_name, u.unit_number, t.full_name AS tenant_name
+       FROM units u
+       JOIN properties p ON p.id = u.property_id
+       LEFT JOIN tenants t ON t.id = $2
+       WHERE u.id = $1`,
+      [ticket.unit_id, ticket.tenant_id]
+    );
+    await notifyManagersOfMaintenanceRequest({
+      businessId: req.businessId,
+      title: ticket.title,
+      description: ticket.description,
+      propertyName: contextRows[0]?.property_name,
+      unitNumber: contextRows[0]?.unit_number,
+      tenantName: contextRows[0]?.tenant_name,
+      aiUrgency: result.urgency,
+      aiTrade: result.trade,
+    });
+
     res.status(201).json(updated[0]);
   })
 );
@@ -123,7 +146,10 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
     const { rows: ticketRows } = await pool.query(
-      "SELECT id FROM maintenance_requests WHERE id = $1 AND business_id = $2",
+      `SELECT m.id, m.title, t.email AS tenant_email, t.full_name AS tenant_name
+       FROM maintenance_requests m
+       LEFT JOIN tenants t ON t.id = m.tenant_id
+       WHERE m.id = $1 AND m.business_id = $2`,
       [req.params.id, req.businessId]
     );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
@@ -138,6 +164,17 @@ router.post(
     await pool.query("UPDATE maintenance_requests SET manager_last_read_at = now() WHERE id = $1", [
       req.params.id,
     ]);
+
+    // No tenant_email means either the ticket has no tenant attached or
+    // that tenant has no email on file — notifyTenantOfMaintenanceReply
+    // no-ops in that case rather than failing.
+    await notifyTenantOfMaintenanceReply({
+      tenantEmail: ticketRows[0].tenant_email,
+      tenantName: ticketRows[0].tenant_name,
+      ticketTitle: ticketRows[0].title,
+      commentBody: data.body,
+    });
+
     res.status(201).json(rows[0]);
   })
 );

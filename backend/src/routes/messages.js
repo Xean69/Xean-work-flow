@@ -3,6 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseMessageBody } from "../utils/validate.js";
+import { notifyTenantOfNewMessage } from "../services/email.js";
 
 const router = Router();
 
@@ -61,7 +62,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
     const { rows: tenantRows } = await pool.query(
-      "SELECT id FROM tenants WHERE id = $1 AND business_id = $2",
+      "SELECT id, email, full_name FROM tenants WHERE id = $1 AND business_id = $2",
       [req.params.tenantId, req.businessId]
     );
     if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
@@ -72,6 +73,13 @@ router.post(
        RETURNING id, sender, body, created_at`,
       [req.businessId, req.params.tenantId, data.body]
     );
+
+    await notifyTenantOfNewMessage({
+      tenantEmail: tenantRows[0].email,
+      tenantName: tenantRows[0].full_name,
+      messageBody: data.body,
+    });
+
     res.status(201).json(rows[0]);
   })
 );

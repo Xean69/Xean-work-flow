@@ -8,6 +8,7 @@ import { UPLOADS_DIR } from "../utils/upload.js";
 import { parsePortalRepairBody, parseMessageBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { currentPeriod } from "../utils/period.js";
+import { notifyManagersOfMaintenanceRequest, notifyManagersOfTenantMessage } from "../services/email.js";
 
 const router = Router();
 
@@ -153,7 +154,7 @@ router.post(
   requireTenantAuth,
   asyncHandler(async (req, res) => {
     const data = parsePortalRepairBody(req.body);
-    const { rows: tenantRows } = await pool.query("SELECT unit_id FROM tenants WHERE id = $1", [
+    const { rows: tenantRows } = await pool.query("SELECT unit_id, full_name FROM tenants WHERE id = $1", [
       req.tenantId,
     ]);
     if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
@@ -162,8 +163,9 @@ router.post(
     // set business_id before, and the column is NOT NULL — every portal
     // repair submission was failing outright. Fixed here as part of the
     // same change, since triage can't be tested through the portal without it.)
-    const { rows: businessRows } = await pool.query(
-      `SELECT p.business_id FROM units u JOIN properties p ON p.id = u.property_id WHERE u.id = $1`,
+    const { rows: unitRows } = await pool.query(
+      `SELECT p.business_id, p.name AS property_name, u.unit_number
+       FROM units u JOIN properties p ON p.id = u.property_id WHERE u.id = $1`,
       [tenantRows[0].unit_id]
     );
 
@@ -171,7 +173,7 @@ router.post(
       `INSERT INTO maintenance_requests (business_id, unit_id, tenant_id, title, description, status, priority)
        VALUES ($1, $2, $3, $4, $5, 'new', $6)
        RETURNING id, title, description, status, priority, created_at, resolved_at`,
-      [businessRows[0]?.business_id, tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
+      [unitRows[0]?.business_id, tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
     );
     const ticket = rows[0];
 
@@ -185,6 +187,18 @@ router.post(
        RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status`,
       [result.urgency, result.trade, result.reasoning, result.status, ticket.id]
     );
+
+    await notifyManagersOfMaintenanceRequest({
+      businessId: unitRows[0]?.business_id,
+      title: ticket.title,
+      description: ticket.description,
+      propertyName: unitRows[0]?.property_name,
+      unitNumber: unitRows[0]?.unit_number,
+      tenantName: tenantRows[0].full_name,
+      aiUrgency: result.urgency,
+      aiTrade: result.trade,
+    });
+
     res.status(201).json(updated[0]);
   })
 );
@@ -224,16 +238,19 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
     const { rows: ticketRows } = await pool.query(
-      "SELECT id FROM maintenance_requests WHERE id = $1 AND tenant_id = $2",
+      "SELECT id, business_id FROM maintenance_requests WHERE id = $1 AND tenant_id = $2",
       [req.params.id, req.tenantId]
     );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
 
+    // Pre-existing bug found while wiring up email notifications: this
+    // INSERT never set business_id before, and the column is NOT NULL — a
+    // tenant replying to their own ticket's thread was failing outright.
     const { rows } = await pool.query(
-      `INSERT INTO maintenance_comments (request_id, sender, body)
-       VALUES ($1, 'tenant', $2)
+      `INSERT INTO maintenance_comments (business_id, request_id, sender, body)
+       VALUES ($1, $2, 'tenant', $3)
        RETURNING id, sender, body, created_at`,
-      [req.params.id, data.body]
+      [ticketRows[0].business_id, req.params.id, data.body]
     );
     await pool.query("UPDATE maintenance_requests SET tenant_last_read_at = now() WHERE id = $1", [
       req.params.id,
@@ -259,12 +276,27 @@ router.post(
   requireTenantAuth,
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
+    // Pre-existing bug found while wiring up email notifications: this
+    // INSERT never set business_id before, and the column is NOT NULL —
+    // every message a tenant sent through the portal was failing outright.
+    const { rows: tenantRows } = await pool.query("SELECT business_id, full_name FROM tenants WHERE id = $1", [
+      req.tenantId,
+    ]);
+    if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+
     const { rows } = await pool.query(
-      `INSERT INTO messages (tenant_id, sender, body)
-       VALUES ($1, 'tenant', $2)
+      `INSERT INTO messages (business_id, tenant_id, sender, body)
+       VALUES ($1, $2, 'tenant', $3)
        RETURNING id, sender, body, created_at`,
-      [req.tenantId, data.body]
+      [tenantRows[0].business_id, req.tenantId, data.body]
     );
+
+    await notifyManagersOfTenantMessage({
+      businessId: tenantRows[0].business_id,
+      tenantName: tenantRows[0].full_name,
+      messageBody: data.body,
+    });
+
     res.status(201).json(rows[0]);
   })
 );
