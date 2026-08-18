@@ -28,6 +28,14 @@ export function logout() {
   return request("/logout", { method: "POST" });
 }
 
+export function forgotPassword(email) {
+  return request("/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+export function resetPassword(token, password) {
+  return request("/reset-password", { method: "POST", body: JSON.stringify({ token, password }) });
+}
+
 export function getMe() {
   return request("/me");
 }

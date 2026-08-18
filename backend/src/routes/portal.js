@@ -3,12 +3,17 @@ import path from "node:path";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { verifyPassword, requireTenantAuth } from "../utils/auth.js";
+import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
 import { UPLOADS_DIR } from "../utils/upload.js";
-import { parsePortalRepairBody, parseMessageBody } from "../utils/validate.js";
+import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { currentPeriod } from "../utils/period.js";
-import { notifyManagersOfMaintenanceRequest, notifyManagersOfTenantMessage } from "../services/email.js";
+import {
+  notifyManagersOfMaintenanceRequest,
+  notifyManagersOfTenantMessage,
+  sendTenantPasswordResetEmail,
+} from "../services/email.js";
+import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 
 const router = Router();
 
@@ -42,6 +47,50 @@ router.post("/logout", (req, res) => {
     res.status(204).end();
   });
 });
+
+// Same shape and same reasoning as the dashboard's /api/admin/forgot-password
+// — identical response whether or not the email belongs to a tenant, so
+// this can't be used to check who has a portal login.
+router.post(
+  "/forgot-password",
+  asyncHandler(async (req, res) => {
+    const data = parseForgotPasswordBody(req.body);
+    const { rows } = await pool.query("SELECT id, email FROM tenants WHERE lower(email) = lower($1)", [
+      data.email,
+    ]);
+    const tenant = rows[0];
+
+    if (tenant) {
+      const { token, tokenHash, expiresAt } = generateResetToken();
+      await pool.query("UPDATE tenants SET reset_token_hash = $1, reset_token_expires_at = $2 WHERE id = $3", [
+        tokenHash,
+        expiresAt,
+        tenant.id,
+      ]);
+      await sendTenantPasswordResetEmail({ email: tenant.email, token });
+    }
+
+    res.json({ message: "If that email exists, we've sent a reset link." });
+  })
+);
+
+router.post(
+  "/reset-password",
+  asyncHandler(async (req, res) => {
+    const data = parseTenantResetPasswordBody(req.body);
+    const { rows } = await pool.query(
+      "SELECT id FROM tenants WHERE reset_token_hash = $1 AND reset_token_expires_at > now()",
+      [hashResetToken(data.token)]
+    );
+    if (!rows[0]) throw new ApiError(400, "This reset link is invalid or has expired.");
+
+    await pool.query(
+      "UPDATE tenants SET password_hash = $1, reset_token_hash = NULL, reset_token_expires_at = NULL WHERE id = $2",
+      [await hashPassword(data.password), rows[0].id]
+    );
+    res.status(204).end();
+  })
+);
 
 // Same paid-vs-rent-for-the-current-period logic as GET /api/tenants on the
 // manager side (tenants.js) — kept as its own small copy here rather than a

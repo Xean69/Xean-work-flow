@@ -2,6 +2,8 @@ import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import PortalLayout from './portal/PortalLayout.jsx'
 import PortalLogin from './portal/pages/Login.jsx'
+import PortalForgotPassword from './portal/pages/ForgotPassword.jsx'
+import PortalResetPassword from './portal/pages/ResetPassword.jsx'
 import PortalHome from './portal/pages/Home.jsx'
 import PortalLease from './portal/pages/Lease.jsx'
 import PortalRepairs from './portal/pages/Repairs.jsx'
@@ -11,6 +13,8 @@ import Landing from './pages/Landing.jsx'
 import Terms from './pages/Terms.jsx'
 import Privacy from './pages/Privacy.jsx'
 import Login from './pages/Login.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import Signup from './pages/Signup.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Properties from './pages/Properties.jsx'
@@ -35,6 +39,8 @@ function App() {
       {/* Tenant portal: entirely separate from the manager dashboard below
           — its own layout, its own auth, no shared navigation. */}
       <Route path="/portal/login" element={<PortalLogin />} />
+      <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
+      <Route path="/portal/reset-password" element={<PortalResetPassword />} />
       <Route element={<PortalLayout />}>
         <Route path="/portal/home" element={<PortalHome />} />
         <Route path="/portal/repairs" element={<PortalRepairs />} />
@@ -52,6 +58,8 @@ function App() {
       {/* Manager dashboard: its own login, separate from the tenant
           portal's — Layout itself guards every route nested under it. */}
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/signup" element={<Signup />} />
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<Dashboard />} />

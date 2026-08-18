@@ -69,6 +69,9 @@ function Login() {
         </form>
 
         <p className="login-switch">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
+        <p className="login-switch">
           New business? <Link to="/signup">Create an account</Link>
         </p>
       </div>

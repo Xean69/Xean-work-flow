@@ -536,6 +536,24 @@ body {
   color: var(--slate);
   margin: 0 0 24px 0;
 }
+.portal-login-hint {
+  font-size: 11.5px;
+  color: var(--slate);
+  margin-top: 2px;
+}
+.portal-login-switch {
+  margin: 20px 0 0 0;
+  font-size: 13px;
+  color: var(--slate);
+}
+.portal-login-switch a {
+  color: var(--brass-deep);
+  font-weight: 600;
+  text-decoration: none;
+}
+.portal-login-switch a:hover {
+  text-decoration: underline;
+}
 
 /* ---- Responsive: desktop gets a wider shell, a top nav instead of the
    bottom tab bar, and two-column card layouts where it makes sense — same

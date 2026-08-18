@@ -131,6 +131,51 @@ export async function notifyTenantOfMaintenanceReply({ tenantEmail, tenantName, 
   }
 }
 
+// The two password-reset senders. Unlike the notify* functions above,
+// there's no businessId/tenantId lookup here — the route already knows the
+// account exists and its email by the time it calls this, since the
+// "don't reveal whether the account exists" behavior is handled by always
+// sending the same response regardless of whether this actually fires.
+export async function sendAdminPasswordResetEmail({ email, token }) {
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Reset your Xean Intake password",
+      html: renderEmail({
+        heading: "Reset your password",
+        lines: [
+          "We received a request to reset your Xean Intake dashboard password.",
+          "This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.",
+        ],
+        ctaText: "Reset password",
+        ctaUrl: `${APP_BASE_URL}/reset-password?token=${token}`,
+      }),
+    });
+  } catch (err) {
+    console.error("sendAdminPasswordResetEmail failed:", err);
+  }
+}
+
+export async function sendTenantPasswordResetEmail({ email, token }) {
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Reset your tenant portal password",
+      html: renderEmail({
+        heading: "Reset your password",
+        lines: [
+          "We received a request to reset your tenant portal password.",
+          "This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.",
+        ],
+        ctaText: "Reset password",
+        ctaUrl: `${APP_BASE_URL}/portal/reset-password?token=${token}`,
+      }),
+    });
+  } catch (err) {
+    console.error("sendTenantPasswordResetEmail failed:", err);
+  }
+}
+
 export async function notifyTenantOfNewMessage({ tenantEmail, tenantName, messageBody }) {
   try {
     if (!tenantEmail) return;

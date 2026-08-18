@@ -452,3 +452,23 @@ BEGIN
       CHECK (ai_classification_status IN ('not_run', 'success', 'failed'));
   END IF;
 END $$;
+
+-- Password reset, for both admin and tenant logins. Only the hash of the
+-- token is stored (SHA-256, not bcrypt — the token itself is already 256
+-- bits of random entropy, so a fast deterministic hash is enough for a
+-- WHERE lookup and is the standard approach; bcrypt's per-call salt would
+-- make that lookup impossible without scanning every outstanding token).
+-- A request for a new token overwrites any previous one, and a successful
+-- reset clears both columns — either way the old token stops working,
+-- which is what "single-use" means here since nothing else ever reads
+-- these columns.
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS reset_token_hash TEXT;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS reset_token_hash TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ;
+
+-- Reset tokens are looked up by hash, not by admin/tenant id, so the hash
+-- itself needs an index — the account lookup at request-a-reset time
+-- already goes through the existing email indexes.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_reset_token_hash ON admins(reset_token_hash) WHERE reset_token_hash IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_reset_token_hash ON tenants(reset_token_hash) WHERE reset_token_hash IS NOT NULL;

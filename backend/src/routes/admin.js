@@ -3,7 +3,9 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireAdminAuth } from "../utils/auth.js";
-import { parseSignupBody } from "../utils/validate.js";
+import { parseSignupBody, parseForgotPasswordBody, parseAdminResetPasswordBody } from "../utils/validate.js";
+import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
+import { sendAdminPasswordResetEmail } from "../services/email.js";
 
 const router = Router();
 
@@ -54,6 +56,57 @@ router.post("/logout", (req, res) => {
     res.status(204).end();
   });
 });
+
+// Deliberately responds identically whether or not the email belongs to an
+// account — otherwise this endpoint would let anyone check which email
+// addresses have a dashboard login, just by watching which ones get a
+// different response.
+router.post(
+  "/forgot-password",
+  asyncHandler(async (req, res) => {
+    const data = parseForgotPasswordBody(req.body);
+    const { rows } = await pool.query("SELECT id, email FROM admins WHERE lower(email) = lower($1)", [
+      data.email,
+    ]);
+    const admin = rows[0];
+
+    if (admin) {
+      const { token, tokenHash, expiresAt } = generateResetToken();
+      await pool.query("UPDATE admins SET reset_token_hash = $1, reset_token_expires_at = $2 WHERE id = $3", [
+        tokenHash,
+        expiresAt,
+        admin.id,
+      ]);
+      // Never throws — see services/email.js. A failed send still gets the
+      // same generic response as a successful one, for the same
+      // no-existence-leak reason noted above.
+      await sendAdminPasswordResetEmail({ email: admin.email, token });
+    }
+
+    res.json({ message: "If that email exists, we've sent a reset link." });
+  })
+);
+
+router.post(
+  "/reset-password",
+  asyncHandler(async (req, res) => {
+    const data = parseAdminResetPasswordBody(req.body);
+    const { rows } = await pool.query(
+      "SELECT id FROM admins WHERE reset_token_hash = $1 AND reset_token_expires_at > now()",
+      [hashResetToken(data.token)]
+    );
+    if (!rows[0]) throw new ApiError(400, "This reset link is invalid or has expired.");
+
+    // Clearing the token here (not just overwriting it on the next forgot-
+    // password request) is what makes it single-use — the same link can't
+    // be submitted twice.
+    await pool.query(
+      "UPDATE admins SET password_hash = $1, reset_token_hash = NULL, reset_token_expires_at = NULL WHERE id = $2",
+      [await hashPassword(data.password), rows[0].id]
+    );
+    res.status(204).end();
+  })
+);
 
 router.get(
   "/me",

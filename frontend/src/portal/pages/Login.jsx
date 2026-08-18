@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../portalApi.js'
 import '../portal.css'
 
@@ -66,6 +66,10 @@ function Login() {
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <p className="portal-login-switch">
+          <Link to="/portal/forgot-password">Forgot password?</Link>
+        </p>
       </div>
     </div>
   )

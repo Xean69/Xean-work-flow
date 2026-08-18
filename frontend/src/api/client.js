@@ -31,6 +31,14 @@ export function logout() {
   return request("/admin/logout", { method: "POST" });
 }
 
+export function forgotPassword(email) {
+  return request("/admin/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+export function resetPassword(token, password) {
+  return request("/admin/reset-password", { method: "POST", body: JSON.stringify({ token, password }) });
+}
+
 export function getMe() {
   return request("/admin/me");
 }

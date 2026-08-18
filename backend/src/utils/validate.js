@@ -35,6 +35,24 @@ export function requireAdminPassword(value) {
   return value;
 }
 
+export function parseForgotPasswordBody(body) {
+  return { email: requireString(body.email, "email") };
+}
+
+export function parseAdminResetPasswordBody(body) {
+  return {
+    token: requireString(body.token, "token"),
+    password: requireAdminPassword(body.password),
+  };
+}
+
+export function parseTenantResetPasswordBody(body) {
+  return {
+    token: requireString(body.token, "token"),
+    password: requirePassword(body.password),
+  };
+}
+
 // Invite-only roles — 'owner' is never assignable through the team API.
 // There's always exactly one owner per business, created at signup (see
 // schema.sql's idx_admins_one_owner_per_business).
