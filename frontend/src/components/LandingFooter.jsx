@@ -21,6 +21,7 @@ function LandingFooter() {
               <Link to="/#features">Features</Link>
               <Link to="/#pricing">Pricing</Link>
               <Link to="/login">Log in</Link>
+              <Link to="/portal/login">Tenant Portal</Link>
             </div>
             <div className="lnd-foot-col">
               <h4>Company</h4>
