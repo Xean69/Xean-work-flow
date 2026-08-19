@@ -487,3 +487,35 @@ ALTER TABLE documents ALTER COLUMN file_path DROP NOT NULL;
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS receipt_url TEXT;
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS receipt_cloudinary_public_id TEXT;
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS receipt_cloudinary_resource_type TEXT;
+
+-- AI-generated portfolio insights (Insights page). Regenerated only on
+-- demand (never automatically) to control Anthropic API cost, same pattern
+-- as Documents' re-extract. insight_generations records one row per
+-- "Generate" click, including the honest "not enough data yet" case (zero
+-- insights, insufficient_data true) — so that explanation survives a page
+-- reload instead of vanishing with the request that produced it. insights
+-- holds the individual dismissible cards; a fresh generate call replaces
+-- the whole current set rather than accumulating stale analysis on top of
+-- it, since a later run reflects the portfolio's current state.
+CREATE TABLE IF NOT EXISTS insight_generations (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  insufficient_data BOOLEAN NOT NULL DEFAULT false,
+  note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS insights (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  icon TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  reasoning TEXT NOT NULL,
+  figures JSONB NOT NULL DEFAULT '[]',
+  dismissed BOOLEAN NOT NULL DEFAULT false,
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_insight_generations_business_id ON insight_generations(business_id);
+CREATE INDEX IF NOT EXISTS idx_insights_business_id ON insights(business_id);

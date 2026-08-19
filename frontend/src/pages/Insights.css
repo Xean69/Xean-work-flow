@@ -1,3 +1,8 @@
+.insights-meta {
+  font-size: 12px;
+  color: var(--slate);
+  margin: -4px 0 14px;
+}
 .insight-card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -7,6 +12,20 @@
   display: flex;
   gap: 14px;
   align-items: flex-start;
+}
+.insight-body {
+  flex: 1;
+  min-width: 0;
+}
+.insight-dismiss {
+  flex-shrink: 0;
+}
+.insight-reasoning {
+  font-size: 11.5px;
+  color: var(--slate);
+  margin-top: 8px;
+  font-style: italic;
+  line-height: 1.5;
 }
 .insight-icon {
   width: 36px;

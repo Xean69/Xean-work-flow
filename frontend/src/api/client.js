@@ -321,3 +321,15 @@ export function updateComplianceCheckStatus(id, status) {
 export function deleteComplianceCheck(id) {
   return request(`/compliance-checks/${id}`, { method: "DELETE" });
 }
+
+export function getInsights() {
+  return request("/insights");
+}
+
+export function generateInsights() {
+  return request("/insights/generate", { method: "POST" });
+}
+
+export function dismissInsight(id) {
+  return request(`/insights/${id}/dismiss`, { method: "PUT" });
+}

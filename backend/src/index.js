@@ -23,6 +23,7 @@ import ownerStatementsRouter from "./routes/ownerStatements.js";
 import strLicensesRouter from "./routes/strLicenses.js";
 import activityRouter from "./routes/activity.js";
 import complianceChecksRouter from "./routes/complianceChecks.js";
+import insightsRouter from "./routes/insights.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -96,6 +97,11 @@ app.use("/api/activity", requireAdminAuth, anyRole, activityRouter);
 // Owner/manager only — compliance isn't financial, so it's not part of
 // the accountant's read-only allowance the way expenses/documents are.
 app.use("/api/compliance-checks", requireAdminAuth, staffOnly, complianceChecksRouter);
+// Owner/manager only, matching the Insights page itself (see
+// frontend/src/utils/permissions.js) — a decision-making tool for
+// management, not something accountants need, and regenerating costs a
+// real Anthropic API call.
+app.use("/api/insights", requireAdminAuth, staffOnly, insightsRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is
