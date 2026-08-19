@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import multer from "multer";
+import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pool from "./db.js";
@@ -30,6 +31,18 @@ import { requireAdminAuth, requireRole } from "./utils/auth.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Set only when the frontend is hosted on a different origin than this API
+// (e.g. Vercel calling Railway) — comma-separated list of allowed origins.
+// Unset in local dev, where Vite's dev-server proxy makes every request
+// same-origin already, so neither CORS nor a cross-site cookie is needed.
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+  : null;
+
+if (corsOrigins) {
+  app.use(cors({ origin: corsOrigins, credentials: true }));
+}
+
 app.use(express.json());
 
 // Session store lives in the same Postgres database — no extra
@@ -43,7 +56,13 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
+      // A cross-site cookie (frontend and API on different origins) needs
+      // SameSite=None, which browsers only honor alongside Secure — fine
+      // in production (Railway is HTTPS-only), but Secure would silently
+      // drop the cookie over the plain-HTTP local dev server, so this
+      // only switches on when CORS_ORIGIN says the origins actually differ.
+      sameSite: corsOrigins ? "none" : "lax",
+      secure: !!corsOrigins,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   })
