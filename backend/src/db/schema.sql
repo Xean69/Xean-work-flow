@@ -472,3 +472,18 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ;
 -- already goes through the existing email indexes.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_reset_token_hash ON admins(reset_token_hash) WHERE reset_token_hash IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_reset_token_hash ON tenants(reset_token_hash) WHERE reset_token_hash IS NOT NULL;
+
+-- File storage moved from local disk to Cloudinary (local storage doesn't
+-- survive a deploy). file_path/receipt_file_path are left in place only for
+-- rows uploaded before this migration — those old local files are no
+-- longer served by the app. New uploads populate the columns below
+-- instead; cloudinary_*_id/*_resource_type are what deletion needs
+-- (Cloudinary's destroy API takes a public_id + resource_type, not a URL).
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_url TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS cloudinary_public_id TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS cloudinary_resource_type TEXT;
+ALTER TABLE documents ALTER COLUMN file_path DROP NOT NULL;
+
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS receipt_url TEXT;
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS receipt_cloudinary_public_id TEXT;
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS receipt_cloudinary_resource_type TEXT;

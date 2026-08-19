@@ -182,9 +182,9 @@ function Expenses() {
           <div className="exp-grid">
             {expenses.map((e) => (
               <div className="exp-card" key={e.id}>
-                {e.receipt_file_path ? (
+                {e.receipt_url ? (
                   <a href={getExpenseReceiptUrl(e.id)} target="_blank" rel="noreferrer" className="exp-thumb">
-                    {isImageReceipt(e.receipt_file_path) ? (
+                    {isImageReceipt(e.receipt_url) ? (
                       <img src={getExpenseReceiptUrl(e.id)} alt="Receipt" className="exp-thumb-img" />
                     ) : (
                       '📄'
@@ -222,7 +222,7 @@ function Expenses() {
         <Modal title={formState?.expense ? 'Edit expense' : 'Upload receipt'} onClose={() => setFormState(null)}>
           <ExpenseForm
             initialValues={initialValues}
-            existingReceiptUrl={formState?.expense?.receipt_file_path ? getExpenseReceiptUrl(formState.expense.id) : null}
+            existingReceiptUrl={formState?.expense?.receipt_url ? getExpenseReceiptUrl(formState.expense.id) : null}
             properties={properties}
             units={unitOptions}
             onSubmit={handleFormSubmit}

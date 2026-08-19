@@ -1,10 +1,8 @@
 import { Router } from "express";
-import path from "node:path";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
-import { UPLOADS_DIR } from "../utils/upload.js";
 import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { currentPeriod } from "../utils/period.js";
@@ -158,18 +156,16 @@ router.get(
   requireTenantAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "SELECT file_name, file_path FROM documents WHERE id = $1 AND tenant_id = $2",
+      "SELECT file_url FROM documents WHERE id = $1 AND tenant_id = $2",
       [req.params.id, req.tenantId]
     );
     const doc = rows[0];
     if (!doc) throw new ApiError(404, "Document not found");
+    if (!doc.file_url) {
+      throw new ApiError(404, "This file predates Cloudinary storage and is no longer available");
+    }
 
-    res.setHeader("Content-Disposition", `inline; filename="${doc.file_name}"`);
-    res.sendFile(path.join(UPLOADS_DIR, doc.file_path), (err) => {
-      if (err && !res.headersSent) {
-        res.status(404).json({ error: "File not found on disk" });
-      }
-    });
+    res.redirect(doc.file_url);
   })
 );
 

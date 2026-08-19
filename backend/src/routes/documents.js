@@ -1,12 +1,11 @@
 import { Router } from "express";
-import path from "node:path";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseDocumentBody, parseDocumentStatusBody, parseExtractedDataBody } from "../utils/validate.js";
-import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
+import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
-import { extractDocumentData, isExtractableDocType } from "../services/extraction.js";
+import { extractDocumentData, isExtractableDocType, mimeTypeForFilename } from "../services/extraction.js";
 
 const router = Router();
 
@@ -59,23 +58,35 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!req.file) throw new ApiError(400, "file is required");
 
-    let data;
+    // multer's memoryStorage holds the file only in req.file.buffer — validate
+    // metadata first, so a bad request never touches Cloudinary at all.
+    const data = parseDocumentBody(req.body);
+    await assertPropertyInBusiness(data.property_id, req.businessId);
+    await assertTenantInBusiness(data.tenant_id, req.businessId);
+
+    let uploaded;
     try {
-      data = parseDocumentBody(req.body);
-      await assertPropertyInBusiness(data.property_id, req.businessId);
-      await assertTenantInBusiness(data.tenant_id, req.businessId);
+      uploaded = await uploadToCloudinary(req.file.buffer, "xean-intake/documents");
     } catch (err) {
-      // Metadata was invalid, but multer already wrote the file to disk —
-      // clean it up rather than leaving an orphaned upload behind.
-      deleteUploadedFile(req.file.filename);
-      throw err;
+      console.error("Cloudinary upload failed:", err);
+      throw new ApiError(502, "Failed to upload file, please try again");
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO documents (business_id, property_id, tenant_id, file_name, file_path, doc_type, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO documents (business_id, property_id, tenant_id, file_name, file_url, cloudinary_public_id, cloudinary_resource_type, doc_type, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [req.businessId, data.property_id, data.tenant_id, req.file.originalname, req.file.filename, data.doc_type, data.notes]
+      [
+        req.businessId,
+        data.property_id,
+        data.tenant_id,
+        req.file.originalname,
+        uploaded.url,
+        uploaded.publicId,
+        uploaded.resourceType,
+        data.doc_type,
+        data.notes,
+      ]
     );
     const doc = rows[0];
 
@@ -83,7 +94,7 @@ router.post(
     // to keep API costs down. doc_types with no extractor (application,
     // other) are marked unsupported without ever calling the API.
     if (isExtractableDocType(doc.doc_type)) {
-      const result = await extractDocumentData(path.join(UPLOADS_DIR, doc.file_path), doc.doc_type);
+      const result = await extractDocumentData(req.file.buffer, req.file.mimetype, doc.doc_type);
       const { rows: updated } = await pool.query(
         `UPDATE documents
          SET extracted_data = $1, extraction_confidence = $2, extraction_status = $3, extracted_at = now()
@@ -119,8 +130,13 @@ router.post(
     if (!isExtractableDocType(doc.doc_type)) {
       throw new ApiError(400, "This document type doesn't support AI extraction");
     }
+    if (!doc.file_url) {
+      throw new ApiError(400, "This document predates Cloudinary storage and has no file to re-extract from");
+    }
 
-    const result = await extractDocumentData(path.join(UPLOADS_DIR, doc.file_path), doc.doc_type);
+    const response = await fetch(doc.file_url);
+    const fileBuffer = Buffer.from(await response.arrayBuffer());
+    const result = await extractDocumentData(fileBuffer, mimeTypeForFilename(doc.file_name), doc.doc_type);
     const { rows: updated } = await pool.query(
       `UPDATE documents
        SET extracted_data = $1, extraction_confidence = $2, extraction_status = $3, extracted_at = now()
@@ -160,25 +176,24 @@ router.put(
   })
 );
 
-// Serves the file inline so PDFs/images open in a new browser tab instead
-// of forcing a download — the browser's own viewer still offers a save
-// option if the user wants one.
+// Redirects to the file's Cloudinary URL rather than streaming it through
+// this server — the browser fetches the bytes straight from Cloudinary's
+// CDN, and this route stays the stable, auth-checked link the frontend
+// links to.
 router.get(
   "/:id/download",
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "SELECT * FROM documents WHERE id = $1 AND business_id = $2",
+      "SELECT file_url FROM documents WHERE id = $1 AND business_id = $2",
       [req.params.id, req.businessId]
     );
     const doc = rows[0];
     if (!doc) throw new ApiError(404, "Document not found");
+    if (!doc.file_url) {
+      throw new ApiError(404, "This file predates Cloudinary storage and is no longer available");
+    }
 
-    res.setHeader("Content-Disposition", `inline; filename="${doc.file_name}"`);
-    res.sendFile(path.join(UPLOADS_DIR, doc.file_path), (err) => {
-      if (err && !res.headersSent) {
-        res.status(404).json({ error: "File not found on disk" });
-      }
-    });
+    res.redirect(doc.file_url);
   })
 );
 
@@ -205,11 +220,11 @@ router.delete(
   staffOnly,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "DELETE FROM documents WHERE id = $1 AND business_id = $2 RETURNING file_path",
+      "DELETE FROM documents WHERE id = $1 AND business_id = $2 RETURNING cloudinary_public_id, cloudinary_resource_type",
       [req.params.id, req.businessId]
     );
     if (!rows[0]) throw new ApiError(404, "Document not found");
-    deleteUploadedFile(rows[0].file_path);
+    deleteFromCloudinary(rows[0].cloudinary_public_id, rows[0].cloudinary_resource_type);
     res.status(204).end();
   })
 );

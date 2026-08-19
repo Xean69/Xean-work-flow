@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 const anthropic = new Anthropic();
@@ -10,6 +9,16 @@ const MEDIA_TYPES = {
   ".jpeg": "image/jpeg",
   ".png": "image/png",
 };
+
+const MEDIA_TYPE_VALUES = new Set(Object.values(MEDIA_TYPES));
+
+// Re-extraction fetches the file back from its Cloudinary URL rather than
+// from req.file (only available at upload time), and Cloudinary URLs don't
+// carry a mimetype — so this maps the document's stored original filename
+// back to one instead.
+export function mimeTypeForFilename(filename) {
+  return MEDIA_TYPES[path.extname(filename || "").toLowerCase()];
+}
 
 // Shared by every tool schema below — the model reports its own confidence
 // rather than us guessing at it after the fact. "high" is reserved for
@@ -120,22 +129,16 @@ export function isExtractableDocType(docType) {
 }
 
 // Runs one extraction pass and returns a plain outcome object — it never
-// throws, so a flaky API call or an unreadable file degrades to
-// status: "failed" instead of breaking the upload/re-extract request that
-// called it.
-export async function extractDocumentData(absoluteFilePath, docType) {
+// throws, so a flaky API call degrades to status: "failed" instead of
+// breaking the upload/re-extract request that called it. fileBuffer comes
+// from multer's memoryStorage at upload time, or from re-fetching the
+// Cloudinary URL on a manual re-extract — either way, no local disk read.
+export async function extractDocumentData(fileBuffer, mediaType, docType) {
   const tool = TOOLS[docType];
   if (!tool) return { status: "unsupported", data: null, confidence: null };
 
-  const mediaType = MEDIA_TYPES[path.extname(absoluteFilePath).toLowerCase()];
-  if (!mediaType) return { status: "unsupported", data: null, confidence: null };
-
-  let fileBuffer;
-  try {
-    fileBuffer = await readFile(absoluteFilePath);
-  } catch (err) {
-    console.error("Extraction: could not read uploaded file", err);
-    return { status: "failed", data: null, confidence: null };
+  if (!mediaType || !MEDIA_TYPE_VALUES.has(mediaType)) {
+    return { status: "unsupported", data: null, confidence: null };
   }
 
   const base64Data = fileBuffer.toString("base64");

@@ -1,10 +1,9 @@
 import { Router } from "express";
-import path from "node:path";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseExpenseBody } from "../utils/validate.js";
-import { upload, UPLOADS_DIR, deleteUploadedFile } from "../utils/upload.js";
+import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
 
 const router = Router();
@@ -59,19 +58,23 @@ router.post(
   staffOnly,
   upload.single("receipt"),
   asyncHandler(async (req, res) => {
-    let data;
-    try {
-      data = parseExpenseBody(req.body);
-      await assertPropertyInBusiness(data.property_id, req.businessId);
-      await assertUnitInBusiness(data.unit_id, req.businessId);
-    } catch (err) {
-      if (req.file) deleteUploadedFile(req.file.filename);
-      throw err;
+    const data = parseExpenseBody(req.body);
+    await assertPropertyInBusiness(data.property_id, req.businessId);
+    await assertUnitInBusiness(data.unit_id, req.businessId);
+
+    let uploaded = null;
+    if (req.file) {
+      try {
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean-intake/receipts");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload receipt, please try again");
+      }
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO expenses (business_id, property_id, unit_id, amount, category, vendor_name, expense_date, receipt_file_path, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO expenses (business_id, property_id, unit_id, amount, category, vendor_name, expense_date, receipt_url, receipt_cloudinary_public_id, receipt_cloudinary_resource_type, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         req.businessId,
@@ -81,7 +84,9 @@ router.post(
         data.category,
         data.vendor_name,
         data.expense_date,
-        req.file ? req.file.filename : null,
+        uploaded?.url ?? null,
+        uploaded?.publicId ?? null,
+        uploaded?.resourceType ?? null,
         data.notes,
       ]
     );
@@ -97,51 +102,65 @@ router.put(
   upload.single("receipt"),
   asyncHandler(async (req, res) => {
     const { rows: existingRows } = await pool.query(
-      "SELECT receipt_file_path FROM expenses WHERE id = $1 AND business_id = $2",
+      "SELECT receipt_cloudinary_public_id, receipt_cloudinary_resource_type FROM expenses WHERE id = $1 AND business_id = $2",
       [req.params.id, req.businessId]
     );
-    if (!existingRows[0]) {
-      if (req.file) deleteUploadedFile(req.file.filename);
-      throw new ApiError(404, "Expense not found");
+    if (!existingRows[0]) throw new ApiError(404, "Expense not found");
+
+    const data = parseExpenseBody(req.body);
+    await assertPropertyInBusiness(data.property_id, req.businessId);
+    await assertUnitInBusiness(data.unit_id, req.businessId);
+
+    let uploaded = null;
+    if (req.file) {
+      try {
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean-intake/receipts");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload receipt, please try again");
+      }
     }
 
-    let data;
-    try {
-      data = parseExpenseBody(req.body);
-      await assertPropertyInBusiness(data.property_id, req.businessId);
-      await assertUnitInBusiness(data.unit_id, req.businessId);
-    } catch (err) {
-      if (req.file) deleteUploadedFile(req.file.filename);
-      throw err;
+    const setClauses = [
+      "property_id = $1",
+      "unit_id = $2",
+      "amount = $3",
+      "category = $4",
+      "vendor_name = $5",
+      "expense_date = $6",
+      "notes = $7",
+    ];
+    const params = [
+      data.property_id,
+      data.unit_id,
+      data.amount,
+      data.category,
+      data.vendor_name,
+      data.expense_date,
+      data.notes,
+    ];
+    if (uploaded) {
+      setClauses.push(
+        `receipt_url = $${params.length + 1}`,
+        `receipt_cloudinary_public_id = $${params.length + 2}`,
+        `receipt_cloudinary_resource_type = $${params.length + 3}`
+      );
+      params.push(uploaded.url, uploaded.publicId, uploaded.resourceType);
     }
-
-    const receiptFilePath = req.file ? req.file.filename : existingRows[0].receipt_file_path;
+    params.push(req.params.id, req.businessId);
 
     const { rows } = await pool.query(
-      `UPDATE expenses
-       SET property_id = $1, unit_id = $2, amount = $3, category = $4,
-           vendor_name = $5, expense_date = $6, receipt_file_path = $7, notes = $8
-       WHERE id = $9 AND business_id = $10
+      `UPDATE expenses SET ${setClauses.join(", ")}
+       WHERE id = $${params.length - 1} AND business_id = $${params.length}
        RETURNING *`,
-      [
-        data.property_id,
-        data.unit_id,
-        data.amount,
-        data.category,
-        data.vendor_name,
-        data.expense_date,
-        receiptFilePath,
-        data.notes,
-        req.params.id,
-        req.businessId,
-      ]
+      params
     );
 
-    if (req.file && existingRows[0].receipt_file_path) {
-      deleteUploadedFile(existingRows[0].receipt_file_path);
-    }
-
     res.json(rows[0]);
+
+    if (uploaded && existingRows[0].receipt_cloudinary_public_id) {
+      deleteFromCloudinary(existingRows[0].receipt_cloudinary_public_id, existingRows[0].receipt_cloudinary_resource_type);
+    }
   })
 );
 
@@ -149,18 +168,13 @@ router.get(
   "/:id/receipt",
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "SELECT receipt_file_path FROM expenses WHERE id = $1 AND business_id = $2",
+      "SELECT receipt_url FROM expenses WHERE id = $1 AND business_id = $2",
       [req.params.id, req.businessId]
     );
-    const filePath = rows[0]?.receipt_file_path;
-    if (!filePath) throw new ApiError(404, "This expense has no receipt attached");
+    const receiptUrl = rows[0]?.receipt_url;
+    if (!receiptUrl) throw new ApiError(404, "This expense has no receipt attached");
 
-    res.setHeader("Content-Disposition", "inline");
-    res.sendFile(path.join(UPLOADS_DIR, filePath), (err) => {
-      if (err && !res.headersSent) {
-        res.status(404).json({ error: "File not found on disk" });
-      }
-    });
+    res.redirect(receiptUrl);
   })
 );
 
@@ -169,11 +183,11 @@ router.delete(
   staffOnly,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "DELETE FROM expenses WHERE id = $1 AND business_id = $2 RETURNING receipt_file_path",
+      "DELETE FROM expenses WHERE id = $1 AND business_id = $2 RETURNING receipt_cloudinary_public_id, receipt_cloudinary_resource_type",
       [req.params.id, req.businessId]
     );
     if (!rows[0]) throw new ApiError(404, "Expense not found");
-    deleteUploadedFile(rows[0].receipt_file_path);
+    deleteFromCloudinary(rows[0].receipt_cloudinary_public_id, rows[0].receipt_cloudinary_resource_type);
     res.status(204).end();
   })
 );

@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
     "connect-pg-simple": "^10.0.0",
     "csv-parse": "^7.0.2",
     "dotenv": "^17.4.2",
