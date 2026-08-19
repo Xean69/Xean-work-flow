@@ -31,6 +31,16 @@ import { requireAdminAuth, requireRole } from "./utils/auth.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Railway (like most PaaS) terminates TLS at its edge and forwards plain
+// HTTP to this container, so without this, Express has no way to know the
+// original request was actually HTTPS. That matters here specifically
+// because the session cookie below sets secure: true in production —
+// without trust proxy, Express treats every request as insecure and
+// express-session silently drops the Set-Cookie header rather than send a
+// secure cookie over what it believes is plain HTTP. Login would appear to
+// succeed (200, correct body) with no session ever actually created.
+app.set("trust proxy", 1);
+
 // Set only when the frontend is hosted on a different origin than this API
 // (e.g. Vercel calling Railway) — comma-separated list of allowed origins.
 // Unset in local dev, where Vite's dev-server proxy makes every request
