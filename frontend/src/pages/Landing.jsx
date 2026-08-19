@@ -53,7 +53,7 @@ function Landing() {
             <span className="lnd-grad">rebuilt for the AI era.</span>
           </h1>
           <p className="lnd-hero-p">
-            Xean Intake reads your leases, triages every maintenance request, and keeps every tenant
+            Xean reads your leases, triages every maintenance request, and keeps every tenant
             conversation in one place — engineered for operators who expect more than spreadsheets.
           </p>
           <div className="lnd-hero-actions">
@@ -71,7 +71,7 @@ function Landing() {
               <span className="lnd-console-dot" />
               <span className="lnd-console-dot" />
               <span className="lnd-console-dot" />
-              <span className="lnd-console-title">xean-intake / portfolio-overview</span>
+              <span className="lnd-console-title">xean / portfolio-overview</span>
             </div>
             <div className="lnd-console-body">
               <div>

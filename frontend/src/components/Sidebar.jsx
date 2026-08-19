@@ -188,7 +188,7 @@ function Sidebar({ admin, onLogout, open }) {
       <div className="brand">
         <div className="brand-mark">X</div>
         <div className="brand-name">
-          Xean <span>Intake</span>
+          Xean
         </div>
       </div>
 

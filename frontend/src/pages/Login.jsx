@@ -30,7 +30,7 @@ function Login() {
         <div className="login-brand">
           <div className="login-mark">X</div>
           <h1>
-            Xean <span>Intake</span>
+            Xean
           </h1>
         </div>
         <p className="login-sub">Sign in to the manager dashboard</p>

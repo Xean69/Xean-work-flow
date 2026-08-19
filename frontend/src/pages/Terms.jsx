@@ -19,12 +19,12 @@ function Terms() {
 
       <div className="lnd-wrap lnd-doc-page">
         <Link to="/" className="lnd-doc-back">
-          ← Back to Xean Intake
+          ← Back to Xean
         </Link>
 
         <div className="lnd-doc-card">
           <h1>
-            Xean Intake — Terms of <span>Service</span>
+            Xean — Terms of <span>Service</span>
           </h1>
 
           <div className="lnd-doc-notice">
@@ -40,13 +40,13 @@ function Terms() {
 
           <h2>1. Acceptance of Terms</h2>
           <p>
-            By creating an account or using Xean Intake ("the Service"), operated by Xean Telecom Inc. ("Xean," "we," "us"), you
+            By creating an account or using Xean ("the Service"), operated by Xean Telecom Inc. ("Xean," "we," "us"), you
             agree to these Terms of Service. If you do not agree, do not use the Service.
           </p>
 
           <h2>2. Description of Service</h2>
           <p>
-            Xean Intake is a property management platform that allows businesses ("Customers") to manage properties, tenants,
+            Xean is a property management platform that allows businesses ("Customers") to manage properties, tenants,
             leases, maintenance requests, documents, and related operations, including AI-assisted document processing and
             maintenance triage.
           </p>

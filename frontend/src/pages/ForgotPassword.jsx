@@ -32,7 +32,7 @@ function ForgotPassword() {
         <div className="login-brand">
           <div className="login-mark">X</div>
           <h1>
-            Xean <span>Intake</span>
+            Xean
           </h1>
         </div>
 

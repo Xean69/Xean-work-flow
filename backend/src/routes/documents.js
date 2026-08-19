@@ -66,7 +66,7 @@ router.post(
 
     let uploaded;
     try {
-      uploaded = await uploadToCloudinary(req.file.buffer, "xean-intake/documents");
+      uploaded = await uploadToCloudinary(req.file.buffer, "xean/documents");
     } catch (err) {
       console.error("Cloudinary upload failed:", err);
       throw new ApiError(502, "Failed to upload file, please try again");

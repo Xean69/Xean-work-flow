@@ -11,7 +11,7 @@ function LandingNav({ withSectionLinks = false }) {
         <Link to="/" className="lnd-logo">
           <div className="lnd-logo-mark">X</div>
           <div className="lnd-logo-text">
-            Xean <span>Intake</span>
+            Xean
           </div>
         </Link>
         {withSectionLinks && (

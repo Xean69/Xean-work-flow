@@ -75,7 +75,7 @@ function Layout() {
             </svg>
           </button>
           <div className="mobile-topbar-brand">
-            Xean <span>Intake</span>
+            Xean
           </div>
         </div>
         {allowed && <Outlet context={{ admin }} />}

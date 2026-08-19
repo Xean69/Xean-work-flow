@@ -48,7 +48,7 @@ function PortalLayout() {
     <div className="portal-shell">
       <header className="portal-header">
         <span className="portal-brand">
-          Xean <span>Intake</span>
+          Xean
         </span>
 
         {/* Same links as the bottom tab bar — CSS decides which one shows

@@ -10,7 +10,7 @@ function LandingFooter() {
             <div className="lnd-logo">
               <div className="lnd-logo-mark">X</div>
               <div className="lnd-logo-text">
-                Xean <span>Intake</span>
+                Xean
               </div>
             </div>
             <p className="lnd-foot-blurb">Property management, rebuilt for the AI era.</p>

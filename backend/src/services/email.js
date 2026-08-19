@@ -7,7 +7,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // built from this one place.
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:5173";
 
-const FROM = "Xean Intake <notifications@xean.ca>";
+const FROM = "Xean <notifications@xean.ca>";
 
 // Deliberately minimal — inline-styled since email clients don't load
 // external stylesheets, and plain since the ask was "simple and clean",
@@ -140,11 +140,11 @@ export async function sendAdminPasswordResetEmail({ email, token }) {
   try {
     await sendEmail({
       to: email,
-      subject: "Reset your Xean Intake password",
+      subject: "Reset your Xean password",
       html: renderEmail({
         heading: "Reset your password",
         lines: [
-          "We received a request to reset your Xean Intake dashboard password.",
+          "We received a request to reset your Xean dashboard password.",
           "This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.",
         ],
         ctaText: "Reset password",

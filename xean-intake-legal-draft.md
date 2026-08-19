@@ -1,12 +1,12 @@
-# Xean Intake — Terms of Service (DRAFT)
+# Xean — Terms of Service (DRAFT)
 
 *Last updated: [DATE] — This is a draft template. Have a lawyer review before publishing.*
 
 ## 1. Acceptance of Terms
-By creating an account or using Xean Intake ("the Service"), operated by Xean Telecom Inc. ("Xean," "we," "us"), you agree to these Terms of Service. If you do not agree, do not use the Service.
+By creating an account or using Xean ("the Service"), operated by Xean Telecom Inc. ("Xean," "we," "us"), you agree to these Terms of Service. If you do not agree, do not use the Service.
 
 ## 2. Description of Service
-Xean Intake is a property management platform that allows businesses ("Customers") to manage properties, tenants, leases, maintenance requests, documents, and related operations, including AI-assisted document processing and maintenance triage.
+Xean is a property management platform that allows businesses ("Customers") to manage properties, tenants, leases, maintenance requests, documents, and related operations, including AI-assisted document processing and maintenance triage.
 
 ## 3. Accounts
 - You must provide accurate information when creating an account.
@@ -55,7 +55,7 @@ Questions about these Terms: [support email]
 
 ---
 
-# Xean Intake — Privacy Policy (DRAFT)
+# Xean — Privacy Policy (DRAFT)
 
 *Last updated: [DATE] — This is a draft template. Have a lawyer review before publishing.*
 
@@ -64,7 +64,7 @@ Questions about these Terms: [support email]
 **Breach notification (accurate as of this draft):** Under Alberta PIPA, you are legally required to report a privacy breach to the Office of the Information and Privacy Commissioner (OIPC) of Alberta **without unreasonable delay** whenever a reasonable person would conclude there is a "real risk of significant harm" (RROSH) to an individual. If the Commissioner determines individuals should be notified, you must do so directly. This is stricter than PIPEDA in one respect — Alberta was the first province in Canada to make this mandatory (since 2010).
 
 ## 1. Who We Are
-Xean Intake is operated by Xean Telecom Inc., based in Edmonton, Alberta, Canada.
+Xean is operated by Xean Telecom Inc., based in Edmonton, Alberta, Canada.
 
 ## 2. What Information We Collect
 **From Customers (property managers/businesses):**

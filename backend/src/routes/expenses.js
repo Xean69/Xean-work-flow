@@ -65,7 +65,7 @@ router.post(
     let uploaded = null;
     if (req.file) {
       try {
-        uploaded = await uploadToCloudinary(req.file.buffer, "xean-intake/receipts");
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean/receipts");
       } catch (err) {
         console.error("Cloudinary upload failed:", err);
         throw new ApiError(502, "Failed to upload receipt, please try again");
@@ -114,7 +114,7 @@ router.put(
     let uploaded = null;
     if (req.file) {
       try {
-        uploaded = await uploadToCloudinary(req.file.buffer, "xean-intake/receipts");
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean/receipts");
       } catch (err) {
         console.error("Cloudinary upload failed:", err);
         throw new ApiError(502, "Failed to upload receipt, please try again");

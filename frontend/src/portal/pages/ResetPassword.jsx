@@ -37,7 +37,7 @@ function ResetPassword() {
         <div className="portal-login-brand">
           <div className="portal-login-mark">X</div>
           <h1>
-            Xean <span>Intake</span>
+            Xean
           </h1>
         </div>
 

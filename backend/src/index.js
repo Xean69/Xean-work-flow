@@ -50,7 +50,7 @@ app.use(
 );
 
 app.get("/health", (req, res) => {
-  res.send("Xean Intake API is running");
+  res.send("Xean API is running");
 });
 
 // /api/admin (login/logout) and /api/portal (tenant login) each guard their
@@ -118,5 +118,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Xean Intake API listening on http://localhost:${PORT}`);
+  console.log(`Xean API listening on http://localhost:${PORT}`);
 });
