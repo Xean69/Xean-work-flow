@@ -344,10 +344,12 @@ export function parseGuideSectionBody(body) {
   };
 }
 
+const UNIT_STATUSES = ["vacant", "occupied", "short_term", "turnover", "rent_ready", "notices"];
+
 export function parseUnitBody(body) {
   const status = body.status === undefined ? "vacant" : body.status;
-  if (status !== "vacant" && status !== "occupied") {
-    throw new ApiError(400, "status must be 'vacant' or 'occupied'");
+  if (!UNIT_STATUSES.includes(status)) {
+    throw new ApiError(400, `status must be one of: ${UNIT_STATUSES.join(", ")}`);
   }
   return {
     unit_number: requireString(body.unit_number, "unit_number"),

@@ -569,3 +569,13 @@ CREATE INDEX IF NOT EXISTS idx_move_in_inspections_business_id ON move_in_inspec
 CREATE INDEX IF NOT EXISTS idx_move_in_inspection_rooms_inspection_id ON move_in_inspection_rooms(inspection_id);
 CREATE INDEX IF NOT EXISTS idx_move_in_inspection_items_room_id ON move_in_inspection_items(room_id);
 CREATE INDEX IF NOT EXISTS idx_move_in_inspection_photos_item_id ON move_in_inspection_photos(item_id);
+
+-- Expands unit status beyond vacant/occupied to cover real property-
+-- management lifecycle states. Purely additive — 'vacant' and 'occupied'
+-- stay valid, so no existing row needs to change. Postgres names an
+-- unnamed inline CHECK constraint "{table}_{column}_check" by default,
+-- which is what the original CREATE TABLE's inline CHECK was called; drop
+-- and recreate it under that name so this is safe to re-run.
+ALTER TABLE units DROP CONSTRAINT IF EXISTS units_status_check;
+ALTER TABLE units ADD CONSTRAINT units_status_check
+  CHECK (status IN ('vacant', 'occupied', 'short_term', 'turnover', 'rent_ready', 'notices'));

@@ -1,5 +1,16 @@
 import { useState } from 'react'
 
+// Single source of truth for unit status labels — StatusBadge.jsx reuses
+// this so the badge text and this dropdown never drift apart.
+export const UNIT_STATUS_LABELS = {
+  vacant: 'Vacant',
+  occupied: 'Occupied',
+  short_term: 'Short Term',
+  turnover: 'Turnover',
+  rent_ready: 'Rent Ready',
+  notices: 'Notices',
+}
+
 const emptyValues = {
   unit_number: '',
   bedrooms: '',
@@ -97,8 +108,11 @@ function UnitForm({ initialValues, onSubmit, onCancel }) {
         <div className="form-field">
           <label htmlFor="status">Status</label>
           <select id="status" name="status" value={values.status} onChange={handleChange}>
-            <option value="vacant">Vacant</option>
-            <option value="occupied">Occupied</option>
+            {Object.entries(UNIT_STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
       </div>

@@ -34,8 +34,14 @@ function computePaymentStatus(rentAmount, paidAmount) {
   return "partial";
 }
 
-// Keeps units.status in sync with whether the unit currently has a tenant,
-// so the Properties page's Vacant/Occupied badge always matches reality.
+// Keeps units.status in sync with whether the unit currently has a tenant
+// — but only called where occupancy itself actually changes (a tenant was
+// added, removed, or moved to a different unit), never on a same-unit
+// edit. Now that status has real lifecycle values beyond vacant/occupied
+// (Turnover, Rent Ready, Notices...), unconditionally forcing it back to
+// plain occupied/vacant on every tenant save would silently wipe out a
+// manually-set status like "Notices" the next time someone just fixed a
+// phone number.
 async function syncUnitStatus(unitId) {
   const { rows } = await pool.query("SELECT 1 FROM tenants WHERE unit_id = $1 LIMIT 1", [
     unitId,
@@ -181,8 +187,14 @@ router.put(
       ]
     );
 
-    await syncUnitStatus(data.unit_id);
-    if (previousUnitId !== data.unit_id) await syncUnitStatus(previousUnitId);
+    // Only re-sync when occupancy actually moved — the new unit definitely
+    // gained a tenant (force to occupied), and the old one definitely lost
+    // one (force to vacant). A same-unit edit (e.g. fixing a phone number)
+    // leaves the unit's status alone, whatever a manager last set it to.
+    if (previousUnitId !== data.unit_id) {
+      await syncUnitStatus(data.unit_id);
+      await syncUnitStatus(previousUnitId);
+    }
 
     res.json(rows[0]);
   })

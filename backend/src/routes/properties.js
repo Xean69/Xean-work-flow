@@ -17,7 +17,10 @@ router.get(
       `SELECT
          p.*,
          COUNT(u.id)::int AS unit_count,
-         COUNT(u.id) FILTER (WHERE u.status = 'occupied')::int AS occupied_count,
+         -- Short Term and Notices still have someone actually living there,
+         -- same as a plain Occupied — only Vacant/Turnover/Rent Ready are
+         -- genuinely not generating rent right now.
+         COUNT(u.id) FILTER (WHERE u.status IN ('occupied', 'short_term', 'notices'))::int AS occupied_count,
          ROUND(AVG(u.rent_amount))::int AS avg_rent
        FROM properties p
        LEFT JOIN units u ON u.property_id = p.id
