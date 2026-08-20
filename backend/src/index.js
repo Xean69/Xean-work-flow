@@ -24,6 +24,7 @@ import strLicensesRouter from "./routes/strLicenses.js";
 import activityRouter from "./routes/activity.js";
 import complianceChecksRouter from "./routes/complianceChecks.js";
 import insightsRouter from "./routes/insights.js";
+import moveInInspectionsRouter from "./routes/moveInInspections.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -129,6 +130,9 @@ app.use("/api/compliance-checks", requireAdminAuth, staffOnly, complianceChecksR
 // management, not something accountants need, and regenerating costs a
 // real Anthropic API call.
 app.use("/api/insights", requireAdminAuth, staffOnly, insightsRouter);
+// Owner/manager only, same reasoning as compliance-checks — not a
+// bookkeeping concern, so accountants get no access at all here.
+app.use("/api/move-in-inspections", requireAdminAuth, staffOnly, moveInInspectionsRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

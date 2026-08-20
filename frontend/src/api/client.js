@@ -337,3 +337,46 @@ export function generateInsights() {
 export function dismissInsight(id) {
   return request(`/insights/${id}/dismiss`, { method: "PUT" });
 }
+
+export function createInspection(tenantId) {
+  return request("/move-in-inspections", { method: "POST", body: JSON.stringify({ tenant_id: tenantId }) });
+}
+
+export function getInspectionByTenant(tenantId) {
+  return request(`/move-in-inspections/by-tenant/${tenantId}`);
+}
+
+export function addInspectionRoom(inspectionId, name) {
+  return request(`/move-in-inspections/${inspectionId}/rooms`, { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export function deleteInspectionRoom(inspectionId, roomId) {
+  return request(`/move-in-inspections/${inspectionId}/rooms/${roomId}`, { method: "DELETE" });
+}
+
+export function addInspectionItem(inspectionId, roomId, label) {
+  return request(`/move-in-inspections/${inspectionId}/rooms/${roomId}/items`, {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  });
+}
+
+export function updateInspectionItem(inspectionId, itemId, data) {
+  return request(`/move-in-inspections/${inspectionId}/items/${itemId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteInspectionItem(inspectionId, itemId) {
+  return request(`/move-in-inspections/${inspectionId}/items/${itemId}`, { method: "DELETE" });
+}
+
+export function uploadInspectionPhoto(inspectionId, itemId, formData) {
+  return uploadRequest(`/move-in-inspections/${inspectionId}/items/${itemId}/photos`, formData);
+}
+
+export function deleteInspectionPhoto(inspectionId, photoId) {
+  return request(`/move-in-inspections/${inspectionId}/photos/${photoId}`, { method: "DELETE" });
+}
+
+export function finalizeInspection(inspectionId) {
+  return request(`/move-in-inspections/${inspectionId}/finalize`, { method: "PUT" });
+}

@@ -79,7 +79,10 @@ router.get(
          t.rent_amount,
          t.deposit_amount,
          (t.password_hash IS NOT NULL) AS has_login,
-         COALESCE(rp.paid_amount, 0) AS current_period_paid
+         COALESCE(rp.paid_amount, 0) AS current_period_paid,
+         insp.id AS inspection_id,
+         insp.status AS inspection_row_status,
+         insp.signed_at AS inspection_signed_at
        FROM units u
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN LATERAL (
@@ -94,17 +97,27 @@ router.get(
          FROM rent_payments rp2
          WHERE rp2.tenant_id = t.id AND rp2.period_covered = $2
        ) rp ON true
+       LEFT JOIN move_in_inspections insp ON insp.tenant_id = t.id
        WHERE p.business_id = $1
        ORDER BY p.name, u.unit_number`,
       [req.businessId, currentPeriod()]
     );
 
     res.json(
-      rows.map((row) => ({
-        ...row,
-        status: row.tenant_id ? computeStatus(row.lease_end) : "vacant",
-        payment_status: row.tenant_id ? computePaymentStatus(row.rent_amount, row.current_period_paid) : null,
-      }))
+      rows.map((row) => {
+        let inspectionStatus = "none";
+        if (row.inspection_row_status === "draft") inspectionStatus = "draft";
+        else if (row.inspection_row_status === "finalized") {
+          inspectionStatus = row.inspection_signed_at ? "signed" : "pending_signature";
+        }
+        const { inspection_row_status, ...rest } = row;
+        return {
+          ...rest,
+          status: row.tenant_id ? computeStatus(row.lease_end) : "vacant",
+          payment_status: row.tenant_id ? computePaymentStatus(row.rent_amount, row.current_period_paid) : null,
+          inspection_status: row.tenant_id ? inspectionStatus : null,
+        };
+      })
     );
   })
 );

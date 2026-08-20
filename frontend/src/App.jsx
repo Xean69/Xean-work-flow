@@ -33,6 +33,7 @@ import OwnerStatements from './pages/OwnerStatements.jsx'
 import Insights from './pages/Insights.jsx'
 import Team from './pages/Team.jsx'
 import Upgrade from './pages/Upgrade.jsx'
+import TenantInspection from './pages/TenantInspection.jsx'
 
 function App() {
   return (
@@ -68,6 +69,7 @@ function App() {
         <Route path="/properties/:id" element={<PropertyDetail />} />
         <Route path="/import" element={<BulkImport />} />
         <Route path="/tenants" element={<Tenants />} />
+        <Route path="/tenants/:tenantId/inspection" element={<TenantInspection />} />
         <Route path="/stays" element={<GuestStays />} />
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/documents" element={<Documents />} />

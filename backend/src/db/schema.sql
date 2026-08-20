@@ -519,3 +519,53 @@ CREATE TABLE IF NOT EXISTS insights (
 
 CREATE INDEX IF NOT EXISTS idx_insight_generations_business_id ON insight_generations(business_id);
 CREATE INDEX IF NOT EXISTS idx_insights_business_id ON insights(business_id);
+
+-- Move-in inspections: one per tenant (unique on tenant_id — a re-inspection
+-- feature would be a new column/table later, not multiple rows here).
+-- Normalized rooms -> items -> photos rather than one JSON blob, since a
+-- manager adds/removes/edits these one at a time through a real CRUD UI;
+-- ON DELETE CASCADE all the way down means removing a room takes its items
+-- and photos with it. Drafts are invisible to the tenant (see portal.js);
+-- once finalized, every mutation route rejects further edits so a manager
+-- can't quietly alter a report after the tenant's reviewed or signed it.
+CREATE TABLE IF NOT EXISTS move_in_inspections (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  tenant_id INTEGER NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finalized')),
+  finalized_at TIMESTAMPTZ,
+  signed_at TIMESTAMPTZ,
+  signed_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS move_in_inspection_rooms (
+  id SERIAL PRIMARY KEY,
+  inspection_id INTEGER NOT NULL REFERENCES move_in_inspections(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS move_in_inspection_items (
+  id SERIAL PRIMARY KEY,
+  room_id INTEGER NOT NULL REFERENCES move_in_inspection_rooms(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  condition TEXT CHECK (condition IN ('good', 'fair', 'poor', 'damaged')),
+  notes TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS move_in_inspection_photos (
+  id SERIAL PRIMARY KEY,
+  item_id INTEGER NOT NULL REFERENCES move_in_inspection_items(id) ON DELETE CASCADE,
+  photo_url TEXT NOT NULL,
+  cloudinary_public_id TEXT NOT NULL,
+  cloudinary_resource_type TEXT NOT NULL,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_move_in_inspections_business_id ON move_in_inspections(business_id);
+CREATE INDEX IF NOT EXISTS idx_move_in_inspection_rooms_inspection_id ON move_in_inspection_rooms(inspection_id);
+CREATE INDEX IF NOT EXISTS idx_move_in_inspection_items_room_id ON move_in_inspection_items(room_id);
+CREATE INDEX IF NOT EXISTS idx_move_in_inspection_photos_item_id ON move_in_inspection_photos(item_id);

@@ -76,3 +76,13 @@ export function sendPortalMessage(body) {
 export function getPortalGuide() {
   return request("/guide");
 }
+
+// Returns null until a manager has finalized one — a draft never appears
+// here at all.
+export function getPortalInspection() {
+  return request("/inspection");
+}
+
+export function signPortalInspection(signedName) {
+  return request("/inspection/sign", { method: "POST", body: JSON.stringify({ signed_name: signedName }) });
+}

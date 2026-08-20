@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   getTenants,
   createTenant,
@@ -34,6 +35,19 @@ const PAYMENT_STATUS_LABEL = { paid: 'Paid', partial: 'Partial', unpaid: 'Unpaid
 const PAYMENT_STATUS_VARIANT = { paid: 'green', partial: 'amber', unpaid: 'red' }
 const METHOD_LABEL = { e_transfer: 'E-transfer', cash: 'Cash', cheque: 'Cheque', other: 'Other' }
 
+const INSPECTION_STATUS_LABEL = {
+  none: 'No inspection',
+  draft: 'Draft',
+  pending_signature: 'Pending signature',
+  signed: 'Signed',
+}
+const INSPECTION_STATUS_VARIANT = {
+  none: 'slate',
+  draft: 'slate',
+  pending_signature: 'amber',
+  signed: 'green',
+}
+
 function formatDate(value) {
   if (!value) return '—'
   return new Date(value).toLocaleDateString(undefined, {
@@ -56,6 +70,7 @@ function formatPeriod(period) {
 }
 
 function Tenants() {
+  const navigate = useNavigate()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -212,6 +227,7 @@ function Tenants() {
                   <th>Lease ends</th>
                   <th>Status</th>
                   <th>Portal login</th>
+                  <th>Move-in inspection</th>
                   <th></th>
                 </tr>
               </thead>
@@ -246,9 +262,24 @@ function Tenants() {
                       )}
                     </td>
                     <td>
+                      {row.tenant_id ? (
+                        <Badge variant={INSPECTION_STATUS_VARIANT[row.inspection_status]}>
+                          {INSPECTION_STATUS_LABEL[row.inspection_status]}
+                        </Badge>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>
                       <div className="table-actions">
                         {row.tenant_id ? (
                           <>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => navigate(`/tenants/${row.tenant_id}/inspection`)}
+                            >
+                              Inspection
+                            </button>
                             <button className="btn btn-ghost btn-sm" onClick={() => openPayments(row)}>
                               Payments
                             </button>

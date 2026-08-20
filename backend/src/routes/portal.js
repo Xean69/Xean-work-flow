@@ -3,7 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
-import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody } from "../utils/validate.js";
+import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, requireString } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { currentPeriod } from "../utils/period.js";
 import {
@@ -12,6 +12,7 @@ import {
   sendTenantPasswordResetEmail,
 } from "../services/email.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
+import { loadInspection } from "./moveInInspections.js";
 
 const router = Router();
 
@@ -166,6 +167,41 @@ router.get(
     }
 
     res.redirect(doc.file_url);
+  })
+);
+
+// A draft is invisible here — only a finalized inspection "exists" as far
+// as the tenant is concerned, so there's nothing to leak or half-show
+// before the manager is done building it.
+router.get(
+  "/inspection",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      "SELECT id FROM move_in_inspections WHERE tenant_id = $1 AND status = 'finalized'",
+      [req.tenantId]
+    );
+    if (!rows[0]) return res.json(null);
+    res.json(await loadInspection(rows[0].id));
+  })
+);
+
+router.post(
+  "/inspection/sign",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const signedName = requireString(req.body.signed_name, "signed_name");
+    const { rows } = await pool.query(
+      `UPDATE move_in_inspections
+       SET signed_at = now(), signed_name = $1
+       WHERE tenant_id = $2 AND status = 'finalized' AND signed_at IS NULL
+       RETURNING id`,
+      [signedName, req.tenantId]
+    );
+    if (!rows[0]) {
+      throw new ApiError(400, "This inspection isn't available to sign right now");
+    }
+    res.json(await loadInspection(rows[0].id));
   })
 );
 
