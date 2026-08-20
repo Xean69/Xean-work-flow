@@ -6,13 +6,14 @@ import {
   deleteDocument,
   updateDocumentStatus,
   getDocumentUrl,
+  resendDocumentNotification,
   getProperties,
   getTenants,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import DocumentForm from '../components/DocumentForm.jsx'
 import Badge from '../components/Badge.jsx'
-import ExtractedData from '../components/ExtractedData.jsx'
+import ExtractedData, { FIELD_CONFIG } from '../components/ExtractedData.jsx'
 import { canWrite } from '../utils/permissions.js'
 import './Documents.css'
 
@@ -32,6 +33,36 @@ function formatDate(value) {
   })
 }
 
+// Whole months between two dates, shown as years once it's a clean
+// multiple of 12 (12 -> "1 year", 24 -> "2 years", otherwise "N months").
+function formatLeaseLength(start, end) {
+  if (!start || !end) return null
+  const a = new Date(start)
+  const b = new Date(end)
+  const months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth())
+  if (months <= 0) return null
+  if (months % 12 === 0) {
+    const years = months / 12
+    return `${years} ${years === 1 ? 'year' : 'years'}`
+  }
+  return `${months} months`
+}
+
+// True when extraction ran successfully but found nothing at all for a
+// doc_type that claims to be a lease/invoice/inspection — e.g. a void
+// cheque manually labeled "Lease". Not a new AI call: extraction already
+// reports "success" with every field null in exactly this case, this just
+// surfaces it instead of quietly showing a card full of dashes.
+function isExtractionMismatch(doc) {
+  const fields = FIELD_CONFIG[doc.doc_type]
+  if (!fields || doc.extraction_status !== 'success') return false
+  const data = doc.extracted_data || {}
+  return fields.every((f) => {
+    const v = data[f.key]
+    return Array.isArray(v) ? v.length === 0 : v === null || v === undefined || v === ''
+  })
+}
+
 function Documents() {
   const { admin } = useOutletContext()
   const readOnly = !canWrite(admin.role)
@@ -44,6 +75,8 @@ function Documents() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
+  // doc id -> 'sending' | 'sent' | an error message
+  const [resendState, setResendState] = useState({})
 
   useEffect(() => {
     load()
@@ -119,6 +152,16 @@ function Documents() {
     await load()
   }
 
+  async function handleResend(doc) {
+    setResendState((s) => ({ ...s, [doc.id]: 'sending' }))
+    try {
+      await resendDocumentNotification(doc.id)
+      setResendState((s) => ({ ...s, [doc.id]: 'sent' }))
+    } catch (err) {
+      setResendState((s) => ({ ...s, [doc.id]: err.message }))
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Documents" subtitle="Upload a lease, invoice, or inspection report to keep on file" />
@@ -182,15 +225,47 @@ function Documents() {
                       {d.file_name}
                     </a>
                     {d.status === 'needs_review' && <Badge variant="amber">Needs review</Badge>}
+                    {isExtractionMismatch(d) && (
+                      <Badge variant="red">Doesn't look like a {DOC_TYPE_LABELS[d.doc_type]}</Badge>
+                    )}
                   </div>
                   <div className="doc-sub">
                     {DOC_TYPE_LABELS[d.doc_type]} · {formatDate(d.uploaded_at)}
                     {d.property_name ? ` · ${d.property_name}` : ''}
                     {d.tenant_name ? ` · ${d.tenant_name}` : ''}
+                    {d.unit_number ? ` · Unit ${d.unit_number}` : ''}
+                    {formatLeaseLength(d.lease_start, d.lease_end)
+                      ? ` · ${formatLeaseLength(d.lease_start, d.lease_end)} lease`
+                      : ''}
                   </div>
                   <ExtractedData doc={d} canWrite={!readOnly} onChange={load} />
                 </div>
                 <div className="doc-actions">
+                  <a
+                    href={getDocumentUrl(d.id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost btn-sm"
+                  >
+                    View
+                  </a>
+                  {!readOnly && d.tenant_id && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => handleResend(d)}
+                      disabled={!d.tenant_email || resendState[d.id] === 'sending'}
+                      title={d.tenant_email ? undefined : 'This tenant has no email on file'}
+                    >
+                      {resendState[d.id] === 'sending'
+                        ? 'Sending…'
+                        : resendState[d.id] === 'sent'
+                        ? 'Sent ✓'
+                        : 'Resend'}
+                    </button>
+                  )}
+                  {resendState[d.id] && resendState[d.id] !== 'sending' && resendState[d.id] !== 'sent' && (
+                    <span className="doc-resend-error">{resendState[d.id]}</span>
+                  )}
                   <label className="doc-reviewed-toggle">
                     <input
                       type="checkbox"

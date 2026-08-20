@@ -3,8 +3,9 @@ import Badge from './Badge.jsx'
 import { extractDocument, updateExtractedData } from '../api/client.js'
 
 // Mirrors the tool schemas in backend/src/services/extraction.js — same
-// fields, same doc_types.
-const FIELD_CONFIG = {
+// fields, same doc_types. Exported so Documents.jsx can reuse the same
+// per-type field list to detect a likely doc_type/content mismatch.
+export const FIELD_CONFIG = {
   lease: [
     { key: 'tenant_name', label: 'Tenant', type: 'text' },
     { key: 'rent_amount', label: 'Rent', type: 'currency' },

@@ -6,6 +6,7 @@ import { parseDocumentBody, parseDocumentStatusBody, parseExtractedDataBody } fr
 import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
 import { extractDocumentData, isExtractableDocType, mimeTypeForFilename } from "../services/extraction.js";
+import { notifyTenantOfNewDocument } from "../services/email.js";
 
 const router = Router();
 
@@ -13,6 +14,17 @@ const router = Router();
 // can read documents — but uploading and deleting are staff-only, applied
 // per-route here rather than at the mount level.
 const staffOnly = requireRole("owner", "manager");
+
+// Tenant-facing wording for the notification email's subject/heading —
+// kept separate from the dashboard's own DOC_TYPE_LABELS (frontend) since
+// this is what the tenant reads, not the manager.
+const DOC_TYPE_EMAIL_LABEL = {
+  lease: "Lease",
+  invoice: "Invoice",
+  inspection: "Inspection",
+  application: "Application",
+  other: "Document",
+};
 
 async function assertPropertyInBusiness(propertyId, businessId) {
   if (propertyId == null) return;
@@ -39,10 +51,15 @@ router.get(
       `SELECT
          d.*,
          p.name AS property_name,
-         t.full_name AS tenant_name
+         t.full_name AS tenant_name,
+         t.email AS tenant_email,
+         t.lease_start,
+         t.lease_end,
+         u.unit_number
        FROM documents d
        LEFT JOIN properties p ON p.id = d.property_id
        LEFT JOIN tenants t ON t.id = d.tenant_id
+       LEFT JOIN units u ON u.id = t.unit_id
        WHERE d.business_id = $1
        ORDER BY d.uploaded_at DESC`,
       [req.businessId]
@@ -93,6 +110,7 @@ router.post(
     // Extraction runs once, right here on upload — never on a later view —
     // to keep API costs down. doc_types with no extractor (application,
     // other) are marked unsupported without ever calling the API.
+    let finalDoc;
     if (isExtractableDocType(doc.doc_type)) {
       const result = await extractDocumentData(req.file.buffer, req.file.mimetype, doc.doc_type);
       const { rows: updated } = await pool.query(
@@ -102,14 +120,34 @@ router.post(
          RETURNING *`,
         [result.data, result.confidence, result.status, doc.id]
       );
-      return res.status(201).json(updated[0]);
+      finalDoc = updated[0];
+    } else {
+      const { rows: updated } = await pool.query(
+        `UPDATE documents SET extraction_status = 'unsupported' WHERE id = $1 RETURNING *`,
+        [doc.id]
+      );
+      finalDoc = updated[0];
     }
 
-    const { rows: updated } = await pool.query(
-      `UPDATE documents SET extraction_status = 'unsupported' WHERE id = $1 RETURNING *`,
-      [doc.id]
-    );
-    res.status(201).json(updated[0]);
+    // Fire-and-forget, same as every other automatic notification — a
+    // failed send should never block the upload itself. The return value
+    // only matters to the deliberate manual "Resend" route below.
+    if (doc.tenant_id) {
+      const { rows: tenantRows } = await pool.query("SELECT full_name, email FROM tenants WHERE id = $1", [
+        doc.tenant_id,
+      ]);
+      const tenant = tenantRows[0];
+      if (tenant) {
+        notifyTenantOfNewDocument({
+          tenantEmail: tenant.email,
+          tenantName: tenant.full_name,
+          docTypeLabel: DOC_TYPE_EMAIL_LABEL[doc.doc_type] || "Document",
+          fileName: doc.file_name,
+        });
+      }
+    }
+
+    res.status(201).json(finalDoc);
   })
 );
 
@@ -194,6 +232,37 @@ router.get(
     }
 
     res.redirect(doc.file_url);
+  })
+);
+
+// Deliberate, manager-clicked resend — unlike the automatic notification
+// on upload, this reports back whether the send actually worked instead of
+// silently no-oping, since a click with no feedback would look broken.
+router.post(
+  "/:id/resend",
+  staffOnly,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT d.doc_type, d.file_name, t.full_name AS tenant_name, t.email AS tenant_email
+       FROM documents d
+       LEFT JOIN tenants t ON t.id = d.tenant_id
+       WHERE d.id = $1 AND d.business_id = $2`,
+      [req.params.id, req.businessId]
+    );
+    const doc = rows[0];
+    if (!doc) throw new ApiError(404, "Document not found");
+    if (!doc.tenant_email) {
+      throw new ApiError(400, "This document has no tenant email to send to");
+    }
+
+    const sent = await notifyTenantOfNewDocument({
+      tenantEmail: doc.tenant_email,
+      tenantName: doc.tenant_name,
+      docTypeLabel: DOC_TYPE_EMAIL_LABEL[doc.doc_type] || "Document",
+      fileName: doc.file_name,
+    });
+    if (!sent) throw new ApiError(502, "Failed to send the email, please try again");
+    res.json({ sent: true });
   })
 );
 

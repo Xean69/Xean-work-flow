@@ -178,6 +178,10 @@ export function updateExtractedData(id, data) {
   return request(`/documents/${id}/extracted-data`, { method: "PUT", body: JSON.stringify(data) });
 }
 
+export function resendDocumentNotification(id) {
+  return request(`/documents/${id}/resend`, { method: "POST" });
+}
+
 export function getStays() {
   return request("/stays");
 }

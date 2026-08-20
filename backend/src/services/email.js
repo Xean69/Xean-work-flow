@@ -176,6 +176,34 @@ export async function sendTenantPasswordResetEmail({ email, token }) {
   }
 }
 
+// Unlike the other notify* functions, this one is also used for a manual
+// "Resend" action the manager deliberately clicks — so it returns whether
+// the send actually succeeded instead of swallowing that outcome. The
+// automatic on-upload call site ignores the return value (same
+// never-block-the-real-action behavior as everywhere else); the resend
+// route reports it back to whoever clicked the button.
+export async function notifyTenantOfNewDocument({ tenantEmail, tenantName, docTypeLabel, fileName }) {
+  try {
+    if (!tenantEmail) return false;
+    return await sendEmail({
+      to: tenantEmail,
+      subject: `New ${docTypeLabel.toLowerCase()} added to your account`,
+      html: renderEmail({
+        heading: `New ${docTypeLabel.toLowerCase()}`,
+        lines: [
+          `Hi ${tenantName || "there"}, your property manager added a new document to your account:`,
+          `<strong>${fileName}</strong>`,
+        ],
+        ctaText: "View in Portal",
+        ctaUrl: `${APP_BASE_URL}/portal/lease`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyTenantOfNewDocument failed:", err);
+    return false;
+  }
+}
+
 export async function notifyTenantOfNewMessage({ tenantEmail, tenantName, messageBody }) {
   try {
     if (!tenantEmail) return;
