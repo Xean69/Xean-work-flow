@@ -1,13 +1,13 @@
-// VITE_API_URL points at a separately-hosted backend (e.g. the deployed
-// frontend on Vercel calling the Railway API). Empty in local dev, where
-// the relative path is instead proxied to localhost by vite.config.js —
-// same origin, so no CORS/cookie concerns there.
-const BASE_URL = `${import.meta.env.VITE_API_URL || ""}/api`;
+// Relative — in local dev this is proxied to localhost by vite.config.js;
+// in production, Vercel proxies it straight through to the Railway backend
+// (see vercel.json) rather than calling it as a separate origin. Either
+// way, this API is always same-site with whatever's calling it.
+const BASE_URL = "/api";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
+    credentials: "same-origin",
     ...options,
   });
 
@@ -150,7 +150,7 @@ export function getDocuments() {
 // the browser needs to set its own multipart Content-Type header (with the
 // boundary) rather than the one request() hardcodes.
 async function uploadRequest(path, formData, method = "POST") {
-  const res = await fetch(`${BASE_URL}${path}`, { method, body: formData, credentials: "include" });
+  const res = await fetch(`${BASE_URL}${path}`, { method, body: formData, credentials: "same-origin" });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(data?.error || `Request failed with status ${res.status}`);

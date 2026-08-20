@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express from "express";
 import multer from "multer";
-import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pool from "./db.js";
@@ -41,18 +40,16 @@ const PORT = process.env.PORT || 3001;
 // succeed (200, correct body) with no session ever actually created.
 app.set("trust proxy", 1);
 
-// Set only when the frontend is hosted on a different origin than this API
-// (e.g. Vercel calling Railway) — comma-separated list of allowed origins.
-// Unset in local dev, where Vite's dev-server proxy makes every request
-// same-origin already, so neither CORS nor a cross-site cookie is needed.
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
-  : null;
-
-if (corsOrigins) {
-  app.use(cors({ origin: corsOrigins, credentials: true }));
-}
-
+// The deployed frontend (Vercel) proxies /api/* straight through to this
+// backend at the edge (see frontend/vercel.json) rather than calling it
+// cross-origin — so as far as any browser is concerned, this API is always
+// same-site with whatever's calling it. No CORS handling needed, and no
+// SameSite=None cookie either (that combination is what got silently
+// dropped by Safari's ITP on mobile — SameSite=None only controls whether a
+// cookie's *allowed* cross-site, it doesn't override a browser's own
+// third-party-cookie blocking, which was the actual cause). Proxying
+// through the same site sidesteps that whole class of problem instead of
+// fighting individual mobile browsers' cookie policies.
 app.use(express.json());
 
 // Session store lives in the same Postgres database — no extra
@@ -66,13 +63,14 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      // A cross-site cookie (frontend and API on different origins) needs
-      // SameSite=None, which browsers only honor alongside Secure — fine
-      // in production (Railway is HTTPS-only), but Secure would silently
-      // drop the cookie over the plain-HTTP local dev server, so this
-      // only switches on when CORS_ORIGIN says the origins actually differ.
-      sameSite: corsOrigins ? "none" : "lax",
-      secure: !!corsOrigins,
+      // Lax is the right default now that the frontend and this API are
+      // always same-site (proxied, see above) — no cross-site case left to
+      // handle. Secure only turns on when actually deployed on Railway
+      // (RAILWAY_ENVIRONMENT is one of Railway's own injected vars): local
+      // dev runs over plain HTTP, and a Secure cookie is silently refused
+      // by the browser there.
+      sameSite: "lax",
+      secure: process.env.RAILWAY_ENVIRONMENT === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   })

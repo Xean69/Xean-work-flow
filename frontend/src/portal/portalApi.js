@@ -2,13 +2,13 @@
 // src/api/client.js (the property manager's client) since these are two
 // genuinely different sessions/experiences hitting different auth-guarded
 // routes.
-// See src/api/client.js for why this reads VITE_API_URL.
-const BASE_URL = `${import.meta.env.VITE_API_URL || ""}/api/portal`;
+// See src/api/client.js — relative, proxied same-site in both dev and prod.
+const BASE_URL = "/api/portal";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
+    credentials: "same-origin",
     ...options,
   });
 
