@@ -32,6 +32,7 @@ import STRLicensing from './pages/STRLicensing.jsx'
 import OwnerStatements from './pages/OwnerStatements.jsx'
 import Insights from './pages/Insights.jsx'
 import Team from './pages/Team.jsx'
+import Upgrade from './pages/Upgrade.jsx'
 
 function App() {
   return (
@@ -78,6 +79,7 @@ function App() {
         <Route path="/statements" element={<OwnerStatements />} />
         <Route path="/insights" element={<Insights />} />
         <Route path="/team" element={<Team />} />
+        <Route path="/upgrade" element={<Upgrade />} />
       </Route>
     </Routes>
   )

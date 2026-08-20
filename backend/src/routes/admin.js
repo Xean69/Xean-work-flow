@@ -6,6 +6,7 @@ import { verifyPassword, hashPassword, requireAdminAuth } from "../utils/auth.js
 import { parseSignupBody, parseForgotPasswordBody, parseAdminResetPasswordBody } from "../utils/validate.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { sendAdminPasswordResetEmail } from "../services/email.js";
+import { computeTrialStatus } from "../utils/trial.js";
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.password_hash, a.role, a.business_id, b.business_name
+      `SELECT a.id, a.email, a.password_hash, a.role, a.business_id, b.business_name, b.created_at AS trial_started_at
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE lower(a.email) = lower($1)`,
@@ -47,6 +48,8 @@ router.post(
       role: admin.role,
       business_id: admin.business_id,
       business_name: admin.business_name,
+      trial_started_at: admin.trial_started_at,
+      trial_status: computeTrialStatus(admin.trial_started_at),
     });
   })
 );
@@ -113,14 +116,14 @@ router.get(
   requireAdminAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.role, a.business_id, b.business_name
+      `SELECT a.id, a.email, a.role, a.business_id, b.business_name, b.created_at AS trial_started_at
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,
       [req.adminId]
     );
     if (!rows[0]) throw new ApiError(404, "Admin not found");
-    res.json(rows[0]);
+    res.json({ ...rows[0], trial_status: computeTrialStatus(rows[0].trial_started_at) });
   })
 );
 
@@ -140,7 +143,7 @@ router.post(
       await client.query("BEGIN");
 
       const { rows: businessRows } = await client.query(
-        "INSERT INTO businesses (business_name, contact_email) VALUES ($1, $2) RETURNING id, business_name",
+        "INSERT INTO businesses (business_name, contact_email) VALUES ($1, $2) RETURNING id, business_name, created_at",
         [data.business_name, data.email]
       );
       const business = businessRows[0];
@@ -168,6 +171,8 @@ router.post(
         role: admin.role,
         business_id: business.id,
         business_name: business.business_name,
+        trial_started_at: business.created_at,
+        trial_status: computeTrialStatus(business.created_at),
       });
     } catch (err) {
       await client.query("ROLLBACK");
