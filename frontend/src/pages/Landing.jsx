@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import LandingNav from '../components/LandingNav.jsx'
 import LandingFooter from '../components/LandingFooter.jsx'
+import CountUp from '../components/CountUp.jsx'
 import './Landing.css'
 
 // One checkmark icon, reused by every pricing tier's feature list instead
@@ -78,15 +79,21 @@ function Landing() {
                 <div className="lnd-console-stats">
                   <div className="lnd-c-stat">
                     <div className="lnd-c-stat-label">Properties</div>
-                    <div className="lnd-c-stat-val">7</div>
+                    <div className="lnd-c-stat-val">
+                      <CountUp value={7} />
+                    </div>
                   </div>
                   <div className="lnd-c-stat">
                     <div className="lnd-c-stat-label">Occupancy</div>
-                    <div className="lnd-c-stat-val lnd-grad">92%</div>
+                    <div className="lnd-c-stat-val lnd-grad">
+                      <CountUp value={92} suffix="%" />
+                    </div>
                   </div>
                   <div className="lnd-c-stat">
                     <div className="lnd-c-stat-label">Open tickets</div>
-                    <div className="lnd-c-stat-val">5</div>
+                    <div className="lnd-c-stat-val">
+                      <CountUp value={5} />
+                    </div>
                   </div>
                 </div>
                 <div className="lnd-c-row">
@@ -113,12 +120,14 @@ function Landing() {
               <div className="lnd-console-side">
                 <div className="lnd-side-label">Extraction confidence</div>
                 <div className="lnd-ring">
-                  <span className="lnd-ring-val">98%</span>
+                  <span className="lnd-ring-val">
+                    <CountUp value={98} suffix="%" />
+                  </span>
                 </div>
                 <div className="lnd-side-caption">
                   Lease_94Street_3B.pdf
                   <br />
-                  read in 4.2s
+                  read in <CountUp value={4.2} decimals={1} suffix="s" />
                 </div>
               </div>
             </div>
@@ -129,15 +138,21 @@ function Landing() {
       <div className="lnd-stripbar">
         <div className="lnd-wrap lnd-strip-inner">
           <div className="lnd-strip-item">
-            <b>4.2s</b>
+            <b>
+              <CountUp value={4.2} decimals={1} suffix="s" />
+            </b>
             <span>Avg. document read time</span>
           </div>
           <div className="lnd-strip-item">
-            <b>1</b>
+            <b>
+              <CountUp value={1} />
+            </b>
             <span>Inbox for every channel</span>
           </div>
           <div className="lnd-strip-item">
-            <b>98%</b>
+            <b>
+              <CountUp value={98} suffix="%" />
+            </b>
             <span>Extraction accuracy</span>
           </div>
         </div>
