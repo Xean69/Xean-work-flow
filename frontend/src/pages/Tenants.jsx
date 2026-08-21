@@ -242,7 +242,12 @@ function Tenants() {
                     <td style={{ color: 'var(--slate)', fontSize: 12 }}>
                       {row.property_name} · {row.unit_number}
                     </td>
-                    <td className="mono">{row.rent_amount ? `$${Number(row.rent_amount).toLocaleString()}` : '—'}</td>
+                    <td className="mono">
+                      {(() => {
+                        const rent = row.rent_amount ?? row.unit_rent_amount
+                        return rent != null ? `$${Number(rent).toLocaleString()}` : '—'
+                      })()}
+                    </td>
                     <td>
                       {row.payment_status ? (
                         <Badge variant={PAYMENT_STATUS_VARIANT[row.payment_status]}>
@@ -322,7 +327,13 @@ function Tenants() {
 
       {formState && (
         <Modal title={formState?.row ? 'Edit tenant' : 'Add tenant'} onClose={() => setFormState(null)}>
-          <TenantForm initialValues={initialValues} unitOptions={unitOptions} onSubmit={handleSubmit} onCancel={() => setFormState(null)} />
+          <TenantForm
+            initialValues={initialValues}
+            isEditing={!!formState?.row}
+            unitOptions={unitOptions}
+            onSubmit={handleSubmit}
+            onCancel={() => setFormState(null)}
+          />
         </Modal>
       )}
 

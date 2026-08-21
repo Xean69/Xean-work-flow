@@ -47,11 +47,26 @@ function formatMonthDay(dateStr) {
 // unitOptions: [{ value, label, rent_amount }] — the units this tenant can
 // be assigned to (vacant units, plus the tenant's own current unit when
 // editing). Proration and first-payment recording only apply when
-// creating a tenant (initialValues is unset) — an existing tenant already
-// has payment history, so there's no "first period" left to set up.
-function TenantForm({ initialValues, unitOptions, onSubmit, onCancel }) {
-  const isEditing = !!initialValues
-  const [values, setValues] = useState({ ...emptyValues, ...initialValues })
+// creating a tenant (isEditing is false) — an existing tenant already has
+// payment history, so there's no "first period" left to set up.
+//
+// isEditing must be passed explicitly rather than derived from
+// initialValues: the "add tenant to this vacant unit" flow also passes a
+// non-null initialValues (just { unit_id }) to preset the dropdown, and
+// that's still a brand-new tenant, not an edit.
+function TenantForm({ initialValues, isEditing = false, unitOptions, onSubmit, onCancel }) {
+  const [values, setValues] = useState(() => {
+    const v = { ...emptyValues, ...initialValues }
+    // A preset unit_id (from clicking "+ Add tenant" on a specific vacant
+    // row) is set here in initial state rather than via the unit_id
+    // <select>'s onChange, so handleUnitChange's auto-fill never runs for
+    // it — fill rent from the matching unit up front instead.
+    if (!isEditing && v.unit_id && !v.rent_amount) {
+      const unit = unitOptions.find((opt) => String(opt.value) === String(v.unit_id))
+      if (unit?.rent_amount != null) v.rent_amount = unit.rent_amount
+    }
+    return v
+  })
   const [rentTouched, setRentTouched] = useState(false)
   const [firstPeriodOverride, setFirstPeriodOverride] = useState(null)
   const [recordFirstPayment, setRecordFirstPayment] = useState(false)
