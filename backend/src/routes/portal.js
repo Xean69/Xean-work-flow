@@ -95,13 +95,25 @@ router.post(
 // manager side (tenants.js) — kept as its own small copy here rather than a
 // shared import since the two routes' surrounding queries don't otherwise
 // overlap. paid >= rent covers $0 rent as trivially "paid" with no
-// special-casing needed.
-function computePaymentStatus(rentAmount, paidAmount) {
-  const rent = Number(rentAmount) || 0;
+// special-casing needed. During a tenant's first period, "rent" is their
+// prorated first_period_rent_amount when one was set — every period after
+// that, firstPeriodAmount is always null and this falls back to the flat
+// rate.
+function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount) {
+  const rent = firstPeriodAmount != null ? Number(firstPeriodAmount) : Number(rentAmount) || 0;
   const paid = Number(paidAmount) || 0;
   if (paid >= rent) return "paid";
   if (paid <= 0) return "unpaid";
   return "partial";
+}
+
+// Same reasoning as tenants.js's copy of this helper: pg returns DATE
+// columns as JS Date objects (UTC midnight), so this reads via toISOString
+// rather than local getters to avoid a month-boundary date rolling into
+// the wrong month depending on the server's timezone.
+function periodOf(dateValue) {
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  return d.toISOString().slice(0, 7);
 }
 
 router.get(
@@ -111,7 +123,7 @@ router.get(
     const { rows } = await pool.query(
       `SELECT
          t.id, t.full_name, t.email, t.rent_amount, t.deposit_amount,
-         t.lease_start, t.lease_end,
+         t.lease_start, t.lease_end, t.first_period_rent_amount,
          u.unit_number,
          p.name AS property_name, p.address, p.city, p.province, p.postal_code,
          COALESCE((
@@ -126,10 +138,15 @@ router.get(
     );
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
     const tenant = rows[0];
+    const isFirstPeriod = tenant.lease_start && periodOf(tenant.lease_start) === currentPeriod();
     res.json({
       ...tenant,
       current_period: currentPeriod(),
-      payment_status: computePaymentStatus(tenant.rent_amount, tenant.current_period_paid),
+      payment_status: computePaymentStatus(
+        tenant.rent_amount,
+        tenant.current_period_paid,
+        isFirstPeriod ? tenant.first_period_rent_amount : null
+      ),
     });
   })
 );

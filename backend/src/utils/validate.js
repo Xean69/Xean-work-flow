@@ -114,6 +114,10 @@ export function parseTenantBody(body) {
   if (new Date(body.lease_end) <= new Date(body.lease_start)) {
     throw new ApiError(400, "lease_end must be after lease_start");
   }
+  const hasFirstPeriodOverride =
+    body.first_period_rent_amount !== undefined &&
+    body.first_period_rent_amount !== null &&
+    body.first_period_rent_amount !== "";
   return {
     unit_id: requireNumber(body.unit_id, "unit_id", { min: 1 }),
     full_name: requireString(body.full_name, "full_name"),
@@ -123,6 +127,9 @@ export function parseTenantBody(body) {
     lease_end: body.lease_end,
     rent_amount: requireNumber(body.rent_amount, "rent_amount", { min: 0 }),
     deposit_amount: requireNumber(body.deposit_amount, "deposit_amount", { min: 0 }),
+    first_period_rent_amount: hasFirstPeriodOverride
+      ? requireNumber(body.first_period_rent_amount, "first_period_rent_amount", { min: 0.01 })
+      : null,
   };
 }
 
@@ -144,6 +151,22 @@ export function parseRentPaymentBody(body) {
     method: body.method,
     period_covered: body.period_covered,
     notes: optionalString(body.notes),
+  };
+}
+
+// The optional "record first payment" sub-object on tenant creation —
+// tenant_id and period_covered aren't part of the client payload the way
+// they are for parseRentPaymentBody, since the route derives both itself
+// (the tenant it just created, and the calendar month of lease_start).
+export function parseFirstPaymentBody(body) {
+  if (!PAYMENT_METHODS.includes(body.method)) {
+    throw new ApiError(400, `method must be one of: ${PAYMENT_METHODS.join(", ")}`);
+  }
+  requireDate(body.payment_date, "payment_date");
+  return {
+    amount: requireNumber(body.amount, "amount", { min: 0.01 }),
+    payment_date: body.payment_date,
+    method: body.method,
   };
 }
 

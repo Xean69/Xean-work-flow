@@ -2,7 +2,7 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseTenantBody, requirePassword } from "../utils/validate.js";
+import { parseTenantBody, requirePassword, parseFirstPaymentBody } from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
 import { currentPeriod } from "../utils/period.js";
 
@@ -25,13 +25,25 @@ function computeStatus(leaseEnd) {
 }
 
 // Same derive-don't-store approach as computeStatus: paid >= rent covers
-// $0 rent as trivially "paid" with no special-casing needed.
-function computePaymentStatus(rentAmount, paidAmount) {
-  const rent = Number(rentAmount) || 0;
+// $0 rent as trivially "paid" with no special-casing needed. During a
+// tenant's first period, "rent" here is their prorated first_period_rent_
+// amount when one was set (see schema.sql) — every period after that,
+// firstPeriodAmount is always null and this falls back to the flat rate.
+function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount) {
+  const rent = firstPeriodAmount != null ? Number(firstPeriodAmount) : Number(rentAmount) || 0;
   const paid = Number(paidAmount) || 0;
   if (paid >= rent) return "paid";
   if (paid <= 0) return "unpaid";
   return "partial";
+}
+
+// pg returns DATE columns as JS Date objects (UTC midnight for that
+// calendar date) — read via toISOString rather than local getters, which
+// could roll a date near a month boundary into the wrong month depending
+// on the server's timezone.
+function periodOf(dateValue) {
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  return d.toISOString().slice(0, 7);
 }
 
 // Keeps units.status in sync with whether the unit currently has a tenant
@@ -74,6 +86,7 @@ router.get(
       `SELECT
          u.id AS unit_id,
          u.unit_number,
+         u.rent_amount AS unit_rent_amount,
          p.id AS property_id,
          p.name AS property_name,
          t.id AS tenant_id,
@@ -84,6 +97,7 @@ router.get(
          t.lease_end,
          t.rent_amount,
          t.deposit_amount,
+         t.first_period_rent_amount,
          (t.password_hash IS NOT NULL) AS has_login,
          COALESCE(rp.paid_amount, 0) AS current_period_paid,
          insp.id AS inspection_id,
@@ -117,10 +131,17 @@ router.get(
           inspectionStatus = row.inspection_signed_at ? "signed" : "pending_signature";
         }
         const { inspection_row_status, ...rest } = row;
+        const isFirstPeriod = row.tenant_id && row.lease_start && periodOf(row.lease_start) === currentPeriod();
         return {
           ...rest,
           status: row.tenant_id ? computeStatus(row.lease_end) : "vacant",
-          payment_status: row.tenant_id ? computePaymentStatus(row.rent_amount, row.current_period_paid) : null,
+          payment_status: row.tenant_id
+            ? computePaymentStatus(
+                row.rent_amount,
+                row.current_period_paid,
+                isFirstPeriod ? row.first_period_rent_amount : null
+              )
+            : null,
           inspection_status: row.tenant_id ? inspectionStatus : null,
         };
       })
@@ -134,24 +155,61 @@ router.post(
     const data = parseTenantBody(req.body);
     await assertUnitInBusiness(data.unit_id, req.businessId);
 
-    const { rows } = await pool.query(
-      `INSERT INTO tenants (business_id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
-      [
-        req.businessId,
-        data.unit_id,
-        data.full_name,
-        data.email,
-        data.phone,
-        data.lease_start,
-        data.lease_end,
-        data.rent_amount,
-        data.deposit_amount,
-      ]
-    );
+    // Optional: "record this as the tenant's first rent payment", checked
+    // during creation on the Tenants page. Validated up front so a bad
+    // payment body fails before the tenant row is ever inserted.
+    const firstPayment = req.body.first_payment ? parseFirstPaymentBody(req.body.first_payment) : null;
+
+    const client = await pool.connect();
+    let tenant;
+    try {
+      await client.query("BEGIN");
+
+      const { rows } = await client.query(
+        `INSERT INTO tenants (business_id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount, created_at`,
+        [
+          req.businessId,
+          data.unit_id,
+          data.full_name,
+          data.email,
+          data.phone,
+          data.lease_start,
+          data.lease_end,
+          data.rent_amount,
+          data.deposit_amount,
+          data.first_period_rent_amount,
+        ]
+      );
+      tenant = rows[0];
+
+      if (firstPayment) {
+        await client.query(
+          `INSERT INTO rent_payments (business_id, tenant_id, amount, payment_date, method, period_covered, recorded_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            req.businessId,
+            tenant.id,
+            firstPayment.amount,
+            firstPayment.payment_date,
+            firstPayment.method,
+            data.lease_start.slice(0, 7),
+            req.adminId,
+          ]
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+
     await syncUnitStatus(data.unit_id);
-    res.status(201).json(rows[0]);
+    res.status(201).json(tenant);
   })
 );
 

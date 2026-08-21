@@ -169,12 +169,16 @@ function Tenants() {
   // so you can view/save without being forced to pick a different unit.
   const vacantOptions = rows
     .filter((r) => !r.tenant_id)
-    .map((r) => ({ value: r.unit_id, label: `${r.property_name} — ${r.unit_number}` }))
+    .map((r) => ({ value: r.unit_id, label: `${r.property_name} — ${r.unit_number}`, rent_amount: r.unit_rent_amount }))
 
   const unitOptions =
     formState?.row && formState.row.tenant_id
       ? [
-          { value: formState.row.unit_id, label: `${formState.row.property_name} — ${formState.row.unit_number}` },
+          {
+            value: formState.row.unit_id,
+            label: `${formState.row.property_name} — ${formState.row.unit_number}`,
+            rent_amount: formState.row.unit_rent_amount,
+          },
           ...vacantOptions,
         ]
       : vacantOptions

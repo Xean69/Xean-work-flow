@@ -579,3 +579,13 @@ CREATE INDEX IF NOT EXISTS idx_move_in_inspection_photos_item_id ON move_in_insp
 ALTER TABLE units DROP CONSTRAINT IF EXISTS units_status_check;
 ALTER TABLE units ADD CONSTRAINT units_status_check
   CHECK (status IN ('vacant', 'occupied', 'short_term', 'turnover', 'rent_ready', 'notices'));
+
+-- Set at tenant creation only when the lease starts mid-month (or a
+-- manager overrides the calculated proration) — this is what that first
+-- period actually owes, whatever the flat monthly rent_amount is. NULL
+-- means "no override": either the lease started on the 1st, or this
+-- tenant predates the proration feature, so the plain rent_amount is
+-- already the correct expectation. Read by computePaymentStatus
+-- (tenants.js, portal.js) only while the current period is this tenant's
+-- first one — every period after that always compares against rent_amount.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS first_period_rent_amount NUMERIC(10,2);

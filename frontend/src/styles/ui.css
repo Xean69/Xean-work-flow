@@ -432,6 +432,27 @@ tr:last-child td {
   margin-bottom: var(--space-4);
   text-align: left;
 }
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-label input {
+  cursor: pointer;
+}
+.proration-box {
+  background: var(--amber-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.proration-box label {
+  color: var(--amber);
+}
 .form-actions {
   display: flex;
   justify-content: flex-end;
