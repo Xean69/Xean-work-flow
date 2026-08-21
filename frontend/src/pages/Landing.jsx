@@ -230,6 +230,52 @@ function Landing() {
         </div>
       </section>
 
+      <section className="lnd-section lnd-ai-section" id="ai-messaging">
+        <div className="lnd-wrap">
+          <div className="lnd-ai-card">
+            <span className="lnd-ai-badge">
+              <span className="lnd-ai-badge-dot" />
+              AI ONLINE · 24/7
+            </span>
+            <h2 className="lnd-ai-headline">
+              Your tenants text at midnight. <span className="lnd-ai-name">Xean</span> answers.
+            </h2>
+            <p className="lnd-ai-sub">
+              Every message triaged, every emergency ticketed, every routine question answered — before your alarm
+              even goes off.
+            </p>
+
+            <div className="lnd-ai-convo">
+              <div className="lnd-ai-bubble lnd-ai-bubble-tenant">heat isnt working, its freezing in here</div>
+              <div className="lnd-ai-bubble lnd-ai-bubble-ai">
+                Logged as urgent HVAC — a tech will reach out first thing.
+              </div>
+              <span className="lnd-ai-ticket">TICKET · HVAC · URGENT</span>
+            </div>
+
+            <div className="lnd-ai-stats">
+              <div className="lnd-ai-stat">
+                <div className="lnd-ai-stat-val">
+                  <CountUp value={0} />
+                </div>
+                <div className="lnd-ai-stat-label">missed calls</div>
+              </div>
+              <div className="lnd-ai-stat lnd-ai-stat-blue">
+                <div className="lnd-ai-stat-val">&lt;10s</div>
+                <div className="lnd-ai-stat-label">reply time</div>
+              </div>
+              <div className="lnd-ai-stat lnd-ai-stat-gold">
+                <div className="lnd-ai-stat-val">
+                  <CountUp value={24} />
+                  /7
+                </div>
+                <div className="lnd-ai-stat-label">coverage</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="lnd-section lnd-section-tight" id="how">
         <div className="lnd-wrap">
           <div className="lnd-section-tag">Deployment</div>
