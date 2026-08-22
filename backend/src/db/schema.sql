@@ -680,3 +680,76 @@ CREATE INDEX IF NOT EXISTS idx_eviction_events_tenant_id ON eviction_events(tena
 ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_doc_type_check;
 ALTER TABLE documents ADD CONSTRAINT documents_doc_type_check
   CHECK (doc_type IN ('lease', 'invoice', 'inspection', 'application', 'other', 'id'));
+
+-- ============================================================================
+-- Rent ledger
+--
+-- Replaces the old rentAmount+addonTotal formula (computePaymentStatus in
+-- tenants.js/portal.js) as the source of truth for "what does this tenant
+-- owe" — see the comment above computeChargeStatus in utils/ledger.js for
+-- the full reasoning. rent_payments itself is untouched: it's still exactly
+-- what owner statements sum, real cash collected, ledger-agnostic by
+-- design, same as it's been through every feature built on top of it so
+-- far (proration, addons).
+-- ============================================================================
+
+-- Definitions for recurring custom charges a manager wants repeated every
+-- month (a late fee they always apply, etc.). Never used for rent or
+-- addons — tenants.rent_amount and tenant_addons are already the source of
+-- truth for those, so generating their monthly charges reads straight from
+-- there instead of a duplicated definition here. "active" lets a manager
+-- stop future generation without erasing the history of what was already
+-- charged from it.
+CREATE TABLE IF NOT EXISTS recurring_charges (
+  id SERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  description TEXT NOT NULL,
+  amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+  charge_type TEXT NOT NULL DEFAULT 'custom' CHECK (charge_type IN ('custom', 'late_fee')),
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- One row per actual charge instance ("invoice line") — never rewritten
+-- retroactively when rent/addon/recurring-charge amounts change later, the
+-- same way an addon's price change only affects future months. period is
+-- null for a genuinely one-time manual charge; set (and used for dedup) for
+-- anything the monthly job generates.
+CREATE TABLE IF NOT EXISTS ledger_charges (
+  id SERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  charge_type TEXT NOT NULL CHECK (charge_type IN ('rent', 'addon', 'late_fee', 'custom')),
+  description TEXT NOT NULL,
+  amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+  due_date DATE NOT NULL,
+  period TEXT CHECK (period ~ '^\d{4}-(0[1-9]|1[0-2])$'),
+  source_addon_id INTEGER REFERENCES property_addons(id) ON DELETE SET NULL,
+  source_recurring_charge_id INTEGER REFERENCES recurring_charges(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- COALESCE-guarded rather than a plain UNIQUE constraint: Postgres treats
+-- NULLs as distinct from each other in a unique constraint, so two 'rent'
+-- charges for the same tenant/period (both with NULL source columns) would
+-- otherwise NOT collide and the monthly job could double-charge someone if
+-- it ever ran twice for the same period.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_charges_dedup ON ledger_charges (
+  tenant_id, charge_type, period, COALESCE(source_addon_id, -1), COALESCE(source_recurring_charge_id, -1)
+);
+CREATE INDEX IF NOT EXISTS idx_ledger_charges_tenant_id ON ledger_charges(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_recurring_charges_tenant_id ON recurring_charges(tenant_id);
+
+-- Which payment paid down which charge, and how much — makes "apply
+-- oldest-outstanding-charges-first" an auditable trail instead of just an
+-- implied rule. A charge's paid/partial/unpaid status is never stored;
+-- it's derived from SUM(amount) here vs. the charge's own amount, same
+-- derive-don't-store approach as computeStatus/inspection_status.
+CREATE TABLE IF NOT EXISTS payment_allocations (
+  id SERIAL PRIMARY KEY,
+  payment_id INTEGER NOT NULL REFERENCES rent_payments(id) ON DELETE CASCADE,
+  charge_id INTEGER NOT NULL REFERENCES ledger_charges(id) ON DELETE CASCADE,
+  amount NUMERIC(10,2) NOT NULL CHECK (amount > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment_id ON payment_allocations(payment_id);
+CREATE INDEX IF NOT EXISTS idx_payment_allocations_charge_id ON payment_allocations(charge_id);

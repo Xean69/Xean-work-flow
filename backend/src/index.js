@@ -27,6 +27,9 @@ import activityRouter from "./routes/activity.js";
 import complianceChecksRouter from "./routes/complianceChecks.js";
 import insightsRouter from "./routes/insights.js";
 import moveInInspectionsRouter from "./routes/moveInInspections.js";
+import chargesRouter from "./routes/charges.js";
+import recurringChargesRouter from "./routes/recurringCharges.js";
+import { startLedgerScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -116,6 +119,8 @@ app.use("/api/messages", requireAdminAuth, staffOnly, messagesRouter);
 app.use("/api/addons", requireAdminAuth, staffOnly, addonsRouter);
 app.use("/api/occupants", requireAdminAuth, staffOnly, tenantOccupantsRouter);
 app.use("/api/eviction-events", requireAdminAuth, staffOnly, evictionEventsRouter);
+app.use("/api/charges", requireAdminAuth, staffOnly, chargesRouter);
+app.use("/api/recurring-charges", requireAdminAuth, staffOnly, recurringChargesRouter);
 app.use("/api/import", requireAdminAuth, staffOnly, importsRouter);
 app.use("/api/team", requireAdminAuth, requireRole("owner"), teamRouter);
 app.use("/api/owner-statements", requireAdminAuth, anyRole, ownerStatementsRouter);
@@ -155,3 +160,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Xean API listening on http://localhost:${PORT}`);
 });
+
+startLedgerScheduler();

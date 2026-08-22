@@ -9,9 +9,11 @@ import {
   parseOccupantBody,
   parseEvictionEventBody,
   parseTenantNotesBody,
+  parseChargeBody,
 } from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
 import { currentPeriod } from "../utils/period.js";
+import { ensureChargesForTenant, getBalanceDue, getPeriodStatus, deriveChargeStatus, allocatePayment } from "../utils/ledger.js";
 
 const router = Router();
 
@@ -29,23 +31,6 @@ function computeStatus(leaseEnd) {
   if (daysLeft <= URGENT_DAYS) return "urgent_renewal";
   if (daysLeft <= RENEWAL_DAYS) return "renewal_due";
   return "active";
-}
-
-// Same derive-don't-store approach as computeStatus: paid >= rent covers
-// $0 rent as trivially "paid" with no special-casing needed. During a
-// tenant's first period, "rent" here is their prorated first_period_rent_
-// amount when one was set (see schema.sql) — every period after that,
-// firstPeriodAmount is always null and this falls back to the flat rate.
-// addonTotal (sum of quantity * monthly_price across the tenant's applied
-// property_addons) is added on top unconditionally — addons are always
-// flat monthly, never prorated, regardless of which period this is.
-function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount, addonTotal = 0) {
-  const rent = firstPeriodAmount != null ? Number(firstPeriodAmount) : Number(rentAmount) || 0;
-  const total = rent + (Number(addonTotal) || 0);
-  const paid = Number(paidAmount) || 0;
-  if (paid >= total) return "paid";
-  if (paid <= 0) return "unpaid";
-  return "partial";
 }
 
 // pg returns DATE columns as JS Date objects (UTC midnight for that
@@ -142,7 +127,6 @@ router.get(
          t.deposit_amount,
          t.first_period_rent_amount,
          (t.password_hash IS NOT NULL) AS has_login,
-         COALESCE(rp.paid_amount, 0) AS current_period_paid,
          COALESCE(ta.addon_total, 0) AS addon_total,
          ta.addons,
          insp.id AS inspection_id,
@@ -157,11 +141,6 @@ router.get(
          ORDER BY t2.lease_end DESC, t2.created_at DESC
          LIMIT 1
        ) t ON true
-       LEFT JOIN LATERAL (
-         SELECT SUM(amount) AS paid_amount
-         FROM rent_payments rp2
-         WHERE rp2.tenant_id = t.id AND rp2.period_covered = $2
-       ) rp ON true
        LEFT JOIN LATERAL (
          SELECT
            SUM(ta2.quantity * pa.monthly_price) AS addon_total,
@@ -183,8 +162,28 @@ router.get(
        LEFT JOIN move_in_inspections insp ON insp.tenant_id = t.id
        WHERE p.business_id = $1
        ORDER BY p.name, u.unit_number`,
+      [req.businessId]
+    );
+
+    // One batch query for every tenant's current-period ledger status,
+    // rather than a query per row — same "This month" meaning the old
+    // rentAmount+addonTotal formula produced, now sourced from real charge
+    // rows instead of live math.
+    const { rows: statusRows } = await pool.query(
+      `SELECT
+         c.tenant_id,
+         SUM(c.amount) AS total_charged,
+         COALESCE(SUM(alloc.allocated), 0) AS total_allocated
+       FROM ledger_charges c
+       JOIN tenants t ON t.id = c.tenant_id
+       LEFT JOIN LATERAL (
+         SELECT SUM(amount) AS allocated FROM payment_allocations WHERE charge_id = c.id
+       ) alloc ON true
+       WHERE t.business_id = $1 AND c.period = $2
+       GROUP BY c.tenant_id`,
       [req.businessId, currentPeriod()]
     );
+    const statusByTenant = new Map(statusRows.map((r) => [r.tenant_id, r]));
 
     res.json(
       rows.map((row) => {
@@ -194,18 +193,13 @@ router.get(
           inspectionStatus = row.inspection_signed_at ? "signed" : "pending_signature";
         }
         const { inspection_row_status, ...rest } = row;
-        const isFirstPeriod = row.tenant_id && row.lease_start && periodOf(row.lease_start) === currentPeriod();
+        const periodStatus = statusByTenant.get(row.tenant_id);
         return {
           ...rest,
           addons: row.addons || [],
           status: row.tenant_id ? computeStatus(row.lease_end) : "vacant",
           payment_status: row.tenant_id
-            ? computePaymentStatus(
-                row.rent_amount,
-                row.current_period_paid,
-                isFirstPeriod ? row.first_period_rent_amount : null,
-                row.addon_total
-              )
+            ? deriveChargeStatus(periodStatus?.total_charged, periodStatus?.total_allocated)
             : null,
           inspection_status: row.tenant_id ? inspectionStatus : null,
         };
@@ -239,7 +233,6 @@ router.get(
          u.rent_amount AS unit_rent_amount,
          p.id AS property_id,
          p.name AS property_name,
-         COALESCE(rp.paid_amount, 0) AS current_period_paid,
          COALESCE(ta.addon_total, 0) AS addon_total,
          COALESCE(ta.addons, '[]') AS addons,
          insp.id AS inspection_id,
@@ -248,11 +241,6 @@ router.get(
        FROM tenants t
        JOIN units u ON u.id = t.unit_id
        JOIN properties p ON p.id = u.property_id
-       LEFT JOIN LATERAL (
-         SELECT SUM(amount) AS paid_amount
-         FROM rent_payments rp2
-         WHERE rp2.tenant_id = t.id AND rp2.period_covered = $3
-       ) rp ON true
        LEFT JOIN LATERAL (
          SELECT
            SUM(ta2.quantity * pa.monthly_price) AS addon_total,
@@ -273,19 +261,19 @@ router.get(
        ) ta ON true
        LEFT JOIN move_in_inspections insp ON insp.tenant_id = t.id
        WHERE t.id = $1 AND t.business_id = $2`,
-      [req.params.id, req.businessId, currentPeriod()]
+      [req.params.id, req.businessId]
     );
     const row = rows[0];
     if (!row) throw new ApiError(404, "Tenant not found");
 
-    const { rows: occupants } = await pool.query(
-      "SELECT * FROM tenant_occupants WHERE tenant_id = $1 ORDER BY created_at",
-      [row.tenant_id]
-    );
-    const { rows: evictionEvents } = await pool.query(
-      "SELECT * FROM eviction_events WHERE tenant_id = $1 ORDER BY date_issued DESC, created_at DESC",
-      [row.tenant_id]
-    );
+    const [{ rows: occupants }, { rows: evictionEvents }, periodStatus, balanceDue] = await Promise.all([
+      pool.query("SELECT * FROM tenant_occupants WHERE tenant_id = $1 ORDER BY created_at", [row.tenant_id]),
+      pool.query("SELECT * FROM eviction_events WHERE tenant_id = $1 ORDER BY date_issued DESC, created_at DESC", [
+        row.tenant_id,
+      ]),
+      getPeriodStatus(row.tenant_id, currentPeriod()),
+      getBalanceDue(row.tenant_id),
+    ]);
 
     let inspectionStatus = "none";
     if (row.inspection_row_status === "draft") inspectionStatus = "draft";
@@ -293,21 +281,122 @@ router.get(
       inspectionStatus = row.inspection_signed_at ? "signed" : "pending_signature";
     }
     const { inspection_row_status, ...rest } = row;
-    const isFirstPeriod = row.lease_start && periodOf(row.lease_start) === currentPeriod();
 
     res.json({
       ...rest,
       status: computeStatus(row.lease_end),
-      payment_status: computePaymentStatus(
-        row.rent_amount,
-        row.current_period_paid,
-        isFirstPeriod ? row.first_period_rent_amount : null,
-        row.addon_total
-      ),
+      payment_status: periodStatus.status,
+      balance_due: balanceDue,
       inspection_status: inspectionStatus,
       occupants,
       eviction_events: evictionEvents,
     });
+  })
+);
+
+// GET /api/tenants/:id/ledger - every charge and payment, oldest first,
+// with a running balance. The Rent History section's real data source —
+// charges and payments are two different tables, merged and sorted here
+// rather than in the frontend so the running-balance math only exists once.
+router.get(
+  "/:id/ledger",
+  asyncHandler(async (req, res) => {
+    const { rows: tenantRows } = await pool.query("SELECT id FROM tenants WHERE id = $1 AND business_id = $2", [
+      req.params.id,
+      req.businessId,
+    ]);
+    if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+
+    const { rows: charges } = await pool.query(
+      `SELECT
+         c.id, c.charge_type, c.description, c.amount, c.due_date, c.period, c.created_at,
+         COALESCE(alloc.allocated, 0) AS allocated
+       FROM ledger_charges c
+       LEFT JOIN LATERAL (
+         SELECT SUM(amount) AS allocated FROM payment_allocations WHERE charge_id = c.id
+       ) alloc ON true
+       WHERE c.tenant_id = $1
+       ORDER BY c.due_date ASC, c.id ASC`,
+      [req.params.id]
+    );
+    const { rows: payments } = await pool.query(
+      "SELECT id, amount, payment_date, method, notes FROM rent_payments WHERE tenant_id = $1 ORDER BY payment_date ASC, id ASC",
+      [req.params.id]
+    );
+
+    const entries = [
+      ...charges.map((c) => ({
+        type: "charge",
+        id: c.id,
+        date: c.due_date,
+        charge_type: c.charge_type,
+        description: c.description,
+        amount: Number(c.amount),
+        allocated: Number(c.allocated),
+        status: deriveChargeStatus(c.amount, c.allocated),
+        created_at: c.created_at,
+      })),
+      ...payments.map((p) => ({
+        type: "payment",
+        id: p.id,
+        date: p.payment_date,
+        method: p.method,
+        notes: p.notes,
+        amount: Number(p.amount),
+        created_at: p.created_at,
+      })),
+    ].sort((a, b) => new Date(a.date) - new Date(b.date) || new Date(a.created_at) - new Date(b.created_at));
+
+    let balance = 0;
+    for (const entry of entries) {
+      balance += entry.type === "charge" ? entry.amount : -entry.amount;
+      entry.running_balance = Math.round(balance * 100) / 100;
+    }
+
+    res.json(entries);
+  })
+);
+
+// The manager-facing "Create charge" form. recurring=true also creates a
+// recurring_charges definition so the same monthly job that generates rent
+// and addon charges picks this up every period going forward — this first
+// instance is created immediately rather than waiting for that job to run.
+router.post(
+  "/:id/charges",
+  asyncHandler(async (req, res) => {
+    const { rows: tenantRows } = await pool.query("SELECT id FROM tenants WHERE id = $1 AND business_id = $2", [
+      req.params.id,
+      req.businessId,
+    ]);
+    if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+
+    const data = parseChargeBody(req.body);
+
+    // period is only meaningful (and only ever set) for charges the dedup
+    // index needs to reason about — a recurring definition's own monthly
+    // instances. A one-time manual charge gets period = null: two
+    // independently-created one-off charges of the same type in the same
+    // month are not duplicates and must both be allowed to exist.
+    let sourceRecurringChargeId = null;
+    let period = null;
+    if (data.recurring) {
+      const { rows: rcRows } = await pool.query(
+        `INSERT INTO recurring_charges (tenant_id, description, amount, charge_type)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [req.params.id, data.description, data.amount, data.charge_type]
+      );
+      sourceRecurringChargeId = rcRows[0].id;
+      period = periodOf(data.due_date);
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO ledger_charges (tenant_id, charge_type, description, amount, due_date, period, source_recurring_charge_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [req.params.id, data.charge_type, data.description, data.amount, data.due_date, period, sourceRecurringChargeId]
+    );
+    res.status(201).json(rows[0]);
   })
 );
 
@@ -409,10 +498,16 @@ router.post(
 
       await replaceTenantAddons(client, tenant.id, data.addons);
 
+      // Generates this tenant's own first-period rent + addon charges right
+      // now, in the same transaction — otherwise their ledger would sit
+      // empty until the next scheduled run generates everyone else's.
+      await ensureChargesForTenant(client, tenant.id, periodOf(data.lease_start), tenant);
+
       if (firstPayment) {
-        await client.query(
+        const { rows: paymentRows } = await client.query(
           `INSERT INTO rent_payments (business_id, tenant_id, amount, payment_date, method, period_covered, recorded_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id`,
           [
             req.businessId,
             tenant.id,
@@ -423,6 +518,7 @@ router.post(
             req.adminId,
           ]
         );
+        await allocatePayment(client, paymentRows[0].id, tenant.id, firstPayment.amount);
       }
 
       await client.query("COMMIT");

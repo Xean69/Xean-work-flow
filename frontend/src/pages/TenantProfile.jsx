@@ -7,10 +7,13 @@ import {
   updateTenant,
   setTenantPassword,
   updateTenantNotes,
-  getRentPayments,
+  getTenantLedger,
   createRentPayment,
   updateRentPayment,
   deleteRentPayment,
+  createCharge,
+  updateCharge,
+  deleteCharge,
   getDocuments,
   uploadDocument,
   deleteDocument,
@@ -29,6 +32,7 @@ import Modal from '../components/Modal.jsx'
 import TenantForm from '../components/TenantForm.jsx'
 import TenantPasswordForm from '../components/TenantPasswordForm.jsx'
 import RentPaymentForm from '../components/RentPaymentForm.jsx'
+import ChargeForm from '../components/ChargeForm.jsx'
 import DocumentForm from '../components/DocumentForm.jsx'
 import OccupantForm from '../components/OccupantForm.jsx'
 import EvictionEventForm, { STAGE_LABELS } from '../components/EvictionEventForm.jsx'
@@ -40,6 +44,7 @@ const STATUS_VARIANT = { active: 'green', renewal_due: 'amber', urgent_renewal: 
 const PAYMENT_STATUS_LABEL = { paid: 'Paid', partial: 'Partial', unpaid: 'Unpaid' }
 const PAYMENT_STATUS_VARIANT = { paid: 'green', partial: 'amber', unpaid: 'red' }
 const METHOD_LABEL = { e_transfer: 'E-transfer', cash: 'Cash', cheque: 'Cheque', other: 'Other' }
+const CHARGE_TYPE_LABEL = { rent: 'Rent', addon: 'Addon', late_fee: 'Late fee', custom: 'Custom' }
 const INSPECTION_STATUS_LABEL = {
   none: 'No inspection',
   draft: 'Draft',
@@ -64,9 +69,8 @@ function formatMoney(amount) {
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 }
 
-function formatPeriod(period) {
-  const [year, month] = period.split('-').map(Number)
-  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+function initial(name) {
+  return (name || '?').trim().charAt(0).toUpperCase()
 }
 
 function TenantProfile() {
@@ -76,7 +80,7 @@ function TenantProfile() {
   const [tenant, setTenant] = useState(null)
   const [allTenants, setAllTenants] = useState([])
   const [addons, setAddons] = useState([])
-  const [payments, setPayments] = useState([])
+  const [ledger, setLedger] = useState([])
   const [documents, setDocuments] = useState([])
   const [inspection, setInspection] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -85,6 +89,7 @@ function TenantProfile() {
   const [editingTenant, setEditingTenant] = useState(false)
   const [passwordModal, setPasswordModal] = useState(false)
   const [editingPayment, setEditingPayment] = useState(null) // null | 'new' | the payment being edited
+  const [chargeModal, setChargeModal] = useState(null) // null | 'new' | the charge being edited
   const [selectedFile, setSelectedFile] = useState(null)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
@@ -102,18 +107,18 @@ function TenantProfile() {
     setLoading(true)
     setLoadError('')
     try {
-      const [t, tenants, addonRows, paymentRows, docRows] = await Promise.all([
+      const [t, tenants, addonRows, ledgerRows, docRows] = await Promise.all([
         getTenant(id),
         getTenants(),
         getAddons(),
-        getRentPayments(id),
+        getTenantLedger(id),
         getDocuments(id),
       ])
       setTenant(t)
       setNotesDraft(t.manager_notes || '')
       setAllTenants(tenants)
       setAddons(addonRows)
-      setPayments(paymentRows)
+      setLedger(ledgerRows)
       setDocuments(docRows)
     } catch (err) {
       setLoadError(err.message)
@@ -163,10 +168,30 @@ function TenantProfile() {
     await load()
   }
 
-  async function handlePaymentDelete(payment) {
-    if (!window.confirm(`Delete this ${formatMoney(payment.amount)} payment?`)) return
-    await deleteRentPayment(payment.id)
+  async function handlePaymentDelete(entry) {
+    if (!window.confirm(`Delete this ${formatMoney(entry.amount)} payment?`)) return
+    await deleteRentPayment(entry.id)
     await load()
+  }
+
+  async function handleChargeSubmit(values) {
+    if (chargeModal && chargeModal !== 'new') {
+      await updateCharge(chargeModal.id, values)
+    } else {
+      await createCharge(tenant.tenant_id, values)
+    }
+    setChargeModal(null)
+    await load()
+  }
+
+  async function handleChargeDelete(entry) {
+    if (!window.confirm(`Delete this ${formatMoney(entry.amount)} charge?`)) return
+    try {
+      await deleteCharge(entry.id)
+      await load()
+    } catch (err) {
+      window.alert(err.message)
+    }
   }
 
   function handleDragOver(e) {
@@ -260,14 +285,9 @@ function TenantProfile() {
     addons: (tenant.addons || []).map((a) => ({ addon_id: a.addon_id, quantity: a.quantity })),
   }
 
-  const totalDue = Number(tenant.rent_amount) + Number(tenant.addon_total || 0)
-
   return (
     <div>
-      <PageHeader
-        title={tenant.full_name}
-        subtitle={`${tenant.property_name} · Unit ${tenant.unit_number}`}
-      >
+      <PageHeader title="Tenant Profile">
         <button className="btn btn-ghost" onClick={() => setEditingTenant(true)}>
           Edit
         </button>
@@ -278,8 +298,68 @@ function TenantProfile() {
           ← Tenants &amp; Leases
         </Link>
 
-        {/* --- Tenant info --- */}
-        <div className="card tenant-info-grid">
+        {/* --- Header: name, property/unit, key badges --- */}
+        <div className="card tenant-header-card">
+          <div className="avatar tenant-avatar">{initial(tenant.full_name)}</div>
+          <div className="tenant-header-main">
+            <h1 className="tenant-header-name">{tenant.full_name}</h1>
+            <p className="tenant-header-sub">
+              {tenant.property_name} · Unit {tenant.unit_number}
+            </p>
+            <div className="tenant-header-badges">
+              <Badge variant={STATUS_VARIANT[tenant.status]}>{STATUS_LABEL[tenant.status]}</Badge>
+              <Badge variant={PAYMENT_STATUS_VARIANT[tenant.payment_status]}>
+                {PAYMENT_STATUS_LABEL[tenant.payment_status]} this month
+              </Badge>
+              <Badge variant={tenant.has_login ? 'green' : 'slate'}>
+                Portal {tenant.has_login ? 'active' : 'not set'}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* --- Additional occupants (directly below the header) --- */}
+        <div className="section-head">
+          <h2>Additional occupants</h2>
+          <button className="btn btn-primary btn-sm" onClick={() => setOccupantModal('new')}>
+            + Add occupant
+          </button>
+        </div>
+        {tenant.occupants.length === 0 ? (
+          <div className="empty-state card">
+            <h3>No additional occupants on file</h3>
+          </div>
+        ) : (
+          <div className="card">
+            {tenant.occupants.map((o) => (
+              <div className="profile-row" key={o.id}>
+                <div>
+                  <h3 style={{ marginBottom: 2 }}>{o.full_name}</h3>
+                  <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>
+                    {o.relationship || 'Occupant'}
+                    {o.notes ? ` · ${o.notes}` : ''}
+                  </p>
+                </div>
+                <div className="table-actions">
+                  <button className="btn btn-ghost btn-sm" onClick={() => setOccupantModal(o)}>
+                    Edit
+                  </button>
+                  <button className="btn btn-danger btn-sm" onClick={() => handleDeleteOccupant(o)}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* --- Balance due --- */}
+        <div className="card balance-due-card">
+          <span className="balance-due-label">Balance due</span>
+          <span className="balance-due-amount">{formatMoney(tenant.balance_due)}</span>
+        </div>
+
+        <div className="tenant-info-grid card" style={{ marginTop: 12 }}>
           <div className="tenant-info-item">
             <span className="tenant-info-label">Email</span>
             <span className="tenant-info-value">{tenant.email || '—'}</span>
@@ -299,20 +379,6 @@ function TenantProfile() {
           <div className="tenant-info-item">
             <span className="tenant-info-label">Rent</span>
             <span className="tenant-info-value mono">{formatMoney(tenant.rent_amount)}</span>
-          </div>
-          <div className="tenant-info-item">
-            <span className="tenant-info-label">Total due this period</span>
-            <span className="tenant-info-value mono">{formatMoney(totalDue)}</span>
-          </div>
-          <div className="tenant-info-item">
-            <span className="tenant-info-label">Status</span>
-            <Badge variant={STATUS_VARIANT[tenant.status]}>{STATUS_LABEL[tenant.status]}</Badge>
-          </div>
-          <div className="tenant-info-item">
-            <span className="tenant-info-label">This month</span>
-            <Badge variant={PAYMENT_STATUS_VARIANT[tenant.payment_status]}>
-              {PAYMENT_STATUS_LABEL[tenant.payment_status]}
-            </Badge>
           </div>
           <div className="tenant-info-item">
             <span className="tenant-info-label">Portal login</span>
@@ -355,45 +421,81 @@ function TenantProfile() {
           </div>
         )}
 
-        {/* --- Rent history --- */}
+        {/* --- Rent ledger --- */}
         <div className="section-head">
-          <h2>Rent history</h2>
-          <button className="btn btn-primary btn-sm" onClick={() => setEditingPayment('new')}>
-            + Record a payment
-          </button>
+          <h2>Rent ledger</h2>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setChargeModal('new')}>
+              + Create charge
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => setEditingPayment('new')}>
+              + Record a payment
+            </button>
+          </div>
         </div>
 
-        {payments.length === 0 ? (
+        {ledger.length === 0 ? (
           <div className="empty-state card">
-            <h3>No payments recorded yet</h3>
+            <h3>Nothing on the ledger yet</h3>
           </div>
         ) : (
           <div className="card table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>Period</th>
-                  <th>Amount</th>
                   <th>Date</th>
-                  <th>Method</th>
+                  <th>Description</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Balance</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td>{formatPeriod(payment.period_covered)}</td>
-                    <td className="mono">{formatMoney(payment.amount)}</td>
-                    <td className="mono">{formatDate(payment.payment_date)}</td>
-                    <td>{METHOD_LABEL[payment.method]}</td>
+                {ledger.map((entry) => (
+                  <tr key={`${entry.type}-${entry.id}`}>
+                    <td className="mono">{formatDate(entry.date)}</td>
+                    <td>
+                      {entry.type === 'charge' ? entry.description : `Payment (${METHOD_LABEL[entry.method]})`}
+                    </td>
+                    <td>
+                      {entry.type === 'charge' ? (
+                        <Badge variant="slate">{CHARGE_TYPE_LABEL[entry.charge_type]}</Badge>
+                      ) : (
+                        <Badge variant="green">Payment</Badge>
+                      )}
+                    </td>
+                    <td className="mono">{entry.type === 'charge' ? formatMoney(entry.amount) : `-${formatMoney(entry.amount)}`}</td>
+                    <td>
+                      {entry.type === 'charge' ? (
+                        <Badge variant={PAYMENT_STATUS_VARIANT[entry.status]}>{PAYMENT_STATUS_LABEL[entry.status]}</Badge>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="mono">{formatMoney(entry.running_balance)}</td>
                     <td>
                       <div className="table-actions">
-                        <button className="btn btn-ghost btn-sm" onClick={() => setEditingPayment(payment)}>
-                          Edit
-                        </button>
-                        <button className="btn btn-danger btn-sm" onClick={() => handlePaymentDelete(payment)}>
-                          Delete
-                        </button>
+                        {entry.type === 'charge' ? (
+                          <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setChargeModal(entry)}>
+                              Edit
+                            </button>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleChargeDelete(entry)}>
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setEditingPayment(entry)}>
+                              Edit
+                            </button>
+                            <button className="btn btn-danger btn-sm" onClick={() => handlePaymentDelete(entry)}>
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -489,41 +591,6 @@ function TenantProfile() {
           </button>
         </div>
 
-        {/* --- Additional occupants --- */}
-        <div className="section-head">
-          <h2>Additional occupants</h2>
-          <button className="btn btn-primary btn-sm" onClick={() => setOccupantModal('new')}>
-            + Add occupant
-          </button>
-        </div>
-        {tenant.occupants.length === 0 ? (
-          <div className="empty-state card">
-            <h3>No additional occupants on file</h3>
-          </div>
-        ) : (
-          <div className="card">
-            {tenant.occupants.map((o) => (
-              <div className="profile-row" key={o.id}>
-                <div>
-                  <h3 style={{ marginBottom: 2 }}>{o.full_name}</h3>
-                  <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>
-                    {o.relationship || 'Occupant'}
-                    {o.notes ? ` · ${o.notes}` : ''}
-                  </p>
-                </div>
-                <div className="table-actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => setOccupantModal(o)}>
-                    Edit
-                  </button>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleDeleteOccupant(o)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* --- Manager notes --- */}
         <div className="section-head">
           <h2>Manager notes</h2>
@@ -617,20 +684,39 @@ function TenantProfile() {
         <Modal title={editingPayment === 'new' ? 'Record a payment' : 'Edit payment'} onClose={() => setEditingPayment(null)}>
           <RentPaymentForm
             key={editingPayment === 'new' ? 'new' : editingPayment.id}
-            rentAmount={totalDue}
+            rentAmount={tenant.balance_due}
             initialValues={
               editingPayment !== 'new'
                 ? {
                     amount: editingPayment.amount,
-                    payment_date: editingPayment.payment_date?.slice(0, 10),
+                    payment_date: editingPayment.date?.slice(0, 10),
                     method: editingPayment.method,
-                    period_covered: editingPayment.period_covered,
+                    period_covered: editingPayment.date?.slice(0, 7),
                     notes: editingPayment.notes || '',
                   }
                 : undefined
             }
             onSubmit={handlePaymentSubmit}
             onCancel={() => setEditingPayment(null)}
+          />
+        </Modal>
+      )}
+
+      {chargeModal && (
+        <Modal title={chargeModal === 'new' ? 'Create charge' : 'Edit charge'} onClose={() => setChargeModal(null)}>
+          <ChargeForm
+            isEditing={chargeModal !== 'new'}
+            initialValues={
+              chargeModal !== 'new'
+                ? {
+                    description: chargeModal.description,
+                    amount: chargeModal.amount,
+                    due_date: chargeModal.date?.slice(0, 10),
+                  }
+                : undefined
+            }
+            onSubmit={handleChargeSubmit}
+            onCancel={() => setChargeModal(null)}
           />
         </Modal>
       )}

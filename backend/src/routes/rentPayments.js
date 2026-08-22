@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseRentPaymentBody } from "../utils/validate.js";
 import { requireRole } from "../utils/auth.js";
+import { allocatePayment, clearAllocationsForPayment } from "../utils/ledger.js";
 
 const router = Router();
 
@@ -50,27 +51,46 @@ router.post(
     const data = parseRentPaymentBody(req.body);
     await assertTenantInBusiness(data.tenant_id, req.businessId);
 
-    const { rows } = await pool.query(
-      `INSERT INTO rent_payments (business_id, tenant_id, amount, payment_date, method, period_covered, notes, recorded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [
-        req.businessId,
-        data.tenant_id,
-        data.amount,
-        data.payment_date,
-        data.method,
-        data.period_covered,
-        data.notes,
-        req.adminId,
-      ]
-    );
-    res.status(201).json(rows[0]);
+    const client = await pool.connect();
+    let payment;
+    try {
+      await client.query("BEGIN");
+      const { rows } = await client.query(
+        `INSERT INTO rent_payments (business_id, tenant_id, amount, payment_date, method, period_covered, notes, recorded_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [
+          req.businessId,
+          data.tenant_id,
+          data.amount,
+          data.payment_date,
+          data.method,
+          data.period_covered,
+          data.notes,
+          req.adminId,
+        ]
+      );
+      payment = rows[0];
+      // Applies against outstanding ledger charges, oldest due_date first —
+      // see utils/ledger.js for the full reasoning (this is what replaced
+      // the old rentAmount+addonTotal formula as the source of "what's owed").
+      await allocatePayment(client, payment.id, data.tenant_id, data.amount);
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.status(201).json(payment);
   })
 );
 
 // recorded_by is deliberately left untouched here — an edit shouldn't
-// change who's credited with originally recording the payment.
+// change who's credited with originally recording the payment. Allocations
+// are cleared and recomputed fresh rather than diffed, since the amount
+// (and therefore what it should cover) may have changed.
 router.put(
   "/:id",
   staffOnly,
@@ -78,24 +98,41 @@ router.put(
     const data = parseRentPaymentBody(req.body);
     await assertTenantInBusiness(data.tenant_id, req.businessId);
 
-    const { rows } = await pool.query(
-      `UPDATE rent_payments
-       SET tenant_id = $1, amount = $2, payment_date = $3, method = $4, period_covered = $5, notes = $6
-       WHERE id = $7 AND business_id = $8
-       RETURNING *`,
-      [
-        data.tenant_id,
-        data.amount,
-        data.payment_date,
-        data.method,
-        data.period_covered,
-        data.notes,
-        req.params.id,
-        req.businessId,
-      ]
-    );
-    if (!rows[0]) throw new ApiError(404, "Payment not found");
-    res.json(rows[0]);
+    const client = await pool.connect();
+    let payment;
+    try {
+      await client.query("BEGIN");
+      const { rows } = await client.query(
+        `UPDATE rent_payments
+         SET tenant_id = $1, amount = $2, payment_date = $3, method = $4, period_covered = $5, notes = $6
+         WHERE id = $7 AND business_id = $8
+         RETURNING *`,
+        [
+          data.tenant_id,
+          data.amount,
+          data.payment_date,
+          data.method,
+          data.period_covered,
+          data.notes,
+          req.params.id,
+          req.businessId,
+        ]
+      );
+      if (!rows[0]) throw new ApiError(404, "Payment not found");
+      payment = rows[0];
+
+      await clearAllocationsForPayment(client, payment.id);
+      await allocatePayment(client, payment.id, data.tenant_id, data.amount);
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json(payment);
   })
 );
 

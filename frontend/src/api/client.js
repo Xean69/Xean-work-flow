@@ -134,6 +134,30 @@ export function deleteEvictionEvent(id) {
   return request(`/eviction-events/${id}`, { method: "DELETE" });
 }
 
+export function getTenantLedger(id) {
+  return request(`/tenants/${id}/ledger`);
+}
+
+export function createCharge(tenantId, data) {
+  return request(`/tenants/${tenantId}/charges`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateCharge(id, data) {
+  return request(`/charges/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteCharge(id) {
+  return request(`/charges/${id}`, { method: "DELETE" });
+}
+
+export function updateRecurringCharge(id, data) {
+  return request(`/recurring-charges/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function stopRecurringCharge(id) {
+  return request(`/recurring-charges/${id}`, { method: "DELETE" });
+}
+
 export function getRentPayments(tenantId) {
   return request(`/rent-payments?tenant_id=${tenantId}`);
 }

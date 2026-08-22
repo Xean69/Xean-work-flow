@@ -13,6 +13,7 @@ import {
 } from "../services/email.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
+import { getPeriodStatus } from "../utils/ledger.js";
 
 const router = Router();
 
@@ -91,35 +92,6 @@ router.post(
   })
 );
 
-// Same paid-vs-rent-for-the-current-period logic as GET /api/tenants on the
-// manager side (tenants.js) — kept as its own small copy here rather than a
-// shared import since the two routes' surrounding queries don't otherwise
-// overlap. paid >= rent covers $0 rent as trivially "paid" with no
-// special-casing needed. During a tenant's first period, "rent" is their
-// prorated first_period_rent_amount when one was set — every period after
-// that, firstPeriodAmount is always null and this falls back to the flat
-// rate.
-// addonTotal (sum of quantity * monthly_price across the tenant's applied
-// property_addons) is added on top unconditionally — addons are always
-// flat monthly, never prorated, regardless of which period this is.
-function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount, addonTotal = 0) {
-  const rent = firstPeriodAmount != null ? Number(firstPeriodAmount) : Number(rentAmount) || 0;
-  const total = rent + (Number(addonTotal) || 0);
-  const paid = Number(paidAmount) || 0;
-  if (paid >= total) return "paid";
-  if (paid <= 0) return "unpaid";
-  return "partial";
-}
-
-// Same reasoning as tenants.js's copy of this helper: pg returns DATE
-// columns as JS Date objects (UTC midnight), so this reads via toISOString
-// rather than local getters to avoid a month-boundary date rolling into
-// the wrong month depending on the server's timezone.
-function periodOf(dateValue) {
-  const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
-  return d.toISOString().slice(0, 7);
-}
-
 router.get(
   "/me",
   requireTenantAuth,
@@ -130,10 +102,6 @@ router.get(
          t.lease_start, t.lease_end, t.first_period_rent_amount,
          u.unit_number,
          p.name AS property_name, p.address, p.city, p.province, p.postal_code,
-         COALESCE((
-           SELECT SUM(amount) FROM rent_payments
-           WHERE tenant_id = t.id AND period_covered = $2
-         ), 0) AS current_period_paid,
          COALESCE(ta.addon_total, 0) AS addon_total,
          ta.addons
        FROM tenants t
@@ -158,21 +126,19 @@ router.get(
          WHERE ta2.tenant_id = t.id
        ) ta ON true
        WHERE t.id = $1`,
-      [req.tenantId, currentPeriod()]
+      [req.tenantId]
     );
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
     const tenant = rows[0];
-    const isFirstPeriod = tenant.lease_start && periodOf(tenant.lease_start) === currentPeriod();
+    // Same period-scoped meaning the old rentAmount+addonTotal formula
+    // produced (see utils/ledger.js) — sourced from real ledger charge rows
+    // instead of live math, but unchanged in what it means to the tenant.
+    const periodStatus = await getPeriodStatus(tenant.id, currentPeriod());
     res.json({
       ...tenant,
       addons: tenant.addons || [],
       current_period: currentPeriod(),
-      payment_status: computePaymentStatus(
-        tenant.rent_amount,
-        tenant.current_period_paid,
-        isFirstPeriod ? tenant.first_period_rent_amount : null,
-        tenant.addon_total
-      ),
+      payment_status: periodStatus.status,
     });
   })
 );

@@ -181,6 +181,43 @@ export function parseTenantNotesBody(body) {
   return { manager_notes: optionalString(body.manager_notes) };
 }
 
+const MANUAL_CHARGE_TYPES = ["custom", "late_fee"];
+
+// The manager-facing "Create charge" form — rent/addon charges are always
+// system-generated (see utils/ledger.js), never created through this path.
+export function parseChargeBody(body) {
+  const charge_type = body.charge_type === undefined ? "custom" : body.charge_type;
+  if (!MANUAL_CHARGE_TYPES.includes(charge_type)) {
+    throw new ApiError(400, `charge_type must be one of: ${MANUAL_CHARGE_TYPES.join(", ")}`);
+  }
+  requireDate(body.due_date, "due_date");
+  return {
+    description: requireString(body.description, "description"),
+    amount: requireNumber(body.amount, "amount", { min: 0.01 }),
+    due_date: body.due_date,
+    charge_type,
+    recurring: body.recurring === true,
+  };
+}
+
+export function parseRecurringChargeBody(body) {
+  return {
+    description: requireString(body.description, "description"),
+    amount: requireNumber(body.amount, "amount", { min: 0.01 }),
+  };
+}
+
+// Editing an existing charge instance — type and period are structural
+// (set once at creation) and never change here.
+export function parseChargeUpdateBody(body) {
+  requireDate(body.due_date, "due_date");
+  return {
+    description: requireString(body.description, "description"),
+    amount: requireNumber(body.amount, "amount", { min: 0.01 }),
+    due_date: body.due_date,
+  };
+}
+
 const PAYMENT_METHODS = ["e_transfer", "cash", "cheque", "other"];
 const PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
