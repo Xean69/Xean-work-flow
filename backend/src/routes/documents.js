@@ -47,6 +47,7 @@ async function assertTenantInBusiness(tenantId, businessId) {
 router.get(
   "/",
   asyncHandler(async (req, res) => {
+    const tenantId = req.query.tenant_id ? Number(req.query.tenant_id) : null;
     const { rows } = await pool.query(
       `SELECT
          d.*,
@@ -60,9 +61,9 @@ router.get(
        LEFT JOIN properties p ON p.id = d.property_id
        LEFT JOIN tenants t ON t.id = d.tenant_id
        LEFT JOIN units u ON u.id = t.unit_id
-       WHERE d.business_id = $1
+       WHERE d.business_id = $1 AND ($2::int IS NULL OR d.tenant_id = $2)
        ORDER BY d.uploaded_at DESC`,
-      [req.businessId]
+      [req.businessId, tenantId]
     );
     res.json(rows);
   })

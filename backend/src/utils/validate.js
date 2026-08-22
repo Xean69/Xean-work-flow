@@ -154,6 +154,33 @@ export function parseAddonBody(body) {
   };
 }
 
+export function parseOccupantBody(body) {
+  return {
+    full_name: requireString(body.full_name, "full_name"),
+    relationship: optionalString(body.relationship),
+    notes: optionalString(body.notes),
+  };
+}
+
+const EVICTION_STAGES = ["notice_issued", "filed_with_court", "hearing_scheduled", "order_granted", "resolved_withdrawn"];
+
+export function parseEvictionEventBody(body) {
+  if (!EVICTION_STAGES.includes(body.stage)) {
+    throw new ApiError(400, `stage must be one of: ${EVICTION_STAGES.join(", ")}`);
+  }
+  requireDate(body.date_issued, "date_issued");
+  return {
+    notice_type: requireString(body.notice_type, "notice_type"),
+    stage: body.stage,
+    date_issued: body.date_issued,
+    notes: optionalString(body.notes),
+  };
+}
+
+export function parseTenantNotesBody(body) {
+  return { manager_notes: optionalString(body.manager_notes) };
+}
+
 const PAYMENT_METHODS = ["e_transfer", "cash", "cheque", "other"];
 const PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -221,7 +248,7 @@ export function parseMaintenanceBody(body) {
   };
 }
 
-const DOC_TYPES = ["lease", "invoice", "inspection", "application", "other"];
+const DOC_TYPES = ["lease", "invoice", "inspection", "application", "other", "id"];
 
 export function parseDocumentBody(body) {
   const doc_type = body.doc_type === undefined ? "other" : body.doc_type;

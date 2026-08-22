@@ -2,7 +2,14 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseTenantBody, requirePassword, parseFirstPaymentBody } from "../utils/validate.js";
+import {
+  parseTenantBody,
+  requirePassword,
+  parseFirstPaymentBody,
+  parseOccupantBody,
+  parseEvictionEventBody,
+  parseTenantNotesBody,
+} from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
 import { currentPeriod } from "../utils/period.js";
 
@@ -204,6 +211,159 @@ router.get(
         };
       })
     );
+  })
+);
+
+// GET /api/tenants/:id - single-tenant detail for the Tenant Profile page.
+// Simpler than the list query above: that one starts from every unit and
+// finds each one's most recent tenant; this starts from the tenant itself,
+// so there's no "most recent per unit" LATERAL needed.
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT
+         t.id AS tenant_id,
+         t.unit_id,
+         t.full_name,
+         t.email,
+         t.phone,
+         t.lease_start,
+         t.lease_end,
+         t.rent_amount,
+         t.deposit_amount,
+         t.first_period_rent_amount,
+         t.manager_notes,
+         (t.password_hash IS NOT NULL) AS has_login,
+         u.unit_number,
+         u.rent_amount AS unit_rent_amount,
+         p.id AS property_id,
+         p.name AS property_name,
+         COALESCE(rp.paid_amount, 0) AS current_period_paid,
+         COALESCE(ta.addon_total, 0) AS addon_total,
+         COALESCE(ta.addons, '[]') AS addons,
+         insp.id AS inspection_id,
+         insp.status AS inspection_row_status,
+         insp.signed_at AS inspection_signed_at
+       FROM tenants t
+       JOIN units u ON u.id = t.unit_id
+       JOIN properties p ON p.id = u.property_id
+       LEFT JOIN LATERAL (
+         SELECT SUM(amount) AS paid_amount
+         FROM rent_payments rp2
+         WHERE rp2.tenant_id = t.id AND rp2.period_covered = $3
+       ) rp ON true
+       LEFT JOIN LATERAL (
+         SELECT
+           SUM(ta2.quantity * pa.monthly_price) AS addon_total,
+           json_agg(
+             json_build_object(
+               'id', ta2.id,
+               'addon_id', pa.id,
+               'name', pa.name,
+               'quantity', ta2.quantity,
+               'unit_price', pa.monthly_price,
+               'subtotal', ta2.quantity * pa.monthly_price
+             )
+             ORDER BY pa.name
+           ) AS addons
+         FROM tenant_addons ta2
+         JOIN property_addons pa ON pa.id = ta2.addon_id
+         WHERE ta2.tenant_id = t.id
+       ) ta ON true
+       LEFT JOIN move_in_inspections insp ON insp.tenant_id = t.id
+       WHERE t.id = $1 AND t.business_id = $2`,
+      [req.params.id, req.businessId, currentPeriod()]
+    );
+    const row = rows[0];
+    if (!row) throw new ApiError(404, "Tenant not found");
+
+    const { rows: occupants } = await pool.query(
+      "SELECT * FROM tenant_occupants WHERE tenant_id = $1 ORDER BY created_at",
+      [row.tenant_id]
+    );
+    const { rows: evictionEvents } = await pool.query(
+      "SELECT * FROM eviction_events WHERE tenant_id = $1 ORDER BY date_issued DESC, created_at DESC",
+      [row.tenant_id]
+    );
+
+    let inspectionStatus = "none";
+    if (row.inspection_row_status === "draft") inspectionStatus = "draft";
+    else if (row.inspection_row_status === "finalized") {
+      inspectionStatus = row.inspection_signed_at ? "signed" : "pending_signature";
+    }
+    const { inspection_row_status, ...rest } = row;
+    const isFirstPeriod = row.lease_start && periodOf(row.lease_start) === currentPeriod();
+
+    res.json({
+      ...rest,
+      status: computeStatus(row.lease_end),
+      payment_status: computePaymentStatus(
+        row.rent_amount,
+        row.current_period_paid,
+        isFirstPeriod ? row.first_period_rent_amount : null,
+        row.addon_total
+      ),
+      inspection_status: inspectionStatus,
+      occupants,
+      eviction_events: evictionEvents,
+    });
+  })
+);
+
+// Separate from the main tenant edit so updating a memo doesn't require
+// resubmitting lease/rent/addons — manager-only by construction (never
+// selected on portal.js's tenant-facing /me route).
+router.put(
+  "/:id/notes",
+  asyncHandler(async (req, res) => {
+    const data = parseTenantNotesBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE tenants SET manager_notes = $1 WHERE id = $2 AND business_id = $3 RETURNING id, manager_notes",
+      [data.manager_notes, req.params.id, req.businessId]
+    );
+    if (!rows[0]) throw new ApiError(404, "Tenant not found");
+    res.json(rows[0]);
+  })
+);
+
+router.post(
+  "/:id/occupants",
+  asyncHandler(async (req, res) => {
+    const { rows: tenantRows } = await pool.query(
+      "SELECT id FROM tenants WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
+    if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+
+    const data = parseOccupantBody(req.body);
+    const { rows } = await pool.query(
+      `INSERT INTO tenant_occupants (tenant_id, full_name, relationship, notes)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [req.params.id, data.full_name, data.relationship, data.notes]
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+router.post(
+  "/:id/eviction-events",
+  asyncHandler(async (req, res) => {
+    const { rows: tenantRows } = await pool.query(
+      "SELECT id FROM tenants WHERE id = $1 AND business_id = $2",
+      [req.params.id, req.businessId]
+    );
+    if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
+
+    const data = parseEvictionEventBody(req.body);
+    const { rows } = await pool.query(
+      `INSERT INTO eviction_events (tenant_id, notice_type, stage, date_issued, notes)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [req.params.id, data.notice_type, data.stage, data.date_issued, data.notes]
+    );
+    res.status(201).json(rows[0]);
   })
 );
 

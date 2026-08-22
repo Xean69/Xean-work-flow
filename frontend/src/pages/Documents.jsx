@@ -22,6 +22,7 @@ const DOC_TYPE_LABELS = {
   invoice: 'Invoice',
   inspection: 'Inspection',
   application: 'Application',
+  id: 'ID',
   other: 'Other',
 }
 

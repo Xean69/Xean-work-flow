@@ -630,3 +630,53 @@ CREATE INDEX IF NOT EXISTS idx_tenant_addons_addon_id ON tenant_addons(addon_id)
 -- survive (the only real rows, on Bottle Towers, were informal notes with
 -- no price data: "parking: underground" and "pet: dogs and cats only").
 DROP TABLE IF EXISTS property_guides;
+
+-- ============================================================================
+-- Tenant Profile page
+--
+-- Additional occupants, an eviction event log, and a manager-only memo,
+-- all scoped through tenant_id -> tenants.business_id rather than carrying
+-- their own business_id column (same pattern as tenant_addons above) since
+-- they're always read/written in the context of one already-known tenant.
+-- ============================================================================
+
+-- Manager-only memo — never exposed on portal.js's tenant-facing /me route.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS manager_notes TEXT;
+
+-- Informational occupants (roommate, spouse, child...) — no login, no lease
+-- terms of their own, just a record of who else lives there.
+CREATE TABLE IF NOT EXISTS tenant_occupants (
+  id SERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  relationship TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- A running log of eviction-related events, not a stored "current status" —
+-- the most recent entry by date_issued is what the UI treats as the
+-- tenant's current stage. notice_type is free text (eviction notice names
+-- are jurisdiction-specific — Ontario's N4 vs. a US "Pay or Quit" notice
+-- aren't the same taxonomy), but stage is a fixed, generic progression.
+CREATE TABLE IF NOT EXISTS eviction_events (
+  id SERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  notice_type TEXT NOT NULL,
+  stage TEXT NOT NULL CHECK (stage IN ('notice_issued', 'filed_with_court', 'hearing_scheduled', 'order_granted', 'resolved_withdrawn')),
+  date_issued DATE NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_occupants_tenant_id ON tenant_occupants(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_eviction_events_tenant_id ON eviction_events(tenant_id);
+
+-- Tenant ID upload reuses the existing documents pipeline — just a new
+-- doc_type value, kept separate from lease-type documents. Postgres names
+-- an unnamed inline CHECK constraint "{table}_{column}_check" by default,
+-- which is what the original CREATE TABLE's inline CHECK was called; drop
+-- and recreate it under that name so this is safe to re-run.
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_doc_type_check;
+ALTER TABLE documents ADD CONSTRAINT documents_doc_type_check
+  CHECK (doc_type IN ('lease', 'invoice', 'inspection', 'application', 'other', 'id'));

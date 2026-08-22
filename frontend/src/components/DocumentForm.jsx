@@ -5,16 +5,20 @@ const DOC_TYPE_LABELS = {
   invoice: 'Invoice',
   inspection: 'Inspection',
   application: 'Application',
+  id: 'ID',
   other: 'Other',
 }
 
 // Collects the metadata for a file the user just selected (via drag-drop or
 // browse) before it's actually uploaded. properties: [{id, name}]. tenants:
-// [{value, label}].
-function DocumentForm({ file, properties, tenants, onSubmit, onCancel }) {
+// [{value, label}]. presetTenantId/presetPropertyId (from the Tenant Profile
+// page, where both are already known) hide those pickers and default them,
+// instead of asking the manager to re-select a tenant they're already
+// looking at.
+function DocumentForm({ file, properties, tenants, presetTenantId, presetPropertyId, onSubmit, onCancel }) {
   const [docType, setDocType] = useState('other')
-  const [propertyId, setPropertyId] = useState('')
-  const [tenantId, setTenantId] = useState('')
+  const [propertyId, setPropertyId] = useState(presetPropertyId || '')
+  const [tenantId, setTenantId] = useState(presetTenantId || '')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -57,30 +61,34 @@ function DocumentForm({ file, properties, tenants, onSubmit, onCancel }) {
             ))}
           </select>
         </div>
+        {!presetPropertyId && (
+          <div className="form-field">
+            <label htmlFor="property_id">Property (optional)</label>
+            <select id="property_id" value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+              <option value="">None</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {!presetTenantId && (
         <div className="form-field">
-          <label htmlFor="property_id">Property (optional)</label>
-          <select id="property_id" value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+          <label htmlFor="tenant_id">Tenant (optional)</label>
+          <select id="tenant_id" value={tenantId} onChange={(e) => setTenantId(e.target.value)}>
             <option value="">None</option>
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
+            {tenants.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
               </option>
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="form-field">
-        <label htmlFor="tenant_id">Tenant (optional)</label>
-        <select id="tenant_id" value={tenantId} onChange={(e) => setTenantId(e.target.value)}>
-          <option value="">None</option>
-          {tenants.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      )}
 
       <div className="form-field">
         <label htmlFor="notes">Notes (optional)</label>

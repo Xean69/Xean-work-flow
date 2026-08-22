@@ -17,6 +17,8 @@ import expensesRouter from "./routes/expenses.js";
 import portalRouter from "./routes/portal.js";
 import messagesRouter from "./routes/messages.js";
 import addonsRouter from "./routes/addons.js";
+import tenantOccupantsRouter from "./routes/tenantOccupants.js";
+import evictionEventsRouter from "./routes/evictionEvents.js";
 import importsRouter from "./routes/imports.js";
 import teamRouter from "./routes/team.js";
 import ownerStatementsRouter from "./routes/ownerStatements.js";
@@ -112,6 +114,8 @@ app.use("/api/scheduled-messages", requireAdminAuth, staffOnly, scheduledMessage
 app.use("/api/expenses", requireAdminAuth, anyRole, expensesRouter);
 app.use("/api/messages", requireAdminAuth, staffOnly, messagesRouter);
 app.use("/api/addons", requireAdminAuth, staffOnly, addonsRouter);
+app.use("/api/occupants", requireAdminAuth, staffOnly, tenantOccupantsRouter);
+app.use("/api/eviction-events", requireAdminAuth, staffOnly, evictionEventsRouter);
 app.use("/api/import", requireAdminAuth, staffOnly, importsRouter);
 app.use("/api/team", requireAdminAuth, requireRole("owner"), teamRouter);
 app.use("/api/owner-statements", requireAdminAuth, anyRole, ownerStatementsRouter);

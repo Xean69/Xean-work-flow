@@ -102,6 +102,38 @@ export function setTenantPassword(id, password) {
   return request(`/tenants/${id}/password`, { method: "PUT", body: JSON.stringify({ password }) });
 }
 
+export function getTenant(id) {
+  return request(`/tenants/${id}`);
+}
+
+export function updateTenantNotes(id, managerNotes) {
+  return request(`/tenants/${id}/notes`, { method: "PUT", body: JSON.stringify({ manager_notes: managerNotes }) });
+}
+
+export function createOccupant(tenantId, data) {
+  return request(`/tenants/${tenantId}/occupants`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateOccupant(id, data) {
+  return request(`/occupants/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteOccupant(id) {
+  return request(`/occupants/${id}`, { method: "DELETE" });
+}
+
+export function createEvictionEvent(tenantId, data) {
+  return request(`/tenants/${tenantId}/eviction-events`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateEvictionEvent(id, data) {
+  return request(`/eviction-events/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteEvictionEvent(id) {
+  return request(`/eviction-events/${id}`, { method: "DELETE" });
+}
+
 export function getRentPayments(tenantId) {
   return request(`/rent-payments?tenant_id=${tenantId}`);
 }
@@ -142,8 +174,8 @@ export function addMaintenanceComment(id, body) {
   return request(`/maintenance/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) });
 }
 
-export function getDocuments() {
-  return request("/documents");
+export function getDocuments(tenantId) {
+  return request(tenantId ? `/documents?tenant_id=${tenantId}` : "/documents");
 }
 
 // Bypasses the JSON-only request() helper: file uploads use FormData, and
