@@ -5,9 +5,11 @@ import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
 import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, requireString } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
+import { generateMaintenanceChatReply } from "../services/maintenanceChat.js";
 import { currentPeriod } from "../utils/period.js";
 import {
   notifyManagersOfMaintenanceRequest,
+  notifyManagersOfMaintenanceEmergency,
   notifyManagersOfTenantMessage,
   sendTenantPasswordResetEmail,
 } from "../services/email.js";
@@ -221,11 +223,11 @@ router.get(
     const { rows } = await pool.query(
       `SELECT
          m.id, m.title, m.description, m.status, m.priority, m.created_at, m.resolved_at,
-         m.ai_urgency, m.ai_trade, m.ai_reasoning, m.ai_classification_status,
+         m.ai_urgency, m.ai_trade, m.ai_reasoning, m.ai_classification_status, m.is_emergency,
          EXISTS (
            SELECT 1 FROM maintenance_comments c
            WHERE c.request_id = m.id
-             AND c.sender = 'manager'
+             AND c.sender IN ('manager', 'ai')
              AND c.created_at > COALESCE(m.tenant_last_read_at, '-infinity'::timestamptz)
          ) AS unread_by_tenant
        FROM maintenance_requests m
@@ -274,7 +276,7 @@ router.post(
       `UPDATE maintenance_requests
        SET ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
        WHERE id = $5
-       RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status`,
+       RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency`,
       [result.urgency, result.trade, result.reasoning, result.status, ticket.id]
     );
 
@@ -289,6 +291,23 @@ router.post(
       aiTrade: result.trade,
     });
 
+    // The tenant's first message in the thread — a clarifying question or a
+    // safe troubleshooting tip, before a human manager needs to get
+    // involved at all.
+    const firstReply = await generateMaintenanceChatReply({
+      title: ticket.title,
+      description: ticket.description,
+      trade: result.trade,
+      urgency: result.urgency,
+      comments: [],
+    });
+    if (firstReply) {
+      await pool.query(
+        "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
+        [unitRows[0]?.business_id, ticket.id, firstReply]
+      );
+    }
+
     res.status(201).json(updated[0]);
   })
 );
@@ -302,7 +321,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id, title, description, status, priority, created_at, resolved_at,
-              ai_urgency, ai_trade, ai_reasoning, ai_classification_status
+              ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency
        FROM maintenance_requests
        WHERE id = $1 AND tenant_id = $2`,
       [req.params.id, req.tenantId]
@@ -328,10 +347,12 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
     const { rows: ticketRows } = await pool.query(
-      "SELECT id, business_id FROM maintenance_requests WHERE id = $1 AND tenant_id = $2",
+      `SELECT id, business_id, title, description, ai_trade, ai_urgency, is_emergency
+       FROM maintenance_requests WHERE id = $1 AND tenant_id = $2`,
       [req.params.id, req.tenantId]
     );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
+    const ticket = ticketRows[0];
 
     // Pre-existing bug found while wiring up email notifications: this
     // INSERT never set business_id before, and the column is NOT NULL — a
@@ -340,12 +361,80 @@ router.post(
       `INSERT INTO maintenance_comments (business_id, request_id, sender, body)
        VALUES ($1, $2, 'tenant', $3)
        RETURNING id, sender, body, created_at`,
-      [ticketRows[0].business_id, req.params.id, data.body]
+      [ticket.business_id, req.params.id, data.body]
     );
     await pool.query("UPDATE maintenance_requests SET tenant_last_read_at = now() WHERE id = $1", [
       req.params.id,
     ]);
+
+    // Once a ticket is flagged an emergency, the AI stops chiming in
+    // entirely — a human manager has taken over from there.
+    if (!ticket.is_emergency) {
+      const { rows: comments } = await pool.query(
+        "SELECT sender, body FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
+        [req.params.id]
+      );
+      const reply = await generateMaintenanceChatReply({
+        title: ticket.title,
+        description: ticket.description,
+        trade: ticket.ai_trade,
+        urgency: ticket.ai_urgency,
+        comments,
+      });
+      if (reply) {
+        await pool.query(
+          "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
+          [ticket.business_id, req.params.id, reply]
+        );
+      }
+    }
+
     res.status(201).json(rows[0]);
+  })
+);
+
+// Tenant-initiated escalation — idempotent, so a double-click can't send a
+// second emergency email or post a second acknowledgment. priority (not
+// ai_urgency) is the field that actually drives the kanban's urgency dot,
+// same as everywhere else "how urgent is this" gets decided.
+router.post(
+  "/maintenance/:id/emergency",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows: ticketRows } = await pool.query(
+      `SELECT m.id, m.business_id, m.title, m.is_emergency, p.name AS property_name, u.unit_number, t.full_name AS tenant_name
+       FROM maintenance_requests m
+       JOIN units u ON u.id = m.unit_id
+       JOIN properties p ON p.id = u.property_id
+       LEFT JOIN tenants t ON t.id = m.tenant_id
+       WHERE m.id = $1 AND m.tenant_id = $2`,
+      [req.params.id, req.tenantId]
+    );
+    if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
+    const ticket = ticketRows[0];
+
+    if (ticket.is_emergency) {
+      return res.json({ is_emergency: true });
+    }
+
+    await pool.query("UPDATE maintenance_requests SET priority = 'high', is_emergency = true WHERE id = $1", [
+      ticket.id,
+    ]);
+    await pool.query(
+      `INSERT INTO maintenance_comments (business_id, request_id, sender, body)
+       VALUES ($1, $2, 'ai', 'This has been flagged as an emergency. A manager has been notified and will reach out as soon as possible.')`,
+      [ticket.business_id, ticket.id]
+    );
+
+    await notifyManagersOfMaintenanceEmergency({
+      businessId: ticket.business_id,
+      title: ticket.title,
+      propertyName: ticket.property_name,
+      unitNumber: ticket.unit_number,
+      tenantName: ticket.tenant_name,
+    });
+
+    res.json({ is_emergency: true });
   })
 );
 

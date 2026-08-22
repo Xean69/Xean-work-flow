@@ -70,10 +70,13 @@ ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS manager_last_read_at T
 CREATE INDEX IF NOT EXISTS idx_maintenance_requests_unit_id ON maintenance_requests(unit_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_requests_tenant_id ON maintenance_requests(tenant_id);
 
+-- 'ai' sender: the maintenance chat assistant's replies live in this same
+-- thread, right alongside the tenant's and manager's own comments — see
+-- services/maintenanceChat.js.
 CREATE TABLE IF NOT EXISTS maintenance_comments (
   id SERIAL PRIMARY KEY,
   request_id INTEGER NOT NULL REFERENCES maintenance_requests(id) ON DELETE CASCADE,
-  sender TEXT NOT NULL CHECK (sender IN ('tenant', 'manager')),
+  sender TEXT NOT NULL CHECK (sender IN ('tenant', 'manager', 'ai')),
   body TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -769,3 +772,22 @@ CREATE TABLE IF NOT EXISTS payment_allocations (
 
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment_id ON payment_allocations(payment_id);
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_charge_id ON payment_allocations(charge_id);
+
+-- ============================================================================
+-- AI-assisted maintenance chat
+--
+-- Relaxes the pre-existing maintenance_comments.sender constraint (already
+-- deployed in production) to allow 'ai', and adds a tenant-settable
+-- emergency flag. Everything else the chat needs — the thread itself,
+-- priority as the field that actually drives kanban urgency — already
+-- existed; see services/maintenanceChat.js for the reasoning.
+-- ============================================================================
+ALTER TABLE maintenance_comments DROP CONSTRAINT IF EXISTS maintenance_comments_sender_check;
+ALTER TABLE maintenance_comments ADD CONSTRAINT maintenance_comments_sender_check
+  CHECK (sender IN ('tenant', 'manager', 'ai'));
+
+-- Set once a tenant flags a ticket as an emergency (POST /portal/maintenance/
+-- :id/emergency) — never cleared automatically afterward, even if a manager
+-- later changes priority back down, since it's a historical record of how
+-- the ticket started, not a live triage state.
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_emergency BOOLEAN NOT NULL DEFAULT false;

@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseMaintenanceBody, parseMessageBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
+import { generateMaintenanceChatReply } from "../services/maintenanceChat.js";
 import { notifyManagersOfMaintenanceRequest, notifyTenantOfMaintenanceReply } from "../services/email.js";
 
 const router = Router();
@@ -39,7 +40,7 @@ router.get(
          EXISTS (
            SELECT 1 FROM maintenance_comments c
            WHERE c.request_id = m.id
-             AND c.sender = 'tenant'
+             AND c.sender IN ('tenant', 'ai')
              AND c.created_at > COALESCE(m.manager_last_read_at, '-infinity'::timestamptz)
          ) AS unread_by_manager
        FROM maintenance_requests m
@@ -102,6 +103,24 @@ router.post(
       aiUrgency: result.urgency,
       aiTrade: result.trade,
     });
+
+    // Only when a tenant is actually attached — a manager-only ticket with
+    // no tenant has no one for the assistant to chat with.
+    if (ticket.tenant_id) {
+      const firstReply = await generateMaintenanceChatReply({
+        title: ticket.title,
+        description: ticket.description,
+        trade: result.trade,
+        urgency: result.urgency,
+        comments: [],
+      });
+      if (firstReply) {
+        await pool.query(
+          "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
+          [req.businessId, ticket.id, firstReply]
+        );
+      }
+    }
 
     res.status(201).json(updated[0]);
   })

@@ -206,6 +206,7 @@ function Maintenance() {
                         {t.property_name} · {t.unit_number}
                         {t.tenant_name ? ` · ${t.tenant_name}` : ''}
                       </div>
+                      {t.is_emergency && <div className="ticket-emergency-tag">🚨 Emergency</div>}
                       <AiTag ticket={t} />
 
                       <div className="ticket-actions">
@@ -269,6 +270,7 @@ function Maintenance() {
                 {threadData.tenant_name ? ` · ${threadData.tenant_name}` : ''}
               </p>
               {threadData.description && <p className="ticket-thread-description">{threadData.description}</p>}
+              {threadData.is_emergency && <p className="ticket-thread-emergency-note">🚨 Flagged as an emergency by the tenant</p>}
               {threadData.ai_classification_status === 'success' && (
                 <p className="ticket-thread-ai-note">
                   ⚡ AI read: {AI_URGENCY_LABELS[threadData.ai_urgency] || threadData.ai_urgency} ·{' '}
@@ -283,7 +285,8 @@ function Maintenance() {
                   </p>
                 )}
                 {threadData.comments.map((c) => (
-                  <div className={`bubble ${c.sender === 'manager' ? 'out' : 'in'}`} key={c.id}>
+                  <div className={`bubble ${c.sender === 'manager' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`} key={c.id}>
+                    {c.sender === 'ai' && <div className="bubble-sender">Assistant</div>}
                     {c.body}
                     <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(c.created_at)}</div>
                   </div>

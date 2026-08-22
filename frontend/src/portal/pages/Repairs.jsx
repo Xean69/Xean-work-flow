@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { getPortalMaintenance, createPortalMaintenance, getPortalMaintenanceDetail, addPortalMaintenanceComment } from '../portalApi.js'
+import {
+  getPortalMaintenance,
+  createPortalMaintenance,
+  getPortalMaintenanceDetail,
+  addPortalMaintenanceComment,
+  flagPortalMaintenanceEmergency,
+} from '../portalApi.js'
 
 const STATUS_META = {
   new: { label: 'Submitted', variant: 'slate' },
@@ -49,6 +55,7 @@ function Repairs() {
   const [threadData, setThreadData] = useState(null)
   const [commentDraft, setCommentDraft] = useState('')
   const [sendingComment, setSendingComment] = useState(false)
+  const [flagging, setFlagging] = useState(false)
   const threadBodyRef = useRef(null)
 
   useEffect(() => {
@@ -111,6 +118,18 @@ function Repairs() {
       setThreadData(await getPortalMaintenanceDetail(expandedId))
     } finally {
       setSendingComment(false)
+    }
+  }
+
+  async function handleFlagEmergency() {
+    if (!window.confirm('Flag this as an emergency? A manager will be notified right away.')) return
+    setFlagging(true)
+    try {
+      await flagPortalMaintenanceEmergency(expandedId)
+      setThreadData(await getPortalMaintenanceDetail(expandedId))
+      setRequests((rows) => rows.map((r) => (r.id === expandedId ? { ...r, is_emergency: true, priority: 'high' } : r)))
+    } finally {
+      setFlagging(false)
     }
   }
 
@@ -196,6 +215,7 @@ function Repairs() {
               </h2>
               <span className={`portal-badge portal-badge-${status.variant}`}>{status.label}</span>
             </div>
+            {r.is_emergency && <div className="portal-emergency-tag">🚨 Emergency</div>}
             {r.description && <p style={{ marginTop: 6 }}>{r.description}</p>}
             {r.ai_classification_status === 'success' && (
               <div className="portal-ai-tag">
@@ -221,12 +241,22 @@ function Repairs() {
                         </p>
                       )}
                       {threadData.comments.map((c) => (
-                        <div key={c.id} className={`portal-bubble ${c.sender === 'tenant' ? 'out' : 'in'}`}>
+                        <div
+                          key={c.id}
+                          className={`portal-bubble ${c.sender === 'tenant' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
+                        >
+                          {c.sender === 'ai' && <div className="portal-bubble-sender">Assistant</div>}
                           {c.body}
                           <div className="portal-bubble-time">{formatTime(c.created_at)}</div>
                         </div>
                       ))}
                     </div>
+
+                    {!threadData.is_emergency && (
+                      <button className="portal-emergency-btn" onClick={handleFlagEmergency} disabled={flagging}>
+                        {flagging ? 'Flagging…' : '🚨 Flag as emergency'}
+                      </button>
+                    )}
 
                     <form className="portal-ticket-composer" onSubmit={handleSendComment}>
                       <input

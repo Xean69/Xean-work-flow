@@ -65,6 +65,10 @@ export function addPortalMaintenanceComment(id, body) {
   return request(`/maintenance/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) });
 }
 
+export function flagPortalMaintenanceEmergency(id) {
+  return request(`/maintenance/${id}/emergency`, { method: "POST" });
+}
+
 export function getPortalMessages() {
   return request("/messages");
 }

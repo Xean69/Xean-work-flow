@@ -95,6 +95,37 @@ export async function notifyManagersOfMaintenanceRequest({
   }
 }
 
+// Distinct from notifyManagersOfMaintenanceRequest above — this fires when
+// a tenant flags an *existing* ticket's chat as an emergency, not when a
+// new one is created, so it gets its own subject/heading rather than the
+// misleading "New maintenance request."
+export async function notifyManagersOfMaintenanceEmergency({
+  businessId,
+  title,
+  propertyName,
+  unitNumber,
+  tenantName,
+}) {
+  try {
+    const to = await getManagerRecipients(businessId);
+    await sendEmail({
+      to,
+      subject: `🚨 Emergency: ${title}`,
+      html: renderEmail({
+        heading: "Maintenance ticket flagged as an emergency",
+        lines: [
+          `<strong>${tenantName || "A tenant"}</strong> at ${propertyName} · ${unitNumber} flagged an existing maintenance request as an emergency.`,
+          `<strong>${title}</strong>`,
+        ],
+        ctaText: "View in Maintenance",
+        ctaUrl: `${APP_BASE_URL}/maintenance`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyManagersOfMaintenanceEmergency failed:", err);
+  }
+}
+
 export async function notifyManagersOfTenantMessage({ businessId, tenantName, messageBody }) {
   try {
     const to = await getManagerRecipients(businessId);

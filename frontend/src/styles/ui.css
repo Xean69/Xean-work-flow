@@ -614,6 +614,20 @@ tr:last-child td {
   align-self: flex-end;
   border-bottom-right-radius: 3px;
 }
+.bubble.ai {
+  background: var(--amber-bg);
+  border: 1px solid var(--amber);
+  align-self: flex-start;
+  border-bottom-left-radius: 3px;
+}
+.bubble-sender {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--amber);
+  margin-bottom: 3px;
+}
 .chat-composer {
   display: flex;
   gap: 10px;
