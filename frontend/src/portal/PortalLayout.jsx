@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { to: '/portal/home', label: 'Home', icon: '🏠' },
   { to: '/portal/repairs', label: 'Repairs', icon: '🔧' },
   { to: '/portal/messages', label: 'Messages', icon: '💬' },
-  { to: '/portal/guide', label: 'Guide', icon: '📖' },
+  { to: '/portal/addons', label: 'Add-ons', icon: '💳' },
   { to: '/portal/lease', label: 'Lease', icon: '📄' },
 ]
 

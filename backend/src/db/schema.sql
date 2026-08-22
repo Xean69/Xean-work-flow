@@ -589,3 +589,44 @@ ALTER TABLE units ADD CONSTRAINT units_status_check
 -- (tenants.js, portal.js) only while the current period is this tenant's
 -- first one — every period after that always compares against rent_amount.
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS first_period_rent_amount NUMERIC(10,2);
+
+-- Replaces the old "Property Guide" free-text content feature (property_
+-- guides / guide_sections) with priced, recurring monthly add-ons — pets,
+-- parking, storage, etc. — that get applied to a tenant's lease. Price
+-- lives only here; tenant_addons never stores its own price, so editing
+-- an addon's monthly_price changes the amount owed for everyone currently
+-- on it, going forward (already-recorded rent_payments are historical and
+-- untouched). Retires property_guides entirely — no tenant-facing free
+-- text content feature exists after this.
+CREATE TABLE IF NOT EXISTS property_addons (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  monthly_price NUMERIC(10,2) NOT NULL CHECK (monthly_price >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- A tenant's selected add-ons and how many of each (e.g. Parking x2).
+-- ON DELETE RESTRICT on addon_id: a manager can't delete an add-on
+-- definition while it's still applied to a tenant's lease — a real charge
+-- should never silently vanish from someone's bill. They have to remove
+-- it from the tenant first, which is an explicit, visible action.
+CREATE TABLE IF NOT EXISTS tenant_addons (
+  id SERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  addon_id INTEGER NOT NULL REFERENCES property_addons(id) ON DELETE RESTRICT,
+  quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  UNIQUE (tenant_id, addon_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_property_addons_property_id ON property_addons(property_id);
+CREATE INDEX IF NOT EXISTS idx_property_addons_business_id ON property_addons(business_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_addons_tenant_id ON tenant_addons(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_addons_addon_id ON tenant_addons(addon_id);
+
+-- property_guides is fully retired by the Property Addons feature above —
+-- confirmed with the business owner that no production content needs to
+-- survive (the only real rows, on Bottle Towers, were informal notes with
+-- no price data: "parking: underground" and "pet: dogs and cats only").
+DROP TABLE IF EXISTS property_guides;

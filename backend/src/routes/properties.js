@@ -2,7 +2,7 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parsePropertyBody, parseUnitBody, parseGuideSectionBody } from "../utils/validate.js";
+import { parsePropertyBody, parseUnitBody, parseAddonBody } from "../utils/validate.js";
 
 const router = Router();
 
@@ -62,11 +62,11 @@ router.get(
       "SELECT * FROM units WHERE property_id = $1 ORDER BY unit_number",
       [req.params.id]
     );
-    const { rows: guide } = await pool.query(
-      "SELECT * FROM property_guides WHERE property_id = $1 ORDER BY sort_order, id",
+    const { rows: addons } = await pool.query(
+      "SELECT * FROM property_addons WHERE property_id = $1 ORDER BY name",
       [req.params.id]
     );
-    res.json({ ...property, units, guide });
+    res.json({ ...property, units, addons });
   })
 );
 
@@ -120,10 +120,8 @@ router.post(
   })
 );
 
-// New sections append to the end of the list — sort_order is picked here,
-// not sent by the client, so it always lands after whatever already exists.
 router.post(
-  "/:id/guide",
+  "/:id/addons",
   asyncHandler(async (req, res) => {
     const { rows: propertyRows } = await pool.query(
       "SELECT id FROM properties WHERE id = $1 AND business_id = $2",
@@ -131,16 +129,12 @@ router.post(
     );
     if (!propertyRows[0]) throw new ApiError(404, "Property not found");
 
-    const data = parseGuideSectionBody(req.body);
-    const { rows: maxRows } = await pool.query(
-      "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM property_guides WHERE property_id = $1",
-      [req.params.id]
-    );
+    const data = parseAddonBody(req.body);
     const { rows } = await pool.query(
-      `INSERT INTO property_guides (business_id, property_id, section_title, content, sort_order)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO property_addons (business_id, property_id, name, monthly_price)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [req.businessId, req.params.id, data.section_title, data.content, maxRows[0].next_order]
+      [req.businessId, req.params.id, data.name, data.monthly_price]
     );
     res.status(201).json(rows[0]);
   })

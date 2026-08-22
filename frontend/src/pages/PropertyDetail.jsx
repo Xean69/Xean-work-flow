@@ -7,15 +7,15 @@ import {
   createUnit,
   updateUnit,
   deleteUnit,
-  createGuideSection,
-  updateGuideSection,
-  deleteGuideSection,
+  createAddon,
+  updateAddon,
+  deleteAddon,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
 import PropertyForm from '../components/PropertyForm.jsx'
 import UnitForm from '../components/UnitForm.jsx'
-import GuideSectionForm from '../components/GuideSectionForm.jsx'
+import AddonForm from '../components/AddonForm.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import './PropertyDetail.css'
 
@@ -27,7 +27,7 @@ function PropertyDetail() {
   const [loadError, setLoadError] = useState('')
   const [editingProperty, setEditingProperty] = useState(false)
   const [unitModal, setUnitModal] = useState(null) // null | 'new' | the unit being edited
-  const [guideModal, setGuideModal] = useState(null) // null | 'new' | the section being edited
+  const [addonModal, setAddonModal] = useState(null) // null | 'new' | the addon being edited
 
   useEffect(() => {
     load()
@@ -76,19 +76,19 @@ function PropertyDetail() {
     await load()
   }
 
-  async function handleSaveGuideSection(values) {
-    if (guideModal && guideModal !== 'new') {
-      await updateGuideSection(guideModal.id, values)
+  async function handleSaveAddon(values) {
+    if (addonModal && addonModal !== 'new') {
+      await updateAddon(addonModal.id, values)
     } else {
-      await createGuideSection(id, values)
+      await createAddon(id, values)
     }
-    setGuideModal(null)
+    setAddonModal(null)
     await load()
   }
 
-  async function handleDeleteGuideSection(section) {
-    if (!window.confirm(`Delete the "${section.section_title}" section?`)) return
-    await deleteGuideSection(section.id)
+  async function handleDeleteAddon(addon) {
+    if (!window.confirm(`Delete the "${addon.name}" addon?`)) return
+    await deleteAddon(addon.id)
     await load()
   }
 
@@ -178,35 +178,48 @@ function PropertyDetail() {
         )}
 
         <div className="section-head">
-          <h2>Property guide</h2>
-          <button className="btn btn-primary btn-sm" onClick={() => setGuideModal('new')}>
-            + Add section
+          <h2>Property Addons</h2>
+          <button className="btn btn-primary btn-sm" onClick={() => setAddonModal('new')}>
+            + Add addon
           </button>
         </div>
 
-        {property.guide.length === 0 ? (
+        {property.addons.length === 0 ? (
           <div className="empty-state card">
-            <h3>No guide content yet</h3>
-            <p>Add sections like parking, trash day, or WiFi — tenants will see these on their portal.</p>
+            <h3>No addons yet</h3>
+            <p>Add priced monthly extras like parking, pets, or storage — managers can apply these to a tenant's lease.</p>
           </div>
         ) : (
-          <div className="card">
-            {property.guide.map((section) => (
-              <div className="guide-row" key={section.id}>
-                <div className="guide-row-body">
-                  <h3>{section.section_title}</h3>
-                  <p>{section.content}</p>
-                </div>
-                <div className="table-actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => setGuideModal(section)}>
-                    Edit
-                  </button>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleDeleteGuideSection(section)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="card table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Monthly price</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {property.addons.map((addon) => (
+                  <tr key={addon.id}>
+                    <td>{addon.name}</td>
+                    <td className="mono">
+                      ${Number(addon.monthly_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <button className="btn btn-ghost btn-sm" onClick={() => setAddonModal(addon)}>
+                          Edit
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDeleteAddon(addon)}>
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -231,12 +244,12 @@ function PropertyDetail() {
         </Modal>
       )}
 
-      {guideModal && (
-        <Modal title={guideModal === 'new' ? 'Add guide section' : 'Edit guide section'} onClose={() => setGuideModal(null)}>
-          <GuideSectionForm
-            initialValues={guideModal === 'new' ? undefined : guideModal}
-            onSubmit={handleSaveGuideSection}
-            onCancel={() => setGuideModal(null)}
+      {addonModal && (
+        <Modal title={addonModal === 'new' ? 'Add addon' : 'Edit addon'} onClose={() => setAddonModal(null)}>
+          <AddonForm
+            initialValues={addonModal === 'new' ? undefined : addonModal}
+            onSubmit={handleSaveAddon}
+            onCancel={() => setAddonModal(null)}
           />
         </Modal>
       )}

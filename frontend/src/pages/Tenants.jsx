@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getTenants,
+  getAddons,
   createTenant,
   updateTenant,
   deleteTenant,
@@ -72,6 +73,7 @@ function formatPeriod(period) {
 function Tenants() {
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
+  const [addons, setAddons] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   // null = closed, {} = add form, { row } = editing, { presetUnitId } = assigning a specific vacant unit
@@ -93,7 +95,9 @@ function Tenants() {
     setLoading(true)
     setLoadError('')
     try {
-      setRows(await getTenants())
+      const [tenantRows, addonRows] = await Promise.all([getTenants(), getAddons()])
+      setRows(tenantRows)
+      setAddons(addonRows)
     } catch (err) {
       setLoadError(err.message)
     } finally {
@@ -169,7 +173,12 @@ function Tenants() {
   // so you can view/save without being forced to pick a different unit.
   const vacantOptions = rows
     .filter((r) => !r.tenant_id)
-    .map((r) => ({ value: r.unit_id, label: `${r.property_name} — ${r.unit_number}`, rent_amount: r.unit_rent_amount }))
+    .map((r) => ({
+      value: r.unit_id,
+      label: `${r.property_name} — ${r.unit_number}`,
+      rent_amount: r.unit_rent_amount,
+      property_id: r.property_id,
+    }))
 
   const unitOptions =
     formState?.row && formState.row.tenant_id
@@ -178,6 +187,7 @@ function Tenants() {
             value: formState.row.unit_id,
             label: `${formState.row.property_name} — ${formState.row.unit_number}`,
             rent_amount: formState.row.unit_rent_amount,
+            property_id: formState.row.property_id,
           },
           ...vacantOptions,
         ]
@@ -193,6 +203,7 @@ function Tenants() {
         lease_end: formState.row.lease_end?.slice(0, 10) || '',
         rent_amount: formState.row.rent_amount || '',
         deposit_amount: formState.row.deposit_amount || '',
+        addons: (formState.row.addons || []).map((a) => ({ addon_id: a.addon_id, quantity: a.quantity })),
       }
     : formState?.presetUnitId
       ? { unit_id: formState.presetUnitId }
@@ -331,6 +342,7 @@ function Tenants() {
             initialValues={initialValues}
             isEditing={!!formState?.row}
             unitOptions={unitOptions}
+            addonOptions={addons}
             onSubmit={handleSubmit}
             onCancel={() => setFormState(null)}
           />
@@ -349,10 +361,37 @@ function Tenants() {
 
       {paymentsRow && (
         <Modal title={`Rent payments — ${paymentsRow.full_name}`} onClose={closePayments}>
+          {paymentsRow.addons?.length > 0 && (
+            <div className="proration-box" style={{ marginBottom: 16 }}>
+              <label>Amount due this period</label>
+              <table>
+                <tbody>
+                  <tr>
+                    <td>Rent</td>
+                    <td className="mono">{formatMoney(paymentsRow.rent_amount)}</td>
+                  </tr>
+                  {paymentsRow.addons.map((a) => (
+                    <tr key={a.id}>
+                      <td>
+                        {a.name} × {a.quantity}
+                      </td>
+                      <td className="mono">{formatMoney(a.subtotal)}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td style={{ fontWeight: 600 }}>Total due</td>
+                    <td className="mono" style={{ fontWeight: 600 }}>
+                      {formatMoney(Number(paymentsRow.rent_amount) + Number(paymentsRow.addon_total || 0))}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
           <h3 style={{ marginBottom: 12 }}>{editingPayment ? 'Edit payment' : 'Record a payment'}</h3>
           <RentPaymentForm
             key={editingPayment?.id ?? 'new'}
-            rentAmount={paymentsRow.rent_amount}
+            rentAmount={Number(paymentsRow.rent_amount) + Number(paymentsRow.addon_total || 0)}
             initialValues={
               editingPayment
                 ? {

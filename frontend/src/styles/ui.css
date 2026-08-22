@@ -453,6 +453,27 @@ tr:last-child td {
 .proration-box label {
   color: var(--amber);
 }
+.proration-box table {
+  margin-top: 8px;
+}
+.proration-box th,
+.proration-box td {
+  padding: 6px 8px;
+  font-size: 12.5px;
+}
+.addon-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.addon-qty-input {
+  width: 60px;
+  padding: 4px 8px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
 .form-actions {
   display: flex;
   justify-content: flex-end;

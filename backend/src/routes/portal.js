@@ -99,10 +99,14 @@ router.post(
 // prorated first_period_rent_amount when one was set — every period after
 // that, firstPeriodAmount is always null and this falls back to the flat
 // rate.
-function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount) {
+// addonTotal (sum of quantity * monthly_price across the tenant's applied
+// property_addons) is added on top unconditionally — addons are always
+// flat monthly, never prorated, regardless of which period this is.
+function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount, addonTotal = 0) {
   const rent = firstPeriodAmount != null ? Number(firstPeriodAmount) : Number(rentAmount) || 0;
+  const total = rent + (Number(addonTotal) || 0);
   const paid = Number(paidAmount) || 0;
-  if (paid >= rent) return "paid";
+  if (paid >= total) return "paid";
   if (paid <= 0) return "unpaid";
   return "partial";
 }
@@ -129,10 +133,30 @@ router.get(
          COALESCE((
            SELECT SUM(amount) FROM rent_payments
            WHERE tenant_id = t.id AND period_covered = $2
-         ), 0) AS current_period_paid
+         ), 0) AS current_period_paid,
+         COALESCE(ta.addon_total, 0) AS addon_total,
+         ta.addons
        FROM tenants t
        JOIN units u ON u.id = t.unit_id
        JOIN properties p ON p.id = u.property_id
+       LEFT JOIN LATERAL (
+         SELECT
+           SUM(ta2.quantity * pa.monthly_price) AS addon_total,
+           json_agg(
+             json_build_object(
+               'id', ta2.id,
+               'addon_id', pa.id,
+               'name', pa.name,
+               'quantity', ta2.quantity,
+               'unit_price', pa.monthly_price,
+               'subtotal', ta2.quantity * pa.monthly_price
+             )
+             ORDER BY pa.name
+           ) AS addons
+         FROM tenant_addons ta2
+         JOIN property_addons pa ON pa.id = ta2.addon_id
+         WHERE ta2.tenant_id = t.id
+       ) ta ON true
        WHERE t.id = $1`,
       [req.tenantId, currentPeriod()]
     );
@@ -141,11 +165,13 @@ router.get(
     const isFirstPeriod = tenant.lease_start && periodOf(tenant.lease_start) === currentPeriod();
     res.json({
       ...tenant,
+      addons: tenant.addons || [],
       current_period: currentPeriod(),
       payment_status: computePaymentStatus(
         tenant.rent_amount,
         tenant.current_period_paid,
-        isFirstPeriod ? tenant.first_period_rent_amount : null
+        isFirstPeriod ? tenant.first_period_rent_amount : null,
+        tenant.addon_total
       ),
     });
   })
@@ -396,25 +422,6 @@ router.post(
     });
 
     res.status(201).json(rows[0]);
-  })
-);
-
-// The property is derived from the tenant's own unit, never taken from the
-// request — a tenant can only ever see their own property's guide.
-router.get(
-  "/guide",
-  requireTenantAuth,
-  asyncHandler(async (req, res) => {
-    const { rows } = await pool.query(
-      `SELECT g.id, g.section_title, g.content
-       FROM property_guides g
-       JOIN units u ON u.property_id = g.property_id
-       JOIN tenants t ON t.unit_id = u.id
-       WHERE t.id = $1
-       ORDER BY g.sort_order, g.id`,
-      [req.tenantId]
-    );
-    res.json(rows);
   })
 );
 

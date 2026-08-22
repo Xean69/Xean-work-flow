@@ -10,23 +10,3 @@
   text-decoration: none;
 }
 
-.guide-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--line);
-}
-.guide-row:last-child {
-  border-bottom: none;
-}
-.guide-row-body h3 {
-  margin-bottom: 4px;
-}
-.guide-row-body p {
-  font-size: 13px;
-  color: var(--slate);
-  white-space: pre-wrap;
-  margin: 0;
-}

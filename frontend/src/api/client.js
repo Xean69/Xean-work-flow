@@ -238,16 +238,20 @@ export function sendManagerMessage(tenantId, body) {
   return request(`/messages/${tenantId}`, { method: "POST", body: JSON.stringify({ body }) });
 }
 
-export function createGuideSection(propertyId, data) {
-  return request(`/properties/${propertyId}/guide`, { method: "POST", body: JSON.stringify(data) });
+export function getAddons() {
+  return request("/addons");
 }
 
-export function updateGuideSection(id, data) {
-  return request(`/guide-sections/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export function createAddon(propertyId, data) {
+  return request(`/properties/${propertyId}/addons`, { method: "POST", body: JSON.stringify(data) });
 }
 
-export function deleteGuideSection(id) {
-  return request(`/guide-sections/${id}`, { method: "DELETE" });
+export function updateAddon(id, data) {
+  return request(`/addons/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function deleteAddon(id) {
+  return request(`/addons/${id}`, { method: "DELETE" });
 }
 
 export function previewPropertyImport(formData) {

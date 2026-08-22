@@ -29,10 +29,14 @@ function computeStatus(leaseEnd) {
 // tenant's first period, "rent" here is their prorated first_period_rent_
 // amount when one was set (see schema.sql) — every period after that,
 // firstPeriodAmount is always null and this falls back to the flat rate.
-function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount) {
+// addonTotal (sum of quantity * monthly_price across the tenant's applied
+// property_addons) is added on top unconditionally — addons are always
+// flat monthly, never prorated, regardless of which period this is.
+function computePaymentStatus(rentAmount, paidAmount, firstPeriodAmount, addonTotal = 0) {
   const rent = firstPeriodAmount != null ? Number(firstPeriodAmount) : Number(rentAmount) || 0;
+  const total = rent + (Number(addonTotal) || 0);
   const paid = Number(paidAmount) || 0;
-  if (paid >= rent) return "paid";
+  if (paid >= total) return "paid";
   if (paid <= 0) return "unpaid";
   return "partial";
 }
@@ -77,6 +81,38 @@ async function assertUnitInBusiness(unitId, businessId) {
   if (!rows[0]) throw new ApiError(400, "unit_id does not belong to a property in your business");
 }
 
+// Every addon a tenant selects must belong to their own unit's property —
+// otherwise a request could bill a tenant for another property's addon by
+// guessing its id. No-op on an empty list.
+async function assertAddonsInProperty(addonIds, unitId, businessId) {
+  if (addonIds.length === 0) return;
+  const { rows } = await pool.query(
+    `SELECT pa.id FROM property_addons pa
+     JOIN units u ON u.property_id = pa.property_id
+     WHERE u.id = $1 AND pa.business_id = $2 AND pa.id = ANY($3::int[])`,
+    [unitId, businessId, addonIds]
+  );
+  const found = new Set(rows.map((r) => r.id));
+  const missing = addonIds.filter((id) => !found.has(id));
+  if (missing.length) {
+    throw new ApiError(400, `addon_id ${missing[0]} does not belong to this unit's property`);
+  }
+}
+
+// Replaces a tenant's full addon set — simpler and safer than diffing
+// against what's already there, since the manager always submits the
+// complete intended selection (checkboxes + quantities), not a delta.
+async function replaceTenantAddons(client, tenantId, addons) {
+  await client.query("DELETE FROM tenant_addons WHERE tenant_id = $1", [tenantId]);
+  for (const addon of addons) {
+    await client.query("INSERT INTO tenant_addons (tenant_id, addon_id, quantity) VALUES ($1, $2, $3)", [
+      tenantId,
+      addon.addon_id,
+      addon.quantity,
+    ]);
+  }
+}
+
 // GET /api/tenants - one row per unit across the whole portfolio: the
 // unit's most recent tenant if it has one, or vacant if it doesn't.
 router.get(
@@ -100,6 +136,8 @@ router.get(
          t.first_period_rent_amount,
          (t.password_hash IS NOT NULL) AS has_login,
          COALESCE(rp.paid_amount, 0) AS current_period_paid,
+         COALESCE(ta.addon_total, 0) AS addon_total,
+         ta.addons,
          insp.id AS inspection_id,
          insp.status AS inspection_row_status,
          insp.signed_at AS inspection_signed_at
@@ -117,6 +155,24 @@ router.get(
          FROM rent_payments rp2
          WHERE rp2.tenant_id = t.id AND rp2.period_covered = $2
        ) rp ON true
+       LEFT JOIN LATERAL (
+         SELECT
+           SUM(ta2.quantity * pa.monthly_price) AS addon_total,
+           json_agg(
+             json_build_object(
+               'id', ta2.id,
+               'addon_id', pa.id,
+               'name', pa.name,
+               'quantity', ta2.quantity,
+               'unit_price', pa.monthly_price,
+               'subtotal', ta2.quantity * pa.monthly_price
+             )
+             ORDER BY pa.name
+           ) AS addons
+         FROM tenant_addons ta2
+         JOIN property_addons pa ON pa.id = ta2.addon_id
+         WHERE ta2.tenant_id = t.id
+       ) ta ON true
        LEFT JOIN move_in_inspections insp ON insp.tenant_id = t.id
        WHERE p.business_id = $1
        ORDER BY p.name, u.unit_number`,
@@ -134,12 +190,14 @@ router.get(
         const isFirstPeriod = row.tenant_id && row.lease_start && periodOf(row.lease_start) === currentPeriod();
         return {
           ...rest,
+          addons: row.addons || [],
           status: row.tenant_id ? computeStatus(row.lease_end) : "vacant",
           payment_status: row.tenant_id
             ? computePaymentStatus(
                 row.rent_amount,
                 row.current_period_paid,
-                isFirstPeriod ? row.first_period_rent_amount : null
+                isFirstPeriod ? row.first_period_rent_amount : null,
+                row.addon_total
               )
             : null,
           inspection_status: row.tenant_id ? inspectionStatus : null,
@@ -154,6 +212,11 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseTenantBody(req.body);
     await assertUnitInBusiness(data.unit_id, req.businessId);
+    await assertAddonsInProperty(
+      data.addons.map((a) => a.addon_id),
+      data.unit_id,
+      req.businessId
+    );
 
     // Optional: "record this as the tenant's first rent payment", checked
     // during creation on the Tenants page. Validated up front so a bad
@@ -183,6 +246,8 @@ router.post(
         ]
       );
       tenant = rows[0];
+
+      await replaceTenantAddons(client, tenant.id, data.addons);
 
       if (firstPayment) {
         await client.query(
@@ -225,25 +290,46 @@ router.put(
 
     const data = parseTenantBody(req.body);
     await assertUnitInBusiness(data.unit_id, req.businessId);
-
-    const { rows } = await pool.query(
-      `UPDATE tenants
-       SET unit_id = $1, full_name = $2, email = $3, phone = $4, lease_start = $5, lease_end = $6, rent_amount = $7, deposit_amount = $8, updated_at = now()
-       WHERE id = $9 AND business_id = $10
-       RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
-      [
-        data.unit_id,
-        data.full_name,
-        data.email,
-        data.phone,
-        data.lease_start,
-        data.lease_end,
-        data.rent_amount,
-        data.deposit_amount,
-        req.params.id,
-        req.businessId,
-      ]
+    await assertAddonsInProperty(
+      data.addons.map((a) => a.addon_id),
+      data.unit_id,
+      req.businessId
     );
+
+    const client = await pool.connect();
+    let tenant;
+    try {
+      await client.query("BEGIN");
+
+      const { rows } = await client.query(
+        `UPDATE tenants
+         SET unit_id = $1, full_name = $2, email = $3, phone = $4, lease_start = $5, lease_end = $6, rent_amount = $7, deposit_amount = $8, updated_at = now()
+         WHERE id = $9 AND business_id = $10
+         RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, created_at`,
+        [
+          data.unit_id,
+          data.full_name,
+          data.email,
+          data.phone,
+          data.lease_start,
+          data.lease_end,
+          data.rent_amount,
+          data.deposit_amount,
+          req.params.id,
+          req.businessId,
+        ]
+      );
+      tenant = rows[0];
+
+      await replaceTenantAddons(client, req.params.id, data.addons);
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
 
     // Only re-sync when occupancy actually moved — the new unit definitely
     // gained a tenant (force to occupied), and the old one definitely lost
@@ -254,7 +340,7 @@ router.put(
       await syncUnitStatus(previousUnitId);
     }
 
-    res.json(rows[0]);
+    res.json(tenant);
   })
 );
 

@@ -46,7 +46,12 @@ export async function gatherPortfolioData(businessId) {
         [businessId]
       ),
       pool.query(
-        `SELECT t.unit_id, t.lease_start, t.lease_end, t.rent_amount
+        `SELECT t.id, t.unit_id, t.lease_start, t.lease_end, t.rent_amount,
+           COALESCE((
+             SELECT SUM(ta.quantity * pa.monthly_price)
+             FROM tenant_addons ta JOIN property_addons pa ON pa.id = ta.addon_id
+             WHERE ta.tenant_id = t.id
+           ), 0) AS monthly_addon_revenue
          FROM tenants t JOIN units u ON u.id = t.unit_id JOIN properties p ON p.id = u.property_id
          WHERE p.business_id = $1
          ORDER BY t.unit_id, t.lease_start`,
@@ -91,6 +96,7 @@ export async function gatherPortfolioData(businessId) {
       lease_start: t.lease_start,
       lease_end: t.lease_end,
       rent_amount: Number(t.rent_amount),
+      monthly_addon_revenue: Number(t.monthly_addon_revenue),
     }));
     const unitStays = staysByUnit.get(u.unit_id) || [];
     return {

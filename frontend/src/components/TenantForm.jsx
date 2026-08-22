@@ -44,17 +44,23 @@ function formatMonthDay(dateStr) {
   return new Date(year, month - 1, day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-// unitOptions: [{ value, label, rent_amount }] — the units this tenant can
-// be assigned to (vacant units, plus the tenant's own current unit when
-// editing). Proration and first-payment recording only apply when
-// creating a tenant (isEditing is false) — an existing tenant already has
-// payment history, so there's no "first period" left to set up.
+// unitOptions: [{ value, label, rent_amount, property_id }] — the units
+// this tenant can be assigned to (vacant units, plus the tenant's own
+// current unit when editing). Proration and first-payment recording only
+// apply when creating a tenant (isEditing is false) — an existing tenant
+// already has payment history, so there's no "first period" left to set
+// up. Addon selection applies to both create and edit, per the feature
+// spec — a manager can change a tenant's addons at any time.
 //
 // isEditing must be passed explicitly rather than derived from
 // initialValues: the "add tenant to this vacant unit" flow also passes a
 // non-null initialValues (just { unit_id }) to preset the dropdown, and
 // that's still a brand-new tenant, not an edit.
-function TenantForm({ initialValues, isEditing = false, unitOptions, onSubmit, onCancel }) {
+//
+// addonOptions: [{ id, name, monthly_price, property_id }] — every addon
+// across the business; filtered below to whichever property the selected
+// unit belongs to.
+function TenantForm({ initialValues, isEditing = false, unitOptions, addonOptions, onSubmit, onCancel }) {
   const [values, setValues] = useState(() => {
     const v = { ...emptyValues, ...initialValues }
     // A preset unit_id (from clicking "+ Add tenant" on a specific vacant
@@ -72,6 +78,14 @@ function TenantForm({ initialValues, isEditing = false, unitOptions, onSubmit, o
   const [recordFirstPayment, setRecordFirstPayment] = useState(false)
   const [paymentDateOverride, setPaymentDateOverride] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('e_transfer')
+  // { [addon_id]: quantity } — presence of a key means the addon is
+  // selected; quantity is the only value a manager can adjust here, never
+  // price (that lives only on the Property Addons definition).
+  const [selectedAddons, setSelectedAddons] = useState(() => {
+    const map = {}
+    for (const a of initialValues?.addons || []) map[a.addon_id] = a.quantity
+    return map
+  })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -95,11 +109,40 @@ function TenantForm({ initialValues, isEditing = false, unitOptions, onSubmit, o
     }))
   }
 
+  function toggleAddon(addonId) {
+    setSelectedAddons((prev) => {
+      const next = { ...prev }
+      if (addonId in next) delete next[addonId]
+      else next[addonId] = 1
+      return next
+    })
+  }
+
+  function setAddonQuantity(addonId, quantity) {
+    setSelectedAddons((prev) => ({ ...prev, [addonId]: quantity }))
+  }
+
   const rentAmountNum = Number(values.rent_amount) || 0
   const proration = !isEditing ? calculateProration(values.lease_start, rentAmountNum) : null
   const defaultFirstPeriodAmount = proration ? proration.amount : rentAmountNum
   const firstPeriodAmount = firstPeriodOverride !== null ? firstPeriodOverride : defaultFirstPeriodAmount
   const paymentDate = paymentDateOverride !== null ? paymentDateOverride : values.lease_start || todayStr()
+
+  // Selecting a different unit that belongs to a different property drops
+  // any addons that no longer apply from the visible breakdown (and thus
+  // from the submitted payload) — the same cross-property restriction the
+  // server enforces, surfaced here rather than left to silently 400 later.
+  const selectedUnit = unitOptions.find((opt) => String(opt.value) === String(values.unit_id))
+  const availableAddons = (addonOptions || []).filter((a) => a.property_id === selectedUnit?.property_id)
+  const addonBreakdown = availableAddons
+    .filter((a) => a.id in selectedAddons)
+    .map((a) => {
+      const quantity = Number(selectedAddons[a.id]) || 1
+      const unitPrice = Number(a.monthly_price)
+      return { addon_id: a.id, name: a.name, quantity, unit_price: unitPrice, subtotal: quantity * unitPrice }
+    })
+  const addonsTotal = addonBreakdown.reduce((sum, a) => sum + a.subtotal, 0)
+  const totalMonthlyAmount = rentAmountNum + addonsTotal
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -111,6 +154,7 @@ function TenantForm({ initialValues, isEditing = false, unitOptions, onSubmit, o
         unit_id: Number(values.unit_id),
         rent_amount: rentAmountNum,
         deposit_amount: Number(values.deposit_amount || 0),
+        addons: addonBreakdown.map((a) => ({ addon_id: a.addon_id, quantity: a.quantity })),
       }
       if (proration) {
         payload.first_period_rent_amount = Number(firstPeriodAmount)
@@ -222,6 +266,62 @@ function TenantForm({ initialValues, isEditing = false, unitOptions, onSubmit, o
           />
         </div>
       </div>
+
+      {availableAddons.length > 0 && (
+        <div className="form-field">
+          <label>Addons</label>
+          {availableAddons.map((addon) => {
+            const checked = addon.id in selectedAddons
+            return (
+              <div className="addon-row" key={addon.id}>
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={checked} onChange={() => toggleAddon(addon.id)} />
+                  {addon.name} (${Number(addon.monthly_price).toFixed(2)}/mo each)
+                </label>
+                {checked && (
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    className="addon-qty-input"
+                    value={selectedAddons[addon.id]}
+                    onChange={(e) => setAddonQuantity(addon.id, e.target.value)}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {addonBreakdown.length > 0 && (
+        <div className="form-field proration-box">
+          <label>Addons breakdown</label>
+          <table>
+            <thead>
+              <tr>
+                <th>Addon</th>
+                <th>Qty</th>
+                <th>Price each</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {addonBreakdown.map((a) => (
+                <tr key={a.addon_id}>
+                  <td>{a.name}</td>
+                  <td>{a.quantity}</td>
+                  <td>${a.unit_price.toFixed(2)}</td>
+                  <td>${a.subtotal.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p style={{ marginTop: 10, fontWeight: 600 }}>
+            Total monthly amount (rent + addons): ${totalMonthlyAmount.toFixed(2)}
+          </p>
+        </div>
+      )}
 
       {proration && (
         <div className="form-field proration-box">

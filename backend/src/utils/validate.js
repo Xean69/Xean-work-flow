@@ -130,6 +130,27 @@ export function parseTenantBody(body) {
     first_period_rent_amount: hasFirstPeriodOverride
       ? requireNumber(body.first_period_rent_amount, "first_period_rent_amount", { min: 0.01 })
       : null,
+    addons: parseTenantAddonsBody(body.addons),
+  };
+}
+
+// The tenant-side "which addons, how many of each" selection. Price is
+// never accepted here — quantity is the only adjustable input; monthly_price
+// always comes from property_addons at read time, per the addon feature's
+// single-source-of-truth rule.
+function parseTenantAddonsBody(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new ApiError(400, "addons must be an array");
+  return value.map((item) => ({
+    addon_id: requireNumber(item.addon_id, "addons[].addon_id", { min: 1 }),
+    quantity: requireNumber(item.quantity, "addons[].quantity", { min: 1 }),
+  }));
+}
+
+export function parseAddonBody(body) {
+  return {
+    name: requireString(body.name, "name"),
+    monthly_price: requireNumber(body.monthly_price, "monthly_price", { min: 0 }),
   };
 }
 
@@ -358,13 +379,6 @@ export function parsePortalRepairBody(body) {
 
 export function parseMessageBody(body) {
   return { body: requireString(body.body, "body") };
-}
-
-export function parseGuideSectionBody(body) {
-  return {
-    section_title: requireString(body.section_title, "section_title"),
-    content: requireString(body.content, "content"),
-  };
 }
 
 const UNIT_STATUSES = ["vacant", "occupied", "short_term", "turnover", "rent_ready", "notices"];
