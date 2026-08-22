@@ -36,6 +36,7 @@ import ChargeForm from '../components/ChargeForm.jsx'
 import DocumentForm from '../components/DocumentForm.jsx'
 import OccupantForm from '../components/OccupantForm.jsx'
 import EvictionEventForm, { STAGE_LABELS } from '../components/EvictionEventForm.jsx'
+import { downloadTenantLedgerPdf } from '../utils/tenantLedgerPdf.js'
 import './Documents.css'
 import './TenantProfile.css'
 
@@ -90,6 +91,7 @@ function TenantProfile() {
   const [passwordModal, setPasswordModal] = useState(false)
   const [editingPayment, setEditingPayment] = useState(null) // null | 'new' | the payment being edited
   const [chargeModal, setChargeModal] = useState(null) // null | 'new' | the charge being edited
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
@@ -191,6 +193,17 @@ function TenantProfile() {
       await load()
     } catch (err) {
       window.alert(err.message)
+    }
+  }
+
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true)
+    try {
+      await downloadTenantLedgerPdf(tenant, ledger)
+    } catch (err) {
+      window.alert(err.message)
+    } finally {
+      setDownloadingPdf(false)
     }
   }
 
@@ -429,6 +442,13 @@ function TenantProfile() {
         <div className="section-head">
           <h2>Rent ledger</h2>
           <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleDownloadPdf}
+              disabled={ledger.length === 0 || downloadingPdf}
+            >
+              {downloadingPdf ? 'Preparing…' : 'Download PDF'}
+            </button>
             <button className="btn btn-ghost btn-sm" onClick={() => setChargeModal('new')}>
               + Create charge
             </button>
