@@ -245,7 +245,7 @@ function TenantProfile() {
     await load()
   }
   async function handleDeleteEviction(event) {
-    if (!window.confirm('Delete this eviction log entry?')) return
+    if (!window.confirm('Delete this notice log entry?')) return
     await deleteEvictionEvent(event.id)
     await load()
   }
@@ -379,6 +379,10 @@ function TenantProfile() {
           <div className="tenant-info-item">
             <span className="tenant-info-label">Rent</span>
             <span className="tenant-info-value mono">{formatMoney(tenant.rent_amount)}</span>
+          </div>
+          <div className="tenant-info-item">
+            <span className="tenant-info-label">Deposit</span>
+            <span className="tenant-info-value mono">{formatMoney(tenant.deposit_amount)}</span>
           </div>
           <div className="tenant-info-item">
             <span className="tenant-info-label">Portal login</span>
@@ -617,9 +621,9 @@ function TenantProfile() {
           </div>
         </div>
 
-        {/* --- Eviction log --- */}
+        {/* --- Notices log --- */}
         <div className="section-head">
-          <h2>Eviction log</h2>
+          <h2>Notices log</h2>
           <button className="btn btn-primary btn-sm" onClick={() => setEvictionModal('new')}>
             + Log event
           </button>
@@ -629,7 +633,7 @@ function TenantProfile() {
         </p>
         {tenant.eviction_events.length === 0 ? (
           <div className="empty-state card">
-            <h3>No eviction events logged</h3>
+            <h3>No notices logged</h3>
           </div>
         ) : (
           <div className="card">
@@ -732,7 +736,7 @@ function TenantProfile() {
       )}
 
       {evictionModal && (
-        <Modal title={evictionModal === 'new' ? 'Log eviction event' : 'Edit eviction event'} onClose={() => setEvictionModal(null)}>
+        <Modal title={evictionModal === 'new' ? 'Log notice' : 'Edit notice'} onClose={() => setEvictionModal(null)}>
           <EvictionEventForm
             initialValues={evictionModal === 'new' ? undefined : evictionModal}
             onSubmit={handleSaveEviction}
