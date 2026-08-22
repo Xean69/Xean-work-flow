@@ -45,7 +45,7 @@ const STATUS_VARIANT = { active: 'green', renewal_due: 'amber', urgent_renewal: 
 const PAYMENT_STATUS_LABEL = { paid: 'Paid', partial: 'Partial', unpaid: 'Unpaid' }
 const PAYMENT_STATUS_VARIANT = { paid: 'green', partial: 'amber', unpaid: 'red' }
 const METHOD_LABEL = { e_transfer: 'E-transfer', cash: 'Cash', cheque: 'Cheque', other: 'Other' }
-const CHARGE_TYPE_LABEL = { rent: 'Rent', addon: 'Addon', late_fee: 'Late fee', custom: 'Custom' }
+const CHARGE_TYPE_LABEL = { rent: 'Rent', addon: 'Addon', late_fee: 'Late fee', custom: 'Custom', credit: 'Credit' }
 const INSPECTION_STATUS_LABEL = {
   none: 'No inspection',
   draft: 'Draft',
@@ -70,6 +70,14 @@ function formatMoney(amount) {
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 }
 
+// A credit's amount arrives from the API already negative (see backend
+// utils/ledger.js) — this puts the minus sign before the $ instead of
+// jsPDF/toLocaleString's default "$-50.00".
+function formatSignedMoney(amount) {
+  const n = Number(amount)
+  return n < 0 ? `-${formatMoney(-n)}` : formatMoney(n)
+}
+
 function initial(name) {
   return (name || '?').trim().charAt(0).toUpperCase()
 }
@@ -92,6 +100,9 @@ function TenantProfile() {
   const [editingPayment, setEditingPayment] = useState(null) // null | 'new' | the payment being edited
   const [chargeModal, setChargeModal] = useState(null) // null | 'new' | the charge being edited
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [pdfRangeModal, setPdfRangeModal] = useState(false)
+  const [pdfFrom, setPdfFrom] = useState('')
+  const [pdfTo, setPdfTo] = useState('')
   const [selectedFile, setSelectedFile] = useState(null)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
@@ -187,7 +198,7 @@ function TenantProfile() {
   }
 
   async function handleChargeDelete(entry) {
-    if (!window.confirm(`Delete this ${formatMoney(entry.amount)} charge?`)) return
+    if (!window.confirm(`Delete this ${formatMoney(Math.abs(entry.amount))} charge?`)) return
     try {
       await deleteCharge(entry.id)
       await load()
@@ -196,10 +207,14 @@ function TenantProfile() {
     }
   }
 
-  async function handleDownloadPdf() {
+  async function handleDownloadPdf(e) {
+    e.preventDefault()
     setDownloadingPdf(true)
     try {
-      await downloadTenantLedgerPdf(tenant, ledger)
+      await downloadTenantLedgerPdf(tenant, ledger, { from: pdfFrom || null, to: pdfTo || null })
+      setPdfRangeModal(false)
+      setPdfFrom('')
+      setPdfTo('')
     } catch (err) {
       window.alert(err.message)
     } finally {
@@ -444,10 +459,10 @@ function TenantProfile() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               className="btn btn-ghost btn-sm"
-              onClick={handleDownloadPdf}
-              disabled={ledger.length === 0 || downloadingPdf}
+              onClick={() => setPdfRangeModal(true)}
+              disabled={ledger.length === 0}
             >
-              {downloadingPdf ? 'Preparing…' : 'Download PDF'}
+              Download PDF
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => setChargeModal('new')}>
               + Create charge
@@ -485,14 +500,18 @@ function TenantProfile() {
                     </td>
                     <td>
                       {entry.type === 'charge' ? (
-                        <Badge variant="slate">{CHARGE_TYPE_LABEL[entry.charge_type]}</Badge>
+                        <Badge variant={entry.charge_type === 'credit' ? 'amber' : 'slate'}>
+                          {CHARGE_TYPE_LABEL[entry.charge_type]}
+                        </Badge>
                       ) : (
                         <Badge variant="green">Payment</Badge>
                       )}
                     </td>
-                    <td className="mono">{entry.type === 'charge' ? formatMoney(entry.amount) : `-${formatMoney(entry.amount)}`}</td>
+                    <td className="mono">
+                      {entry.type === 'charge' ? formatSignedMoney(entry.amount) : `-${formatMoney(entry.amount)}`}
+                    </td>
                     <td>
-                      {entry.type === 'charge' ? (
+                      {entry.type === 'charge' && entry.status ? (
                         <Badge variant={PAYMENT_STATUS_VARIANT[entry.status]}>{PAYMENT_STATUS_LABEL[entry.status]}</Badge>
                       ) : (
                         '—'
@@ -726,6 +745,34 @@ function TenantProfile() {
         </Modal>
       )}
 
+      {pdfRangeModal && (
+        <Modal title="Download ledger PDF" onClose={() => setPdfRangeModal(false)}>
+          <form onSubmit={handleDownloadPdf}>
+            <p style={{ fontSize: 12.5, color: 'var(--slate)', marginBottom: 16 }}>
+              Leave both dates blank to export the tenant's full history.
+            </p>
+            <div className="form-row">
+              <div className="form-field">
+                <label htmlFor="pdf_from">From</label>
+                <input id="pdf_from" type="date" value={pdfFrom} onChange={(e) => setPdfFrom(e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label htmlFor="pdf_to">To</label>
+                <input id="pdf_to" type="date" value={pdfTo} onChange={(e) => setPdfTo(e.target.value)} />
+              </div>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setPdfRangeModal(false)} disabled={downloadingPdf}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={downloadingPdf}>
+                {downloadingPdf ? 'Preparing…' : 'Generate PDF'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {chargeModal && (
         <Modal title={chargeModal === 'new' ? 'Create charge' : 'Edit charge'} onClose={() => setChargeModal(null)}>
           <ChargeForm
@@ -734,7 +781,10 @@ function TenantProfile() {
               chargeModal !== 'new'
                 ? {
                     description: chargeModal.description,
-                    amount: chargeModal.amount,
+                    // A credit is stored (and arrives here) as a negative
+                    // amount — the form always shows/edits a plain positive
+                    // number, same convention as creating one.
+                    amount: Math.abs(chargeModal.amount),
                     due_date: chargeModal.date?.slice(0, 10),
                   }
                 : undefined

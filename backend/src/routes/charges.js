@@ -12,16 +12,28 @@ const router = Router();
 router.put(
   "/:id",
   asyncHandler(async (req, res) => {
+    const { rows: existingRows } = await pool.query(
+      `SELECT c.charge_type FROM ledger_charges c
+       JOIN tenants t ON t.id = c.tenant_id
+       WHERE c.id = $1 AND t.business_id = $2`,
+      [req.params.id, req.businessId]
+    );
+    if (!existingRows[0]) throw new ApiError(404, "Charge not found");
+
     const data = parseChargeUpdateBody(req.body);
+    // Same sign convention as creating a credit: the form always shows and
+    // submits a plain positive amount, negated here based on the charge's
+    // own (unchangeable) type rather than trusting a sign from the client.
+    const storedAmount = existingRows[0].charge_type === "credit" ? -data.amount : data.amount;
+
     const { rows } = await pool.query(
       `UPDATE ledger_charges c
        SET description = $1, amount = $2, due_date = $3
        FROM tenants t
        WHERE c.tenant_id = t.id AND c.id = $4 AND t.business_id = $5
        RETURNING c.*`,
-      [data.description, data.amount, data.due_date, req.params.id, req.businessId]
+      [data.description, storedAmount, data.due_date, req.params.id, req.businessId]
     );
-    if (!rows[0]) throw new ApiError(404, "Charge not found");
     res.json(rows[0]);
   })
 );

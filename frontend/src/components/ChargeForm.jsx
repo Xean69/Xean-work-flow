@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const CHARGE_TYPE_LABELS = { custom: 'Custom', late_fee: 'Late fee' }
+const CHARGE_TYPE_LABELS = { custom: 'Custom', late_fee: 'Late fee', credit: 'Credit' }
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10)
@@ -26,7 +26,13 @@ function ChargeForm({ initialValues, isEditing = false, onSubmit, onCancel }) {
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target
-    setValues((v) => ({ ...v, [name]: type === 'checkbox' ? checked : value }))
+    setValues((v) => ({
+      ...v,
+      [name]: type === 'checkbox' ? checked : value,
+      // Credits can't be recurring — switching to Credit clears a
+      // previously-checked box rather than silently ignoring it on submit.
+      ...(name === 'charge_type' && value === 'credit' ? { recurring: false } : {}),
+    }))
   }
 
   async function handleSubmit(e) {
@@ -90,7 +96,7 @@ function ChargeForm({ initialValues, isEditing = false, onSubmit, onCancel }) {
         </div>
       )}
 
-      {!isEditing && (
+      {!isEditing && values.charge_type !== 'credit' && (
         <div className="form-field">
           <label className="checkbox-label">
             <input type="checkbox" name="recurring" checked={values.recurring} onChange={handleChange} />

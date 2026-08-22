@@ -715,18 +715,34 @@ CREATE TABLE IF NOT EXISTS recurring_charges (
 -- same way an addon's price change only affects future months. period is
 -- null for a genuinely one-time manual charge; set (and used for dedup) for
 -- anything the monthly job generates.
+-- amount allows negative: a 'credit' charge_type is stored as a negative
+-- amount (manager types a plain positive number in the form; the server
+-- negates it once at creation). This isn't just a sign convention — every
+-- balance/allocation query that sums ledger_charges.amount already nets a
+-- credit out correctly with no special-casing, and a negative-amount row
+-- structurally can never be selected as an "outstanding charge" a payment
+-- could be allocated against (see allocatePayment in utils/ledger.js).
 CREATE TABLE IF NOT EXISTS ledger_charges (
   id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  charge_type TEXT NOT NULL CHECK (charge_type IN ('rent', 'addon', 'late_fee', 'custom')),
+  charge_type TEXT NOT NULL CHECK (charge_type IN ('rent', 'addon', 'late_fee', 'custom', 'credit')),
   description TEXT NOT NULL,
-  amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+  amount NUMERIC(10,2) NOT NULL CHECK (amount <> 0),
   due_date DATE NOT NULL,
   period TEXT CHECK (period ~ '^\d{4}-(0[1-9]|1[0-2])$'),
   source_addon_id INTEGER REFERENCES property_addons(id) ON DELETE SET NULL,
   source_recurring_charge_id INTEGER REFERENCES recurring_charges(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Relaxes the constraints above for a database where ledger_charges already
+-- existed before the credit feature — same drop-and-recreate-by-default-
+-- name pattern used elsewhere in this file.
+ALTER TABLE ledger_charges DROP CONSTRAINT IF EXISTS ledger_charges_amount_check;
+ALTER TABLE ledger_charges ADD CONSTRAINT ledger_charges_amount_check CHECK (amount <> 0);
+ALTER TABLE ledger_charges DROP CONSTRAINT IF EXISTS ledger_charges_charge_type_check;
+ALTER TABLE ledger_charges ADD CONSTRAINT ledger_charges_charge_type_check
+  CHECK (charge_type IN ('rent', 'addon', 'late_fee', 'custom', 'credit'));
 
 -- COALESCE-guarded rather than a plain UNIQUE constraint: Postgres treats
 -- NULLs as distinct from each other in a unique constraint, so two 'rent'

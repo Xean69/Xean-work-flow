@@ -333,7 +333,9 @@ router.get(
         description: c.description,
         amount: Number(c.amount),
         allocated: Number(c.allocated),
-        status: deriveChargeStatus(c.amount, c.allocated),
+        // A credit isn't something that gets "paid off" — paid/partial/
+        // unpaid doesn't apply to it, same as it doesn't apply to a payment.
+        status: c.charge_type === "credit" ? null : deriveChargeStatus(c.amount, c.allocated),
         created_at: c.created_at,
       })),
       ...payments.map((p) => ({
@@ -390,11 +392,16 @@ router.post(
       period = periodOf(data.due_date);
     }
 
+    // A credit is stored as a negative amount — the manager types a plain
+    // positive number, negated once here, so every downstream balance
+    // query can just sum ledger_charges.amount with no sign-specific logic.
+    const storedAmount = data.charge_type === "credit" ? -data.amount : data.amount;
+
     const { rows } = await pool.query(
       `INSERT INTO ledger_charges (tenant_id, charge_type, description, amount, due_date, period, source_recurring_charge_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [req.params.id, data.charge_type, data.description, data.amount, data.due_date, period, sourceRecurringChargeId]
+      [req.params.id, data.charge_type, data.description, storedAmount, data.due_date, period, sourceRecurringChargeId]
     );
     res.status(201).json(rows[0]);
   })

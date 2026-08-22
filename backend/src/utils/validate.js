@@ -181,14 +181,21 @@ export function parseTenantNotesBody(body) {
   return { manager_notes: optionalString(body.manager_notes) };
 }
 
-const MANUAL_CHARGE_TYPES = ["custom", "late_fee"];
+const MANUAL_CHARGE_TYPES = ["custom", "late_fee", "credit"];
 
 // The manager-facing "Create charge" form — rent/addon charges are always
 // system-generated (see utils/ledger.js), never created through this path.
+// amount is always entered (and validated) as a plain positive number here
+// — a credit's amount is negated once, server-side, at the route that
+// actually inserts the row, so the manager never has to think about signs.
 export function parseChargeBody(body) {
   const charge_type = body.charge_type === undefined ? "custom" : body.charge_type;
   if (!MANUAL_CHARGE_TYPES.includes(charge_type)) {
     throw new ApiError(400, `charge_type must be one of: ${MANUAL_CHARGE_TYPES.join(", ")}`);
+  }
+  const recurring = body.recurring === true;
+  if (recurring && charge_type === "credit") {
+    throw new ApiError(400, "Credits can't be recurring — log a new one each time instead");
   }
   requireDate(body.due_date, "due_date");
   return {
@@ -196,7 +203,7 @@ export function parseChargeBody(body) {
     amount: requireNumber(body.amount, "amount", { min: 0.01 }),
     due_date: body.due_date,
     charge_type,
-    recurring: body.recurring === true,
+    recurring,
   };
 }
 
