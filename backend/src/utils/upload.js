@@ -10,6 +10,14 @@ cloudinary.config({
 
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
+// Cloudinary's own actual account limit for images/raw files (confirmed via
+// the Admin API's usage endpoint, not assumed) — shared by every image/
+// document upload path (Documents, Expense receipts, Eviction Notice
+// attachments, and the image/document case of maintenance chat attachments
+// below). A file between this and the old 20MB used to be silently accepted
+// here only to fail at Cloudinary with a less friendly error.
+const IMAGE_DOC_MAX_SIZE = 10 * 1024 * 1024;
+
 // Buffered in memory rather than written to disk — the buffer goes straight
 // to Cloudinary (and, for documents, into the AI extraction call) without
 // ever touching this server's filesystem, which is what makes uploads safe
@@ -19,7 +27,7 @@ const storage = multer.memoryStorage();
 // Shared by any route that accepts a file (Documents, Expenses receipts).
 export const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: IMAGE_DOC_MAX_SIZE },
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
       return cb(new ApiError(400, "Only PDF, JPG, and PNG files are supported"));
@@ -39,14 +47,13 @@ const CHAT_ALLOWED_MIME_TYPES = new Set([
   "video/webm",
 ]);
 
-// Cloudinary's own actual account limits (confirmed via the Admin API's
-// usage endpoint, not assumed) — 10MB for images/raw on the Free plan,
-// 100MB for video. Multer's own limit has to be a single number, so it's
-// set to the higher (video) ceiling; assertChatAttachmentSizeOk enforces
-// the tighter image/document one before ever calling Cloudinary, so a
-// too-large photo fails fast with a clear message instead of a Cloudinary
-// rejection after the upload already happened.
-const CHAT_IMAGE_DOC_MAX_SIZE = 10 * 1024 * 1024;
+// Video gets a much higher ceiling than IMAGE_DOC_MAX_SIZE above (also a
+// real Cloudinary account limit, not assumed). Multer's own limit has to be
+// a single number, so it's set to this higher (video) ceiling;
+// assertChatAttachmentSizeOk enforces the tighter image/document one before
+// ever calling Cloudinary, so a too-large photo fails fast with a clear
+// message instead of a Cloudinary rejection after the upload already
+// happened.
 const CHAT_VIDEO_MAX_SIZE = 100 * 1024 * 1024;
 
 // Shared by the maintenance chat's comment routes (both portal and
@@ -64,7 +71,7 @@ export const uploadChatAttachment = multer({
 });
 
 export function assertChatAttachmentSizeOk(file) {
-  if (!file.mimetype.startsWith("video/") && file.size > CHAT_IMAGE_DOC_MAX_SIZE) {
+  if (!file.mimetype.startsWith("video/") && file.size > IMAGE_DOC_MAX_SIZE) {
     throw new ApiError(400, "Images and documents must be under 10MB");
   }
 }
