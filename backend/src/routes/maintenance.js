@@ -27,6 +27,9 @@ async function assertTenantInBusiness(tenantId, businessId) {
   if (!rows[0]) throw new ApiError(400, "tenant_id does not belong to your business");
 }
 
+// Excludes status = 'pending' — a tenant still chatting with the AI before
+// any ticket exists (see routes/portal.js) never appears here at all,
+// consistent with the kanban only ever rendering the three known columns.
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -47,7 +50,7 @@ router.get(
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN tenants t ON t.id = m.tenant_id
-       WHERE m.business_id = $1
+       WHERE m.business_id = $1 AND m.status != 'pending'
        ORDER BY m.created_at DESC`,
       [req.businessId]
     );
@@ -127,7 +130,9 @@ router.post(
 );
 
 // Opening a ticket's detail view marks it read from the manager's side —
-// this is what clears the unread badge, same as opening an email.
+// this is what clears the unread badge, same as opening an email. Also
+// excludes status = 'pending', same reasoning as the list route above — a
+// manager can't reach one of these even by guessing an id.
 router.get(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -142,7 +147,7 @@ router.get(
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN tenants t ON t.id = m.tenant_id
-       WHERE m.id = $1 AND m.business_id = $2`,
+       WHERE m.id = $1 AND m.business_id = $2 AND m.status != 'pending'`,
       [req.params.id, req.businessId]
     );
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");

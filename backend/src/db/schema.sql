@@ -791,3 +791,22 @@ ALTER TABLE maintenance_comments ADD CONSTRAINT maintenance_comments_sender_chec
 -- later changes priority back down, since it's a historical record of how
 -- the ticket started, not a live triage state.
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_emergency BOOLEAN NOT NULL DEFAULT false;
+
+-- ============================================================================
+-- Pre-ticket maintenance chat
+--
+-- 'pending' is a new maintenance_requests.status: a tenant-reported issue
+-- the AI is still troubleshooting via chat (services/maintenanceChat.js's
+-- generatePendingChatReply) that hasn't been triaged or shown to a manager
+-- yet. This reuses the exact same row and comment thread the ticket keeps
+-- for its whole life once promoted — promotion (routes/portal.js's
+-- classifyAndPromote) is just an UPDATE to status='new' plus the same
+-- classification call that already ran at creation before this change, so
+-- comments never need to move between tables. The manager-facing routes
+-- (routes/maintenance.js) explicitly exclude status='pending' from both the
+-- list and detail queries so a pending conversation stays invisible until
+-- it's promoted (or never shows up at all, if chat alone resolves it).
+-- ============================================================================
+ALTER TABLE maintenance_requests DROP CONSTRAINT IF EXISTS maintenance_requests_status_check;
+ALTER TABLE maintenance_requests ADD CONSTRAINT maintenance_requests_status_check
+  CHECK (status IN ('pending', 'new', 'in_progress', 'resolved'));

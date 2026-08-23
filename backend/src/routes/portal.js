@@ -5,7 +5,7 @@ import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
 import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, requireString } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
-import { generateMaintenanceChatReply } from "../services/maintenanceChat.js";
+import { generateMaintenanceChatReply, generatePendingChatReply } from "../services/maintenanceChat.js";
 import { currentPeriod } from "../utils/period.js";
 import {
   notifyManagersOfMaintenanceRequest,
@@ -216,6 +216,41 @@ router.post(
   })
 );
 
+// Turns a 'pending' pre-ticket conversation into a real, manager-visible
+// ticket: runs the same classification pass that used to run at creation
+// (before pending existed), flips status to 'new', and sends the same
+// "new maintenance request" email a manager would have gotten immediately
+// under the old flow. Shared by the natural AI-escalation path (comment
+// route) and the tenant's manual emergency flag (which promotes too, just
+// skipping straight here without asking the AI first).
+async function classifyAndPromote(ticketId, { businessId, propertyName, unitNumber, tenantName }) {
+  const { rows } = await pool.query("SELECT title, description FROM maintenance_requests WHERE id = $1", [
+    ticketId,
+  ]);
+  const ticket = rows[0];
+  const result = await classifyMaintenanceRequest(ticket.title, ticket.description);
+  const { rows: updated } = await pool.query(
+    `UPDATE maintenance_requests
+     SET status = 'new', ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
+     WHERE id = $5
+     RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency`,
+    [result.urgency, result.trade, result.reasoning, result.status, ticketId]
+  );
+
+  await notifyManagersOfMaintenanceRequest({
+    businessId,
+    title: ticket.title,
+    description: ticket.description,
+    propertyName,
+    unitNumber,
+    tenantName,
+    aiUrgency: result.urgency,
+    aiTrade: result.trade,
+  });
+
+  return updated[0];
+}
+
 router.get(
   "/maintenance",
   requireTenantAuth,
@@ -261,54 +296,44 @@ router.post(
       [tenantRows[0].unit_id]
     );
 
+    // Starts as 'pending' — invisible to the manager dashboard and not yet
+    // classified. The AI tries to troubleshoot via chat first; a real
+    // ticket only gets created once it's out of safe suggestions or the
+    // tenant flags an emergency (see generatePendingChatReply and the
+    // /emergency route below).
     const { rows } = await pool.query(
       `INSERT INTO maintenance_requests (business_id, unit_id, tenant_id, title, description, status, priority)
-       VALUES ($1, $2, $3, $4, $5, 'new', $6)
-       RETURNING id, title, description, status, priority, created_at, resolved_at`,
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6)
+       RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency`,
       [unitRows[0]?.business_id, tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
     );
-    const ticket = rows[0];
-
-    // Same classification pass as the dashboard's create route — runs once,
-    // right here, regardless of which side opened the ticket.
-    const result = await classifyMaintenanceRequest(ticket.title, ticket.description);
-    const { rows: updated } = await pool.query(
-      `UPDATE maintenance_requests
-       SET ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
-       WHERE id = $5
-       RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency`,
-      [result.urgency, result.trade, result.reasoning, result.status, ticket.id]
-    );
-
-    await notifyManagersOfMaintenanceRequest({
-      businessId: unitRows[0]?.business_id,
-      title: ticket.title,
-      description: ticket.description,
-      propertyName: unitRows[0]?.property_name,
-      unitNumber: unitRows[0]?.unit_number,
-      tenantName: tenantRows[0].full_name,
-      aiUrgency: result.urgency,
-      aiTrade: result.trade,
-    });
+    let ticket = rows[0];
 
     // The tenant's first message in the thread — a clarifying question or a
     // safe troubleshooting tip, before a human manager needs to get
-    // involved at all.
-    const firstReply = await generateMaintenanceChatReply({
+    // involved at all. Even turn one can decide there's nothing safe to
+    // suggest (e.g. a structural issue) and escalate immediately.
+    const { reply, readyForTicket } = await generatePendingChatReply({
       title: ticket.title,
       description: ticket.description,
-      trade: result.trade,
-      urgency: result.urgency,
+      priority: ticket.priority,
       comments: [],
     });
-    if (firstReply) {
-      await pool.query(
-        "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
-        [unitRows[0]?.business_id, ticket.id, firstReply]
-      );
+    await pool.query(
+      "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
+      [unitRows[0]?.business_id, ticket.id, reply]
+    );
+
+    if (readyForTicket) {
+      ticket = await classifyAndPromote(ticket.id, {
+        businessId: unitRows[0]?.business_id,
+        propertyName: unitRows[0]?.property_name,
+        unitNumber: unitRows[0]?.unit_number,
+        tenantName: tenantRows[0].full_name,
+      });
     }
 
-    res.status(201).json(updated[0]);
+    res.status(201).json(ticket);
   })
 );
 
@@ -347,7 +372,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
     const { rows: ticketRows } = await pool.query(
-      `SELECT id, business_id, title, description, ai_trade, ai_urgency, is_emergency
+      `SELECT id, business_id, title, description, status, ai_trade, ai_urgency, is_emergency
        FROM maintenance_requests WHERE id = $1 AND tenant_id = $2`,
       [req.params.id, req.tenantId]
     );
@@ -367,13 +392,44 @@ router.post(
       req.params.id,
     ]);
 
-    // Once a ticket is flagged an emergency, the AI stops chiming in
-    // entirely — a human manager has taken over from there.
-    if (!ticket.is_emergency) {
-      const { rows: comments } = await pool.query(
-        "SELECT sender, body FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
-        [req.params.id]
+    const { rows: comments } = await pool.query(
+      "SELECT sender, body FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
+      [req.params.id]
+    );
+
+    if (ticket.status === "pending") {
+      // Still troubleshooting via chat — no ticket exists yet. Every turn
+      // decides both a reply and whether it's time to promote.
+      const { reply, readyForTicket } = await generatePendingChatReply({
+        title: ticket.title,
+        description: ticket.description,
+        comments,
+      });
+      await pool.query(
+        "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
+        [ticket.business_id, req.params.id, reply]
       );
+
+      if (readyForTicket) {
+        const { rows: contextRows } = await pool.query(
+          `SELECT p.name AS property_name, u.unit_number, t.full_name AS tenant_name
+           FROM maintenance_requests m
+           JOIN units u ON u.id = m.unit_id
+           JOIN properties p ON p.id = u.property_id
+           LEFT JOIN tenants t ON t.id = m.tenant_id
+           WHERE m.id = $1`,
+          [req.params.id]
+        );
+        await classifyAndPromote(req.params.id, {
+          businessId: ticket.business_id,
+          propertyName: contextRows[0]?.property_name,
+          unitNumber: contextRows[0]?.unit_number,
+          tenantName: contextRows[0]?.tenant_name,
+        });
+      }
+    } else if (!ticket.is_emergency) {
+      // Already a real ticket — once flagged an emergency, the AI stops
+      // chiming in entirely, a human manager has taken over from there.
       const reply = await generateMaintenanceChatReply({
         title: ticket.title,
         description: ticket.description,
@@ -402,7 +458,8 @@ router.post(
   requireTenantAuth,
   asyncHandler(async (req, res) => {
     const { rows: ticketRows } = await pool.query(
-      `SELECT m.id, m.business_id, m.title, m.is_emergency, p.name AS property_name, u.unit_number, t.full_name AS tenant_name
+      `SELECT m.id, m.business_id, m.title, m.description, m.status, m.is_emergency,
+              p.name AS property_name, u.unit_number, t.full_name AS tenant_name
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
@@ -417,9 +474,24 @@ router.post(
       return res.json({ is_emergency: true });
     }
 
-    await pool.query("UPDATE maintenance_requests SET priority = 'high', is_emergency = true WHERE id = $1", [
-      ticket.id,
-    ]);
+    if (ticket.status === "pending") {
+      // No ticket exists yet — skip troubleshooting entirely and go
+      // straight to a real, high-priority ticket. Still runs classification
+      // (for trade/urgency context on the ticket), but forces priority and
+      // is_emergency rather than trusting the classifier's own urgency read.
+      const result = await classifyMaintenanceRequest(ticket.title, ticket.description);
+      await pool.query(
+        `UPDATE maintenance_requests
+         SET status = 'new', priority = 'high', is_emergency = true,
+             ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
+         WHERE id = $5`,
+        [result.urgency, result.trade, result.reasoning, result.status, ticket.id]
+      );
+    } else {
+      await pool.query("UPDATE maintenance_requests SET priority = 'high', is_emergency = true WHERE id = $1", [
+        ticket.id,
+      ]);
+    }
     await pool.query(
       `INSERT INTO maintenance_comments (business_id, request_id, sender, body)
        VALUES ($1, $2, 'ai', 'This has been flagged as an emergency. A manager has been notified and will reach out as soon as possible.')`,

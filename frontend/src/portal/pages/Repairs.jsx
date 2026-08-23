@@ -8,6 +8,7 @@ import {
 } from '../portalApi.js'
 
 const STATUS_META = {
+  pending: { label: 'Chatting with assistant', variant: 'slate' },
   new: { label: 'Submitted', variant: 'slate' },
   in_progress: { label: 'In progress', variant: 'amber' },
   resolved: { label: 'Resolved', variant: 'green' },
@@ -80,12 +81,17 @@ function Repairs() {
     setError('')
     setSubmitting(true)
     try {
-      await createPortalMaintenance({ title, description, priority })
+      const created = await createPortalMaintenance({ title, description, priority })
       setTitle('')
       setDescription('')
       setPriority('medium')
       setShowForm(false)
       await load()
+      // Open straight into the conversation — the assistant's first reply
+      // is already waiting, and chatting is the whole point before a real
+      // ticket exists.
+      setExpandedId(created.id)
+      setThreadData(await getPortalMaintenanceDetail(created.id))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -115,7 +121,26 @@ function Repairs() {
     try {
       await addPortalMaintenanceComment(expandedId, commentDraft.trim())
       setCommentDraft('')
-      setThreadData(await getPortalMaintenanceDetail(expandedId))
+      const detail = await getPortalMaintenanceDetail(expandedId)
+      setThreadData(detail)
+      // A reply can promote a pending conversation into a real ticket
+      // server-side — sync the list's cached row so the card's status badge
+      // reflects that without a full reload, same as handleFlagEmergency does.
+      setRequests((rows) =>
+        rows.map((r) =>
+          r.id === expandedId
+            ? {
+                ...r,
+                status: detail.status,
+                priority: detail.priority,
+                is_emergency: detail.is_emergency,
+                ai_urgency: detail.ai_urgency,
+                ai_trade: detail.ai_trade,
+                ai_classification_status: detail.ai_classification_status,
+              }
+            : r
+        )
+      )
     } finally {
       setSendingComment(false)
     }
