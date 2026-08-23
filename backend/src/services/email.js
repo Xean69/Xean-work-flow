@@ -35,11 +35,16 @@ async function sendEmail({ to, subject, html }) {
     return false;
   }
   try {
-    const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+    const { data, error } = await resend.emails.send({ from: FROM, to, subject, html });
     if (error) {
       console.error(`Email "${subject}" to ${to} failed:`, error);
       return false;
     }
+    // Failures were already logged everywhere; successes weren't logged at
+    // all, which is exactly the gap that made a real delivery hard to
+    // confirm after the fact (see the maintenance-notification
+    // investigation this was added for) — cheap enough to log every time.
+    console.log(`Email "${subject}" to ${to} sent (id: ${data?.id})`);
     return true;
   } catch (err) {
     console.error(`Email "${subject}" to ${to} failed:`, err);

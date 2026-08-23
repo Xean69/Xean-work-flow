@@ -448,7 +448,13 @@ export function parsePortalRepairBody(body) {
   };
 }
 
-export function parseMessageBody(body) {
+// requireBody is false only for maintenance chat comments that carry an
+// attachment — a message needs text or a file, never neither, so the route
+// itself decides which case it's in before calling this.
+export function parseMessageBody(body, { requireBody = true } = {}) {
+  if (!requireBody) {
+    return { body: typeof body.body === "string" ? body.body.trim() : "" };
+  }
   return { body: requireString(body.body, "body") };
 }
 

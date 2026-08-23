@@ -6,6 +6,7 @@ import { parseMaintenanceBody, parseMessageBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply } from "../services/maintenanceChat.js";
 import { notifyManagersOfMaintenanceRequest, notifyTenantOfMaintenanceReply } from "../services/email.js";
+import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
 
 const router = Router();
 
@@ -153,7 +154,8 @@ router.get(
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
 
     const { rows: comments } = await pool.query(
-      "SELECT id, sender, body, created_at FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
+      `SELECT id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at
+       FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
       [req.params.id]
     );
 
@@ -167,8 +169,10 @@ router.get(
 
 router.post(
   "/:id/comments",
+  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
-    const data = parseMessageBody(req.body);
+    if (req.file) assertChatAttachmentSizeOk(req.file);
+    const data = parseMessageBody(req.body, { requireBody: !req.file });
     const { rows: ticketRows } = await pool.query(
       `SELECT m.id, m.title, t.email AS tenant_email, t.full_name AS tenant_name
        FROM maintenance_requests m
@@ -178,11 +182,30 @@ router.post(
     );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
 
+    let uploaded = null;
+    if (req.file) {
+      try {
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload attachment, please try again");
+      }
+    }
+
     const { rows } = await pool.query(
-      `INSERT INTO maintenance_comments (business_id, request_id, sender, body)
-       VALUES ($1, $2, 'manager', $3)
-       RETURNING id, sender, body, created_at`,
-      [req.businessId, req.params.id, data.body]
+      `INSERT INTO maintenance_comments
+         (business_id, request_id, sender, body, attachment_url, attachment_cloudinary_public_id, attachment_cloudinary_resource_type, attachment_file_name)
+       VALUES ($1, $2, 'manager', $3, $4, $5, $6, $7)
+       RETURNING id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at`,
+      [
+        req.businessId,
+        req.params.id,
+        data.body,
+        uploaded?.url || null,
+        uploaded?.publicId || null,
+        uploaded?.resourceType || null,
+        req.file?.originalname || null,
+      ]
     );
     // Sending a comment implies you've seen the thread up to now too.
     await pool.query("UPDATE maintenance_requests SET manager_last_read_at = now() WHERE id = $1", [
@@ -196,7 +219,7 @@ router.post(
       tenantEmail: ticketRows[0].tenant_email,
       tenantName: ticketRows[0].tenant_name,
       ticketTitle: ticketRows[0].title,
-      commentBody: data.body,
+      commentBody: data.body || "(sent an attachment)",
     });
 
     res.status(201).json(rows[0]);

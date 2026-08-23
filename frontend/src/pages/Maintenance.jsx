@@ -56,6 +56,29 @@ function formatTime(value) {
   })
 }
 
+const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.pdf,.mp4,.mov,.webm'
+
+// resource_type comes straight from Cloudinary ('image', 'video', or 'raw'
+// for anything else — PDFs, docs) — that's already exactly the distinction
+// needed to pick a preview.
+function AttachmentPreview({ url, resourceType, fileName }) {
+  if (resourceType === 'image') {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        <img src={url} alt={fileName || 'Attachment'} className="bubble-attachment-img" />
+      </a>
+    )
+  }
+  if (resourceType === 'video') {
+    return <video src={url} controls className="bubble-attachment-video" />
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="bubble-attachment-file">
+      📄 {fileName || 'Download attachment'}
+    </a>
+  )
+}
+
 function Maintenance() {
   const [tickets, setTickets] = useState([])
   const [unitRows, setUnitRows] = useState([])
@@ -67,6 +90,7 @@ function Maintenance() {
   const [threadTicketId, setThreadTicketId] = useState(null)
   const [threadData, setThreadData] = useState(null)
   const [commentDraft, setCommentDraft] = useState('')
+  const [commentFile, setCommentFile] = useState(null)
   const [sendingComment, setSendingComment] = useState(false)
   const threadBodyRef = useRef(null)
 
@@ -138,15 +162,20 @@ function Maintenance() {
     setThreadTicketId(null)
     setThreadData(null)
     setCommentDraft('')
+    setCommentFile(null)
   }
 
   async function handleSendComment(e) {
     e.preventDefault()
-    if (!commentDraft.trim()) return
+    if (!commentDraft.trim() && !commentFile) return
     setSendingComment(true)
     try {
-      await addMaintenanceComment(threadTicketId, commentDraft.trim())
+      const formData = new FormData()
+      if (commentDraft.trim()) formData.append('body', commentDraft.trim())
+      if (commentFile) formData.append('attachment', commentFile)
+      await addMaintenanceComment(threadTicketId, formData)
       setCommentDraft('')
+      setCommentFile(null)
       setThreadData(await getMaintenanceRequest(threadTicketId))
     } finally {
       setSendingComment(false)
@@ -288,19 +317,36 @@ function Maintenance() {
                   <div className={`bubble ${c.sender === 'manager' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`} key={c.id}>
                     {c.sender === 'ai' && <div className="bubble-sender">Assistant</div>}
                     {c.body}
+                    {c.attachment_url && (
+                      <AttachmentPreview
+                        url={c.attachment_url}
+                        resourceType={c.attachment_cloudinary_resource_type}
+                        fileName={c.attachment_file_name}
+                      />
+                    )}
                     <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(c.created_at)}</div>
                   </div>
                 ))}
               </div>
 
               <form className="ticket-thread-composer" onSubmit={handleSendComment}>
+                <label className="attach-btn" title="Attach a photo, video, or document">
+                  📎
+                  <input
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    onChange={(e) => setCommentFile(e.target.files?.[0] || null)}
+                    disabled={sendingComment}
+                    style={{ display: 'none' }}
+                  />
+                </label>
                 <input
                   value={commentDraft}
                   onChange={(e) => setCommentDraft(e.target.value)}
-                  placeholder="Type a comment…"
+                  placeholder={commentFile ? commentFile.name : 'Type a comment…'}
                   disabled={sendingComment}
                 />
-                <button type="submit" className="btn btn-primary" disabled={sendingComment || !commentDraft.trim()}>
+                <button type="submit" className="btn btn-primary" disabled={sendingComment || (!commentDraft.trim() && !commentFile)}>
                   Send
                 </button>
               </form>

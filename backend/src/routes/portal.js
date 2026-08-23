@@ -16,6 +16,7 @@ import {
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
 import { getPeriodStatus } from "../utils/ledger.js";
+import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
 
 const router = Router();
 
@@ -279,8 +280,10 @@ router.get(
 router.post(
   "/maintenance",
   requireTenantAuth,
+  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
     const data = parsePortalRepairBody(req.body);
+    if (req.file) assertChatAttachmentSizeOk(req.file);
     const { rows: tenantRows } = await pool.query("SELECT unit_id, full_name FROM tenants WHERE id = $1", [
       req.tenantId,
     ]);
@@ -308,6 +311,26 @@ router.post(
       [unitRows[0]?.business_id, tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
     );
     let ticket = rows[0];
+
+    // If the tenant attached a photo/video/document while reporting, it
+    // becomes their first message in the thread (empty body, just the
+    // attachment) — same shape as any other attached chat message, rather
+    // than a separate ticket-level attachment display.
+    if (req.file) {
+      let uploaded;
+      try {
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload attachment, please try again");
+      }
+      await pool.query(
+        `INSERT INTO maintenance_comments
+           (business_id, request_id, sender, body, attachment_url, attachment_cloudinary_public_id, attachment_cloudinary_resource_type, attachment_file_name)
+         VALUES ($1, $2, 'tenant', '', $3, $4, $5, $6)`,
+        [unitRows[0]?.business_id, ticket.id, uploaded.url, uploaded.publicId, uploaded.resourceType, req.file.originalname]
+      );
+    }
 
     // The tenant's first message in the thread — a clarifying question or a
     // safe troubleshooting tip, before a human manager needs to get
@@ -354,7 +377,8 @@ router.get(
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
 
     const { rows: comments } = await pool.query(
-      "SELECT id, sender, body, created_at FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
+      `SELECT id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at
+       FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
       [req.params.id]
     );
 
@@ -369,8 +393,12 @@ router.get(
 router.post(
   "/maintenance/:id/comments",
   requireTenantAuth,
+  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
-    const data = parseMessageBody(req.body);
+    if (req.file) assertChatAttachmentSizeOk(req.file);
+    // requireBody only relaxes to optional when there's a file — if neither
+    // is present, parseMessageBody's own requireString rejects the request.
+    const data = parseMessageBody(req.body, { requireBody: !req.file });
     const { rows: ticketRows } = await pool.query(
       `SELECT id, business_id, title, description, status, ai_trade, ai_urgency, is_emergency
        FROM maintenance_requests WHERE id = $1 AND tenant_id = $2`,
@@ -379,14 +407,33 @@ router.post(
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
     const ticket = ticketRows[0];
 
+    let uploaded = null;
+    if (req.file) {
+      try {
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload attachment, please try again");
+      }
+    }
+
     // Pre-existing bug found while wiring up email notifications: this
     // INSERT never set business_id before, and the column is NOT NULL — a
     // tenant replying to their own ticket's thread was failing outright.
     const { rows } = await pool.query(
-      `INSERT INTO maintenance_comments (business_id, request_id, sender, body)
-       VALUES ($1, $2, 'tenant', $3)
-       RETURNING id, sender, body, created_at`,
-      [ticket.business_id, req.params.id, data.body]
+      `INSERT INTO maintenance_comments
+         (business_id, request_id, sender, body, attachment_url, attachment_cloudinary_public_id, attachment_cloudinary_resource_type, attachment_file_name)
+       VALUES ($1, $2, 'tenant', $3, $4, $5, $6, $7)
+       RETURNING id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at`,
+      [
+        ticket.business_id,
+        req.params.id,
+        data.body,
+        uploaded?.url || null,
+        uploaded?.publicId || null,
+        uploaded?.resourceType || null,
+        req.file?.originalname || null,
+      ]
     );
     await pool.query("UPDATE maintenance_requests SET tenant_last_read_at = now() WHERE id = $1", [
       req.params.id,

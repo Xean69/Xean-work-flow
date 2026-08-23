@@ -818,3 +818,25 @@ ALTER TABLE maintenance_requests ADD CONSTRAINT maintenance_requests_status_chec
 ALTER TABLE eviction_events ADD COLUMN IF NOT EXISTS attachment_url TEXT;
 ALTER TABLE eviction_events ADD COLUMN IF NOT EXISTS attachment_cloudinary_public_id TEXT;
 ALTER TABLE eviction_events ADD COLUMN IF NOT EXISTS attachment_cloudinary_resource_type TEXT;
+
+-- ============================================================================
+-- Maintenance chat attachments
+--
+-- One optional attachment per comment — same flat-columns-on-the-row shape
+-- as eviction_events' notice attachment above, not a join to documents.
+-- Covers both an ongoing chat reply's attachment and the tenant's initial
+-- report: when a tenant attaches a file while first reporting an issue
+-- (routes/portal.js's POST /maintenance), it's inserted as a normal
+-- sender='tenant' comment with an empty body, so it renders in the thread
+-- exactly like any other attached message rather than needing a second,
+-- ticket-level display path. attachment_file_name is only meaningful for
+-- non-image/video files, shown as a download link's label.
+-- ============================================================================
+ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS attachment_url TEXT;
+ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS attachment_cloudinary_public_id TEXT;
+ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS attachment_cloudinary_resource_type TEXT;
+ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS attachment_file_name TEXT;
+
+-- body stays NOT NULL and needs no schema change for attachment-only
+-- messages — an empty string ('') already satisfies NOT NULL; the app
+-- always inserts it explicitly rather than relying on a column default.

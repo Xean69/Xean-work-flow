@@ -64,7 +64,7 @@ export async function generateMaintenanceChatReply({ title, description, trade, 
       .join("\n");
 
     const conversation = comments
-      .map((c) => `${c.sender === "tenant" ? "Tenant" : c.sender === "ai" ? "You" : "Manager"}: ${c.body}`)
+      .map((c) => `${c.sender === "tenant" ? "Tenant" : c.sender === "ai" ? "You" : "Manager"}: ${c.body || "[sent an attachment]"}`)
       .join("\n");
 
     const response = await anthropic.messages.create({
@@ -150,7 +150,7 @@ export async function generatePendingChatReply({ title, description, priority, c
       .join("\n");
 
     const conversation = comments
-      .map((c) => `${c.sender === "tenant" ? "Tenant" : "You"}: ${c.body}`)
+      .map((c) => `${c.sender === "tenant" ? "Tenant" : "You"}: ${c.body || "[sent an attachment]"}`)
       .join("\n");
 
     const response = await anthropic.messages.create({

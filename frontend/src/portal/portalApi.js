@@ -49,20 +49,32 @@ export function getPortalDocumentUrl(id) {
   return `${BASE_URL}/documents/${id}/download`;
 }
 
+// Bypasses the JSON-only request() helper: file uploads use FormData, and
+// the browser needs to set its own multipart Content-Type header (with the
+// boundary) rather than the one request() hardcodes.
+async function uploadRequest(path, formData, method = "POST") {
+  const res = await fetch(`${BASE_URL}${path}`, { method, body: formData, credentials: "same-origin" });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error || `Request failed with status ${res.status}`);
+  }
+  return data;
+}
+
 export function getPortalMaintenance() {
   return request("/maintenance");
 }
 
-export function createPortalMaintenance(data) {
-  return request("/maintenance", { method: "POST", body: JSON.stringify(data) });
+export function createPortalMaintenance(formData) {
+  return uploadRequest("/maintenance", formData);
 }
 
 export function getPortalMaintenanceDetail(id) {
   return request(`/maintenance/${id}`);
 }
 
-export function addPortalMaintenanceComment(id, body) {
-  return request(`/maintenance/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) });
+export function addPortalMaintenanceComment(id, formData) {
+  return uploadRequest(`/maintenance/${id}/comments`, formData);
 }
 
 export function flagPortalMaintenanceEmergency(id) {

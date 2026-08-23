@@ -198,8 +198,8 @@ export function getMaintenanceRequest(id) {
   return request(`/maintenance/${id}`);
 }
 
-export function addMaintenanceComment(id, body) {
-  return request(`/maintenance/${id}/comments`, { method: "POST", body: JSON.stringify({ body }) });
+export function addMaintenanceComment(id, formData) {
+  return uploadRequest(`/maintenance/${id}/comments`, formData);
 }
 
 export function getDocuments(tenantId) {

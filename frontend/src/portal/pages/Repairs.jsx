@@ -41,6 +41,29 @@ function formatTime(value) {
   })
 }
 
+// resource_type comes straight from Cloudinary ('image', 'video', or 'raw'
+// for anything else — PDFs, docs) — that's already exactly the distinction
+// needed to pick a preview.
+function AttachmentPreview({ url, resourceType, fileName }) {
+  if (resourceType === 'image') {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        <img src={url} alt={fileName || 'Attachment'} className="portal-bubble-attachment-img" />
+      </a>
+    )
+  }
+  if (resourceType === 'video') {
+    return <video src={url} controls className="portal-bubble-attachment-video" />
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="portal-bubble-attachment-file">
+      📄 {fileName || 'Download attachment'}
+    </a>
+  )
+}
+
+const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.pdf,.mp4,.mov,.webm'
+
 function Repairs() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -48,6 +71,7 @@ function Repairs() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('medium')
+  const [reportFile, setReportFile] = useState(null)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -55,8 +79,11 @@ function Repairs() {
   const [expandedId, setExpandedId] = useState(null)
   const [threadData, setThreadData] = useState(null)
   const [commentDraft, setCommentDraft] = useState('')
+  const [commentFile, setCommentFile] = useState(null)
   const [sendingComment, setSendingComment] = useState(false)
-  const [flagging, setFlagging] = useState(false)
+  // Ticket id currently being flagged, or null — the button now lives on
+  // each card's header, so more than one card could act at once.
+  const [flagging, setFlagging] = useState(null)
   const threadBodyRef = useRef(null)
 
   useEffect(() => {
@@ -81,10 +108,16 @@ function Repairs() {
     setError('')
     setSubmitting(true)
     try {
-      const created = await createPortalMaintenance({ title, description, priority })
+      const formData = new FormData()
+      formData.append('title', title)
+      if (description) formData.append('description', description)
+      formData.append('priority', priority)
+      if (reportFile) formData.append('attachment', reportFile)
+      const created = await createPortalMaintenance(formData)
       setTitle('')
       setDescription('')
       setPriority('medium')
+      setReportFile(null)
       setShowForm(false)
       await load()
       // Open straight into the conversation — the assistant's first reply
@@ -106,6 +139,7 @@ function Repairs() {
       setExpandedId(null)
       setThreadData(null)
       setCommentDraft('')
+      setCommentFile(null)
       return
     }
     setExpandedId(request.id)
@@ -116,11 +150,15 @@ function Repairs() {
 
   async function handleSendComment(e) {
     e.preventDefault()
-    if (!commentDraft.trim()) return
+    if (!commentDraft.trim() && !commentFile) return
     setSendingComment(true)
     try {
-      await addPortalMaintenanceComment(expandedId, commentDraft.trim())
+      const formData = new FormData()
+      if (commentDraft.trim()) formData.append('body', commentDraft.trim())
+      if (commentFile) formData.append('attachment', commentFile)
+      await addPortalMaintenanceComment(expandedId, formData)
       setCommentDraft('')
+      setCommentFile(null)
       const detail = await getPortalMaintenanceDetail(expandedId)
       setThreadData(detail)
       // A reply can promote a pending conversation into a real ticket
@@ -146,15 +184,17 @@ function Repairs() {
     }
   }
 
-  async function handleFlagEmergency() {
+  // Lives on the card header now, not just inside the expanded thread — can
+  // be triggered for any ticket in the list, not only the one currently open.
+  async function handleFlagEmergency(ticketId) {
     if (!window.confirm('Flag this as an emergency? A manager will be notified right away.')) return
-    setFlagging(true)
+    setFlagging(ticketId)
     try {
-      await flagPortalMaintenanceEmergency(expandedId)
-      setThreadData(await getPortalMaintenanceDetail(expandedId))
-      setRequests((rows) => rows.map((r) => (r.id === expandedId ? { ...r, is_emergency: true, priority: 'high' } : r)))
+      await flagPortalMaintenanceEmergency(ticketId)
+      if (expandedId === ticketId) setThreadData(await getPortalMaintenanceDetail(ticketId))
+      setRequests((rows) => rows.map((r) => (r.id === ticketId ? { ...r, is_emergency: true, priority: 'high' } : r)))
     } finally {
-      setFlagging(false)
+      setFlagging(null)
     }
   }
 
@@ -200,6 +240,17 @@ function Repairs() {
               </select>
             </div>
 
+            <div className="portal-field">
+              <label htmlFor="attachment">Photo or video (optional)</label>
+              <input
+                id="attachment"
+                type="file"
+                accept={ATTACHMENT_ACCEPT}
+                onChange={(e) => setReportFile(e.target.files?.[0] || null)}
+              />
+              {reportFile && <span style={{ fontSize: 12, color: 'var(--slate)' }}>{reportFile.name}</span>}
+            </div>
+
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
@@ -238,7 +289,18 @@ function Repairs() {
                 {r.title}
                 {r.unread_by_tenant && <span className="portal-unread-dot" title="New reply" />}
               </h2>
-              <span className={`portal-badge portal-badge-${status.variant}`}>{status.label}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                <span className={`portal-badge portal-badge-${status.variant}`}>{status.label}</span>
+                {!r.is_emergency && (
+                  <button
+                    className="portal-emergency-btn-sm"
+                    onClick={() => handleFlagEmergency(r.id)}
+                    disabled={flagging === r.id}
+                  >
+                    {flagging === r.id ? 'Flagging…' : '🚨 Flag as emergency'}
+                  </button>
+                )}
+              </div>
             </div>
             {r.is_emergency && <div className="portal-emergency-tag">🚨 Emergency</div>}
             {r.description && <p style={{ marginTop: 6 }}>{r.description}</p>}
@@ -272,25 +334,40 @@ function Repairs() {
                         >
                           {c.sender === 'ai' && <div className="portal-bubble-sender">Assistant</div>}
                           {c.body}
+                          {c.attachment_url && (
+                            <AttachmentPreview
+                              url={c.attachment_url}
+                              resourceType={c.attachment_cloudinary_resource_type}
+                              fileName={c.attachment_file_name}
+                            />
+                          )}
                           <div className="portal-bubble-time">{formatTime(c.created_at)}</div>
                         </div>
                       ))}
                     </div>
 
-                    {!threadData.is_emergency && (
-                      <button className="portal-emergency-btn" onClick={handleFlagEmergency} disabled={flagging}>
-                        {flagging ? 'Flagging…' : '🚨 Flag as emergency'}
-                      </button>
-                    )}
-
                     <form className="portal-ticket-composer" onSubmit={handleSendComment}>
+                      <label className="portal-attach-btn" title="Attach a photo, video, or document">
+                        📎
+                        <input
+                          type="file"
+                          accept={ATTACHMENT_ACCEPT}
+                          onChange={(e) => setCommentFile(e.target.files?.[0] || null)}
+                          disabled={sendingComment}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
                       <input
                         value={commentDraft}
                         onChange={(e) => setCommentDraft(e.target.value)}
-                        placeholder="Type a reply…"
+                        placeholder={commentFile ? commentFile.name : 'Type a reply…'}
                         disabled={sendingComment}
                       />
-                      <button type="submit" className="portal-btn portal-btn-primary" disabled={sendingComment || !commentDraft.trim()}>
+                      <button
+                        type="submit"
+                        className="portal-btn portal-btn-primary"
+                        disabled={sendingComment || (!commentDraft.trim() && !commentFile)}
+                      >
                         Send
                       </button>
                     </form>
