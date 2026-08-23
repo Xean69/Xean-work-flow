@@ -50,7 +50,7 @@ function PortalLayout() {
       <PortalOfflineBanner />
       <header className="portal-header">
         <span className="portal-brand-group">
-          <img src="/pwa-192x192.png" alt="" className="portal-brand-mark" />
+          <img src="/logo-nav.png" alt="" className="portal-brand-mark" />
           <span className="portal-brand">Xean</span>
         </span>
 

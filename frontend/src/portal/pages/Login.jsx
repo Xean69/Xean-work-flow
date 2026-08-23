@@ -27,7 +27,7 @@ function Login() {
     <div className="portal-login-screen portal-login-screen-branded">
       <div className="portal-login-card">
         <div className="portal-login-brand">
-          <img src="/pwa-192x192.png" alt="Xean" className="portal-login-mark" />
+          <img src="/logo-nav.png" alt="Xean" className="portal-login-mark" />
           <h1>
             Xean
           </h1>

@@ -8,7 +8,7 @@ function LandingFooter() {
         <div className="lnd-foot-top">
           <div>
             <div className="lnd-logo">
-              <img src="/pwa-192x192.png" alt="Xean" className="lnd-logo-mark" />
+              <img src="/logo-nav.png" alt="Xean" className="lnd-logo-mark" />
               <div className="lnd-logo-text">
                 Xean
               </div>

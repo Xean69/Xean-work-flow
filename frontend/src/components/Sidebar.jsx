@@ -186,7 +186,7 @@ function Sidebar({ admin, onLogout, open }) {
   return (
     <aside className={'sidebar' + (open ? ' sidebar-open' : '')}>
       <div className="brand">
-        <img src="/pwa-192x192.png" alt="Xean" className="brand-mark" />
+        <img src="/logo-nav.png" alt="Xean" className="brand-mark" />
         <div className="brand-name">
           Xean
         </div>

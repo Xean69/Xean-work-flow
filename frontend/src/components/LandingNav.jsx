@@ -9,7 +9,7 @@ function LandingNav({ withSectionLinks = false }) {
     <div className="lnd-wrap">
       <nav className="lnd-nav">
         <Link to="/" className="lnd-logo">
-          <img src="/pwa-192x192.png" alt="Xean" className="lnd-logo-mark" />
+          <img src="/logo-nav.png" alt="Xean" className="lnd-logo-mark" />
           <div className="lnd-logo-text">
             Xean
           </div>

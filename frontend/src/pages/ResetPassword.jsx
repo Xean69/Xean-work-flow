@@ -35,7 +35,7 @@ function ResetPassword() {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-brand">
-          <img src="/pwa-192x192.png" alt="Xean" className="login-mark" />
+          <img src="/logo-nav.png" alt="Xean" className="login-mark" />
           <h1>
             Xean
           </h1>
