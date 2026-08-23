@@ -24,7 +24,7 @@ function Login() {
   }
 
   return (
-    <div className="portal-login-screen">
+    <div className="portal-login-screen portal-login-screen-branded">
       <div className="portal-login-card">
         <div className="portal-login-brand">
           <div className="portal-login-mark">X</div>

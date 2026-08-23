@@ -536,6 +536,25 @@ body {
   background: var(--parchment);
   padding: 24px;
 }
+/* Matches the landing page's dark navy background (Landing.css's --lnd-bg,
+   .lnd-glow, .lnd-grid-texture) — reproduced here as layered gradients on
+   one element instead of extra glow/texture DOM nodes, so this page's
+   markup and behavior stay untouched. Scoped to this page only, not the
+   shared .portal-login-screen rule above, since the portal's Forgot/Reset
+   Password pages also use that class and weren't asked to change. */
+.portal-login-screen-branded {
+  background-color: #06070b;
+  background-image:
+    radial-gradient(circle at 8% -8%, rgba(74, 111, 160, 0.35), transparent 45%),
+    radial-gradient(circle at 108% 28%, rgba(217, 195, 154, 0.22), transparent 45%),
+    radial-gradient(circle at 42% 112%, rgba(74, 111, 160, 0.2), transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: auto, auto, auto, 64px 64px, 64px 64px;
+}
+.portal-login-screen-branded .portal-login-card {
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
 .portal-login-card {
   width: 100%;
   max-width: 380px;
