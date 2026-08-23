@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader.jsx'
 import Badge from '../components/Badge.jsx'
 import Modal from '../components/Modal.jsx'
 import TenantForm from '../components/TenantForm.jsx'
+import './Tenants.css'
 
 const STATUS_LABEL = {
   active: 'Active',
@@ -51,6 +52,7 @@ function Tenants() {
   const [loadError, setLoadError] = useState('')
   // null = closed, {} = add form, { row } = editing, { presetUnitId } = assigning a specific vacant unit
   const [formState, setFormState] = useState(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     load()
@@ -129,12 +131,25 @@ function Tenants() {
       ? { unit_id: formState.presetUnitId }
       : undefined
 
+  // Client-side only — the full portfolio is already loaded in `rows`, so
+  // there's no reason to round-trip to the backend just to filter a list
+  // that's already sitting in memory.
+  const query = search.trim().toLowerCase()
+  const visibleRows = query
+    ? rows.filter((r) =>
+        [r.full_name, r.email, r.phone].some((field) => field && field.toLowerCase().includes(query))
+      )
+    : rows
+
   return (
     <div>
       <PageHeader
         title="Tenants & Leases"
         subtitle={loading ? 'Loading…' : `${occupiedCount} active ${occupiedCount === 1 ? 'tenant' : 'tenants'} across your portfolio`}
       >
+        <Link to="/tenants/analytics" className="btn btn-ghost">
+          View Analytics
+        </Link>
         <button className="btn btn-primary" onClick={() => setFormState({})} disabled={!loading && vacantOptions.length === 0}>
           + Add tenant
         </button>
@@ -151,6 +166,23 @@ function Tenants() {
         )}
 
         {rows.length > 0 && (
+          <input
+            type="text"
+            className="tenants-search"
+            placeholder="Search by name, email, or phone…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        )}
+
+        {rows.length > 0 && visibleRows.length === 0 && (
+          <div className="empty-state card">
+            <h3>No matches</h3>
+            <p>No tenant matches "{search}".</p>
+          </div>
+        )}
+
+        {visibleRows.length > 0 && (
           <div className="card table-scroll">
             <table>
               <thead>
@@ -167,7 +199,7 @@ function Tenants() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {visibleRows.map((row) => (
                   <tr key={row.unit_id}>
                     <td style={{ fontWeight: 600 }}>{row.full_name || '—'}</td>
                     <td style={{ color: 'var(--slate)', fontSize: 12 }}>

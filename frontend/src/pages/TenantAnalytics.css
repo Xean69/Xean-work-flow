@@ -1,0 +1,20 @@
+.back-link {
+  display: inline-block;
+  margin-bottom: 18px;
+  font-size: 12.5px;
+  color: var(--slate);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--brass-deep);
+  text-decoration: none;
+}
+
+.analytics-days-warn {
+  color: var(--amber);
+  font-weight: 600;
+}
+.analytics-days-critical {
+  color: var(--red);
+  font-weight: 600;
+}

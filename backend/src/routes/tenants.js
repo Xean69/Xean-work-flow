@@ -13,7 +13,7 @@ import {
 } from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
 import { currentPeriod } from "../utils/period.js";
-import { ensureChargesForTenant, getBalanceDue, getPeriodStatus, deriveChargeStatus, allocatePayment } from "../utils/ledger.js";
+import { ensureChargesForTenant, getBalanceDue, getPeriodStatus, deriveChargeStatus, allocatePayment, getPortfolioBalances } from "../utils/ledger.js";
 import { upload, uploadToCloudinary } from "../utils/upload.js";
 
 const router = Router();
@@ -206,6 +206,59 @@ router.get(
         };
       })
     );
+  })
+);
+
+// UTC-midnight-to-UTC-midnight day count — due_date comes back from pg as a
+// JS Date at UTC midnight for that calendar date (same reasoning as this
+// file's own periodOf), so both sides need to be normalized the same way
+// or the result drifts by a day depending on the server's local timezone.
+function daysBetween(dueDate) {
+  const due = new Date(dueDate);
+  const dueUTC = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((todayUTC - dueUTC) / 86400000);
+}
+
+// GET /api/tenants/analytics - the Tenants & Leases "View Analytics" page.
+// Declared before GET /:id below so Express doesn't match "analytics" as an
+// :id first. Every tenant's ledger-wide balance (see getPortfolioBalances)
+// splits into the pending/current counts and the pending table; vacancy is
+// a separate, unrelated count straight off units.status.
+router.get(
+  "/analytics",
+  asyncHandler(async (req, res) => {
+    const [balances, vacantResult] = await Promise.all([
+      getPortfolioBalances(req.businessId),
+      pool.query(
+        `SELECT COUNT(*) FROM units u JOIN properties p ON p.id = u.property_id
+         WHERE p.business_id = $1 AND u.status = 'vacant'`,
+        [req.businessId]
+      ),
+    ]);
+
+    const pending = balances.filter((b) => b.balance_due > 0);
+    const currentCount = balances.length - pending.length;
+    const totalOutstanding = pending.reduce((sum, b) => sum + b.balance_due, 0);
+
+    res.json({
+      vacant_units: Number(vacantResult.rows[0].count),
+      pending_count: pending.length,
+      current_count: currentCount,
+      total_outstanding: totalOutstanding,
+      tenants: pending
+        .map((b) => ({
+          tenant_id: b.tenant_id,
+          full_name: b.full_name,
+          phone: b.phone,
+          property_name: b.property_name,
+          unit_number: b.unit_number,
+          balance_due: b.balance_due,
+          days_owing: b.oldest_unpaid_due_date ? daysBetween(b.oldest_unpaid_due_date) : 0,
+        }))
+        .sort((a, b) => b.days_owing - a.days_owing),
+    });
   })
 );
 

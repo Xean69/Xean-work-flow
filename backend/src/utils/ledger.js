@@ -162,6 +162,36 @@ export async function getBalanceDue(tenantId) {
   return Math.max(0, Number(rows[0].balance_due));
 }
 
+// Same balance-due computation as getBalanceDue above, but for every tenant
+// in the business at once (one query, not one-per-tenant) — used by the
+// Tenants & Leases analytics page, which needs every tenant's balance to
+// build its pending/current summary, not just the ones already known to owe
+// money. Also returns each tenant's oldest still-outstanding charge's
+// due_date, which is what "days owing" is measured from.
+export async function getPortfolioBalances(businessId) {
+  const { rows } = await pool.query(
+    `SELECT
+       t.id AS tenant_id,
+       t.full_name,
+       t.phone,
+       u.unit_number,
+       p.name AS property_name,
+       COALESCE(SUM(c.amount - COALESCE(alloc.allocated, 0)), 0) AS balance_due,
+       MIN(CASE WHEN (c.amount - COALESCE(alloc.allocated, 0)) > 0 THEN c.due_date END) AS oldest_unpaid_due_date
+     FROM tenants t
+     JOIN units u ON u.id = t.unit_id
+     JOIN properties p ON p.id = u.property_id
+     LEFT JOIN ledger_charges c ON c.tenant_id = t.id
+     LEFT JOIN LATERAL (
+       SELECT SUM(amount) AS allocated FROM payment_allocations WHERE charge_id = c.id
+     ) alloc ON true
+     WHERE t.business_id = $1
+     GROUP BY t.id, t.full_name, t.phone, u.unit_number, p.name`,
+    [businessId]
+  );
+  return rows.map((r) => ({ ...r, balance_due: Math.max(0, Number(r.balance_due)) }));
+}
+
 // Applies a payment's amount against this tenant's outstanding charges,
 // oldest due_date first. Any leftover once every charge is fully covered
 // is left unapplied — a credit visible in the ledger, not auto-pulled into

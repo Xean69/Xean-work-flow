@@ -23,6 +23,7 @@ import PropertyDetail from './pages/PropertyDetail.jsx'
 import BulkImport from './pages/BulkImport.jsx'
 import Tenants from './pages/Tenants.jsx'
 import TenantProfile from './pages/TenantProfile.jsx'
+import TenantAnalytics from './pages/TenantAnalytics.jsx'
 import GuestStays from './pages/GuestStays.jsx'
 import Maintenance from './pages/Maintenance.jsx'
 import Documents from './pages/Documents.jsx'
@@ -101,6 +102,7 @@ function App() {
         <Route path="/properties/:id" element={<PropertyDetail />} />
         <Route path="/import" element={<BulkImport />} />
         <Route path="/tenants" element={<Tenants />} />
+        <Route path="/tenants/analytics" element={<TenantAnalytics />} />
         <Route path="/tenants/:id" element={<TenantProfile />} />
         <Route path="/tenants/:tenantId/inspection" element={<TenantInspection />} />
         <Route path="/stays" element={<GuestStays />} />

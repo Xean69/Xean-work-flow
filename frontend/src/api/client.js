@@ -86,6 +86,10 @@ export function getTenants() {
   return request("/tenants");
 }
 
+export function getTenantAnalytics() {
+  return request("/tenants/analytics");
+}
+
 export function createTenant(data) {
   return request("/tenants", { method: "POST", body: JSON.stringify(data) });
 }

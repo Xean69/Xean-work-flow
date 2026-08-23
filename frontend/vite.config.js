@@ -21,6 +21,12 @@ export default defineConfig({
         // instead of a browser offline error — this is the app-shell-only
         // offline behavior, not offline data (see useOnlineStatus.js).
         navigateFallback: '/index.html',
+        // jspdf/exceljs are dynamically imported only when a user clicks a
+        // "Download PDF/Excel" button — excluded from precache so every
+        // install/update doesn't force-download ~1MB of export libraries
+        // nobody may ever use. They still work on-demand: the SW's runtime
+        // fetch handles the import normally, just not proactively cached.
+        globIgnores: ['**/jspdf*.js', '**/exceljs*.js'],
       },
     }),
   ],
