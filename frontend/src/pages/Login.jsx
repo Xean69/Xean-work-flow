@@ -28,7 +28,7 @@ function Login() {
     <div className="login-screen login-screen-branded">
       <div className="login-card">
         <div className="login-brand">
-          <div className="login-mark">X</div>
+          <img src="/pwa-192x192.png" alt="Xean" className="login-mark" />
           <h1>
             Xean
           </h1>

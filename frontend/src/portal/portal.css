@@ -30,6 +30,17 @@ body {
   background: var(--ink);
   color: #f1eee7;
 }
+.portal-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.portal-brand-mark {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
 .portal-brand {
   font-family: var(--font-display);
   font-weight: 600;
@@ -637,17 +648,9 @@ body {
   margin-bottom: 8px;
 }
 .portal-login-mark {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(155deg, var(--brass-light), var(--brass-deep));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  color: var(--ink);
-  font-size: 20px;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
 }
 .portal-login-brand h1 {
   font-family: var(--font-display);

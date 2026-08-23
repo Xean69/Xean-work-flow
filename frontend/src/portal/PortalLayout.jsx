@@ -49,8 +49,9 @@ function PortalLayout() {
     <div className="portal-shell">
       <PortalOfflineBanner />
       <header className="portal-header">
-        <span className="portal-brand">
-          Xean
+        <span className="portal-brand-group">
+          <img src="/pwa-192x192.png" alt="" className="portal-brand-mark" />
+          <span className="portal-brand">Xean</span>
         </span>
 
         {/* Same links as the bottom tab bar — CSS decides which one shows
