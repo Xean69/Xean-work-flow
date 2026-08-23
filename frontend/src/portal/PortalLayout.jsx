@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom'
 import { getMe, logout } from './portalApi.js'
+import PortalOfflineBanner from './PortalOfflineBanner.jsx'
 import './portal.css'
 
 const NAV_ITEMS = [
@@ -46,6 +47,7 @@ function PortalLayout() {
 
   return (
     <div className="portal-shell">
+      <PortalOfflineBanner />
       <header className="portal-header">
         <span className="portal-brand">
           Xean

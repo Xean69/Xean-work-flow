@@ -2,11 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1b2430" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <title>Xean</title>
+
+    <!-- The manager dashboard and tenant portal are two different install
+         targets (different start_url/scope so an installed icon returns to
+         the right app) sharing one SPA build — this picks the right static
+         manifest before the browser evaluates installability. Must run
+         synchronously, before body parsing, not from a React effect. -->
+    <link rel="manifest" id="app-manifest" href="/manifest-app.webmanifest" />
+    <script>
+      if (location.pathname.startsWith('/portal')) {
+        document.getElementById('app-manifest').href = '/manifest-portal.webmanifest'
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

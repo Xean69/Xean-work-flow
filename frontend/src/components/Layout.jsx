@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import TrialBanner from './TrialBanner.jsx'
+import OfflineBanner from './OfflineBanner.jsx'
 import { getMe, logout } from '../api/client.js'
 import { canAccessPath, defaultRouteForRole } from '../utils/permissions.js'
 import './Layout.css'
@@ -64,6 +65,7 @@ function Layout() {
       {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
       <Sidebar admin={admin} onLogout={handleLogout} open={sidebarOpen} />
       <div className="main">
+        <OfflineBanner />
         <TrialBanner admin={admin} />
         <div className="mobile-topbar">
           <button
