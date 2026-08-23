@@ -33,6 +33,13 @@ Never suggest, under any circumstances:
 - Anything requiring tools beyond what's already in a typical kitchen/utility drawer, or any chemicals.
 - Structural repairs of any kind.`;
 
+// Shared by both prompts below. A photo/video request is optional context-
+// gathering, not a gate — it should never block or delay help, and it
+// should never repeat once the conversation already has an answer (an
+// attachment, a decline, or the AI's own earlier ask visible in the
+// transcript already tells it that).
+const VISUAL_GUIDANCE = `When the tenant's description is visual or hard to judge from text alone (e.g. "the cabinet is broken," "something's leaking," "there's a crack," a strange smell, an appliance acting up with no clear symptoms) and no photo or video has been attached yet in this conversation, it's often more useful to ask the tenant to attach one than to guess at a specific cause or troubleshooting step — prefer asking over guessing in that turn. This is optional, never a requirement: if the tenant doesn't attach anything, says they can't, or you've already asked for one earlier in this conversation, move on and help with whatever you have — never ask twice, and never ask if a photo or video already appears in the conversation. If a photo has been attached, you can see it directly — look at it and let what it actually shows inform your reply instead of asking something it already answers. Videos and some photo formats aren't visible to you even when attached; if a message says an attachment couldn't be viewed, treat it the same as if the tenant had only described the issue in words.`;
+
 // Used once a ticket already exists (real, past the pending stage) and the
 // conversation continues — no more "should this become a ticket" decision
 // to make, so this is plain text, no tool use.
@@ -40,9 +47,57 @@ const SYSTEM_PROMPT = `You are a maintenance assistant for a property management
 
 Reply with plain conversational text only — 1-3 short sentences, no headers, no bullet lists, no markdown formatting.
 
+${VISUAL_GUIDANCE}
+
 ${SAFETY_RULES}
 
 If nothing on the safe list applies, or you're at all unsure, just acknowledge the issue and say a manager will follow up — never guess toward being "helpful" when a suggestion could be risky.`;
+
+// resource_type is Cloudinary's own classification ('image', 'video', or
+// 'raw' for everything else — PDFs, docs). Claude's vision only supports
+// JPEG/PNG/GIF/WebP — not video, and not HEIC/HEIF (common straight off an
+// iPhone camera, and otherwise a normal 'image' upload here) — so those
+// need to fall back to a text placeholder rather than a real image block,
+// which Claude would just reject outright. The filename extension is the
+// only signal available for that distinction; when it's missing or
+// ambiguous this defaults to treating the file as viewable, since JPEG/PNG
+// are the overwhelmingly common case.
+function isViewableImage(comment) {
+  if (comment.attachment_cloudinary_resource_type !== "image") return false;
+  return !/\.(heic|heif)$/i.test(comment.attachment_file_name || "");
+}
+
+function unviewableAttachmentLabel(comment) {
+  if (comment.attachment_cloudinary_resource_type === "video") {
+    return "[attached a video, which I can't view directly]";
+  }
+  if (comment.attachment_cloudinary_resource_type === "image") {
+    return "[attached a photo in a format I can't view directly]";
+  }
+  return "[attached a document]";
+}
+
+// Turns the stored comment thread into a content-blocks array instead of
+// one flattened string, so an attached photo can be included as a real
+// image block Claude actually sees — not just a "[sent an attachment]"
+// placeholder. speakerFor labels each turn (the two callers differ only in
+// whether "Manager" is a possible sender — a pending conversation never
+// has one, since managers can't see a ticket that doesn't exist yet).
+function buildConversationBlocks(comments, speakerFor) {
+  const blocks = [];
+  for (const c of comments) {
+    const speaker = speakerFor(c.sender);
+    if (c.attachment_url && isViewableImage(c)) {
+      blocks.push({ type: "text", text: `${speaker}${c.body ? ": " + c.body : " sent a photo:"}` });
+      blocks.push({ type: "image", source: { type: "url", url: c.attachment_url } });
+    } else if (c.attachment_url) {
+      blocks.push({ type: "text", text: `${speaker}: ${c.body || unviewableAttachmentLabel(c)}` });
+    } else {
+      blocks.push({ type: "text", text: `${speaker}: ${c.body}` });
+    }
+  }
+  return blocks;
+}
 
 // Runs once per new tenant comment on an already-real ticket and returns a
 // plain reply string, or null if generation failed or produced nothing —
@@ -63,23 +118,26 @@ export async function generateMaintenanceChatReply({ title, description, trade, 
       .filter(Boolean)
       .join("\n");
 
-    const conversation = comments
-      .map((c) => `${c.sender === "tenant" ? "Tenant" : c.sender === "ai" ? "You" : "Manager"}: ${c.body || "[sent an attachment]"}`)
-      .join("\n");
+    const speakerFor = (sender) => (sender === "tenant" ? "Tenant" : sender === "ai" ? "You" : "Manager");
+    const conversationBlocks = buildConversationBlocks(comments, speakerFor);
+
+    const content = [
+      {
+        type: "text",
+        text: conversationBlocks.length
+          ? `${context}\n\nConversation so far:`
+          : `${context}\n\nThe tenant just submitted this ticket — write your first reply to them.`,
+      },
+      ...conversationBlocks,
+      ...(conversationBlocks.length ? [{ type: "text", text: "Write your next reply to the tenant." }] : []),
+    ];
 
     const response = await anthropic.messages.create({
       model: "claude-opus-5",
       max_tokens: 300,
       output_config: { effort: "low" },
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: conversation
-            ? `${context}\n\nConversation so far:\n${conversation}\n\nWrite your next reply to the tenant.`
-            : `${context}\n\nThe tenant just submitted this ticket — write your first reply to them.`,
-        },
-      ],
+      messages: [{ role: "user", content }],
     });
 
     const textBlock = response.content.find((block) => block.type === "text");
@@ -103,6 +161,8 @@ Each turn, decide both your reply and whether it's time to create a ticket:
 - If there's still a genuinely useful safe step or clarifying question, ask or suggest exactly one of them (never more than one at a time), and set ready_for_ticket to false.
 - Set ready_for_ticket to true once nothing on the safe list below applies to this issue, or the tenant already tried the one safe step that did apply and it didn't fix things, or the tenant says the issue still isn't resolved after 1-2 exchanges. When ready_for_ticket is true, your reply should tell the tenant you're creating a ticket now so a manager can take care of it — don't keep asking questions at that point.
 - Don't drag the conversation out — if you don't have a genuinely useful safe next step, escalate rather than stalling with small talk.
+
+${VISUAL_GUIDANCE} Asking for a photo/video counts as a clarifying question for that turn — set ready_for_ticket to false when you do.
 
 ${SAFETY_RULES}
 
@@ -149,9 +209,21 @@ export async function generatePendingChatReply({ title, description, priority, c
       .filter(Boolean)
       .join("\n");
 
-    const conversation = comments
-      .map((c) => `${c.sender === "tenant" ? "Tenant" : "You"}: ${c.body || "[sent an attachment]"}`)
-      .join("\n");
+    const speakerFor = (sender) => (sender === "tenant" ? "Tenant" : "You");
+    const conversationBlocks = buildConversationBlocks(comments, speakerFor);
+
+    const content = [
+      {
+        type: "text",
+        text: conversationBlocks.length
+          ? `${context}\n\nConversation so far:`
+          : `${context}\n\nThe tenant just reported this issue — decide your first reply using the ${PENDING_TOOL.name} tool.`,
+      },
+      ...conversationBlocks,
+      ...(conversationBlocks.length
+        ? [{ type: "text", text: `Decide your next reply using the ${PENDING_TOOL.name} tool.` }]
+        : []),
+    ];
 
     const response = await anthropic.messages.create({
       model: "claude-opus-5",
@@ -160,14 +232,7 @@ export async function generatePendingChatReply({ title, description, priority, c
       system: PENDING_SYSTEM_PROMPT,
       tools: [PENDING_TOOL],
       tool_choice: { type: "tool", name: PENDING_TOOL.name },
-      messages: [
-        {
-          role: "user",
-          content: conversation
-            ? `${context}\n\nConversation so far:\n${conversation}\n\nDecide your next reply using the ${PENDING_TOOL.name} tool.`
-            : `${context}\n\nThe tenant just reported this issue — decide your first reply using the ${PENDING_TOOL.name} tool.`,
-        },
-      ],
+      messages: [{ role: "user", content }],
     });
 
     const toolUse = response.content.find((block) => block.type === "tool_use");

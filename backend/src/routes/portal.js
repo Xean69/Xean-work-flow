@@ -316,6 +316,7 @@ router.post(
     // becomes their first message in the thread (empty body, just the
     // attachment) — same shape as any other attached chat message, rather
     // than a separate ticket-level attachment display.
+    let initialAttachment = null;
     if (req.file) {
       let uploaded;
       try {
@@ -330,17 +331,26 @@ router.post(
          VALUES ($1, $2, 'tenant', '', $3, $4, $5, $6)`,
         [unitRows[0]?.business_id, ticket.id, uploaded.url, uploaded.publicId, uploaded.resourceType, req.file.originalname]
       );
+      initialAttachment = {
+        sender: "tenant",
+        body: "",
+        attachment_url: uploaded.url,
+        attachment_cloudinary_resource_type: uploaded.resourceType,
+        attachment_file_name: req.file.originalname,
+      };
     }
 
     // The tenant's first message in the thread — a clarifying question or a
     // safe troubleshooting tip, before a human manager needs to get
     // involved at all. Even turn one can decide there's nothing safe to
-    // suggest (e.g. a structural issue) and escalate immediately.
+    // suggest (e.g. a structural issue) and escalate immediately. If a
+    // photo/video came with the report, the AI needs to see it was sent
+    // here too — not just on later turns.
     const { reply, readyForTicket } = await generatePendingChatReply({
       title: ticket.title,
       description: ticket.description,
       priority: ticket.priority,
-      comments: [],
+      comments: initialAttachment ? [initialAttachment] : [],
     });
     await pool.query(
       "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
@@ -440,7 +450,8 @@ router.post(
     ]);
 
     const { rows: comments } = await pool.query(
-      "SELECT sender, body FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC",
+      `SELECT sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name
+       FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
       [req.params.id]
     );
 
