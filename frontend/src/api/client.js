@@ -122,16 +122,20 @@ export function deleteOccupant(id) {
   return request(`/occupants/${id}`, { method: "DELETE" });
 }
 
-export function createEvictionEvent(tenantId, data) {
-  return request(`/tenants/${tenantId}/eviction-events`, { method: "POST", body: JSON.stringify(data) });
+export function createEvictionEvent(tenantId, formData) {
+  return uploadRequest(`/tenants/${tenantId}/eviction-events`, formData);
 }
 
-export function updateEvictionEvent(id, data) {
-  return request(`/eviction-events/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export function updateEvictionEvent(id, formData) {
+  return uploadRequest(`/eviction-events/${id}`, formData, "PUT");
 }
 
 export function deleteEvictionEvent(id) {
   return request(`/eviction-events/${id}`, { method: "DELETE" });
+}
+
+export function getEvictionEventAttachmentUrl(id) {
+  return `${BASE_URL}/eviction-events/${id}/attachment`;
 }
 
 export function getTenantLedger(id) {

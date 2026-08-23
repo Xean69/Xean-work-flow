@@ -23,8 +23,11 @@ const emptyValues = {
 // current stage is just whichever entry has the most recent date_issued.
 // notice_type is free text since eviction notice names are jurisdiction-
 // specific (e.g. Ontario's N4 vs. a US "Pay or Quit" notice).
-function EvictionEventForm({ initialValues, onSubmit, onCancel }) {
+// existingAttachmentUrl is set only when editing an event that already has
+// a notice document attached.
+function EvictionEventForm({ initialValues, existingAttachmentUrl, onSubmit, onCancel }) {
   const [values, setValues] = useState({ ...emptyValues, ...initialValues })
+  const [file, setFile] = useState(null)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -38,7 +41,13 @@ function EvictionEventForm({ initialValues, onSubmit, onCancel }) {
     setError('')
     setSubmitting(true)
     try {
-      await onSubmit(values)
+      const formData = new FormData()
+      if (file) formData.append('attachment', file)
+      formData.append('notice_type', values.notice_type)
+      formData.append('stage', values.stage)
+      formData.append('date_issued', values.date_issued)
+      if (values.notes) formData.append('notes', values.notes)
+      await onSubmit(formData)
     } catch (err) {
       setError(err.message)
       setSubmitting(false)
@@ -88,6 +97,22 @@ function EvictionEventForm({ initialValues, onSubmit, onCancel }) {
       <div className="form-field">
         <label htmlFor="notes">Notes (optional)</label>
         <textarea id="notes" name="notes" value={values.notes} onChange={handleChange} rows={2} />
+      </div>
+
+      <div className="form-field">
+        <label htmlFor="attachment">Notice document (optional)</label>
+        <input
+          id="attachment"
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+        />
+        {!file && existingAttachmentUrl && (
+          <a href={existingAttachmentUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12 }}>
+            View current attachment
+          </a>
+        )}
+        {file && <span style={{ fontSize: 12, color: 'var(--slate)' }}>{file.name}</span>}
       </div>
 
       <div className="form-actions">

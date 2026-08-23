@@ -14,6 +14,7 @@ import {
 import { hashPassword } from "../utils/auth.js";
 import { currentPeriod } from "../utils/period.js";
 import { ensureChargesForTenant, getBalanceDue, getPeriodStatus, deriveChargeStatus, allocatePayment } from "../utils/ledger.js";
+import { upload, uploadToCloudinary } from "../utils/upload.js";
 
 const router = Router();
 
@@ -445,6 +446,7 @@ router.post(
 
 router.post(
   "/:id/eviction-events",
+  upload.single("attachment"),
   asyncHandler(async (req, res) => {
     const { rows: tenantRows } = await pool.query(
       "SELECT id FROM tenants WHERE id = $1 AND business_id = $2",
@@ -453,11 +455,33 @@ router.post(
     if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
 
     const data = parseEvictionEventBody(req.body);
+
+    // The attachment is optional — only upload if a manager actually chose
+    // a file, same as expenses' receipt.
+    let uploaded = null;
+    if (req.file) {
+      try {
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean/eviction-notices");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload attachment, please try again");
+      }
+    }
+
     const { rows } = await pool.query(
-      `INSERT INTO eviction_events (tenant_id, notice_type, stage, date_issued, notes)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO eviction_events (tenant_id, notice_type, stage, date_issued, notes, attachment_url, attachment_cloudinary_public_id, attachment_cloudinary_resource_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [req.params.id, data.notice_type, data.stage, data.date_issued, data.notes]
+      [
+        req.params.id,
+        data.notice_type,
+        data.stage,
+        data.date_issued,
+        data.notes,
+        uploaded?.url || null,
+        uploaded?.publicId || null,
+        uploaded?.resourceType || null,
+      ]
     );
     res.status(201).json(rows[0]);
   })

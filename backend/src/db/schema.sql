@@ -810,3 +810,11 @@ ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_emergency BOOLEAN N
 ALTER TABLE maintenance_requests DROP CONSTRAINT IF EXISTS maintenance_requests_status_check;
 ALTER TABLE maintenance_requests ADD CONSTRAINT maintenance_requests_status_check
   CHECK (status IN ('pending', 'new', 'in_progress', 'resolved'));
+
+-- Optional notice-document attachment on a Notices log entry — one file per
+-- row, same shape as expenses.receipt_url/receipt_cloudinary_public_id/
+-- receipt_cloudinary_resource_type, not the documents table (which would
+-- surface an eviction notice in the unrelated Documents tab).
+ALTER TABLE eviction_events ADD COLUMN IF NOT EXISTS attachment_url TEXT;
+ALTER TABLE eviction_events ADD COLUMN IF NOT EXISTS attachment_cloudinary_public_id TEXT;
+ALTER TABLE eviction_events ADD COLUMN IF NOT EXISTS attachment_cloudinary_resource_type TEXT;

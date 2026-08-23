@@ -25,6 +25,7 @@ import {
   createEvictionEvent,
   updateEvictionEvent,
   deleteEvictionEvent,
+  getEvictionEventAttachmentUrl,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Badge from '../components/Badge.jsx'
@@ -687,6 +688,16 @@ function TenantProfile() {
                   {e.notes && <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>{e.notes}</p>}
                 </div>
                 <div className="table-actions">
+                  {e.attachment_url && (
+                    <a
+                      href={getEvictionEventAttachmentUrl(e.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-ghost btn-sm"
+                    >
+                      View
+                    </a>
+                  )}
                   <button className="btn btn-ghost btn-sm" onClick={() => setEvictionModal(e)}>
                     Edit
                   </button>
@@ -809,6 +820,11 @@ function TenantProfile() {
         <Modal title={evictionModal === 'new' ? 'Log notice' : 'Edit notice'} onClose={() => setEvictionModal(null)}>
           <EvictionEventForm
             initialValues={evictionModal === 'new' ? undefined : evictionModal}
+            existingAttachmentUrl={
+              evictionModal !== 'new' && evictionModal.attachment_url
+                ? getEvictionEventAttachmentUrl(evictionModal.id)
+                : null
+            }
             onSubmit={handleSaveEviction}
             onCancel={() => setEvictionModal(null)}
           />
