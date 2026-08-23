@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getTenantAnalytics } from '../api/client.js'
+import { getTenantAnalytics, getProperties } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import StatCard from '../components/StatCard.jsx'
 import { downloadAnalyticsPdf, downloadAnalyticsExcel } from '../utils/tenantAnalyticsExport.js'
@@ -12,19 +12,29 @@ function formatMoney(amount) {
 
 function TenantAnalytics() {
   const [data, setData] = useState(null)
+  const [properties, setProperties] = useState([])
+  const [propertyFilter, setPropertyFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [exporting, setExporting] = useState(null) // null | 'pdf' | 'excel'
 
   useEffect(() => {
-    load()
+    getProperties().then(setProperties).catch(() => {})
   }, [])
+
+  // Refetches whenever the property filter changes (including the initial
+  // "All properties" load) — the summary stats are computed server-side, so
+  // there's no way to re-derive a per-property view from an already-loaded
+  // all-properties response.
+  useEffect(() => {
+    load()
+  }, [propertyFilter])
 
   async function load() {
     setLoading(true)
     setLoadError('')
     try {
-      setData(await getTenantAnalytics())
+      setData(await getTenantAnalytics(propertyFilter || undefined))
     } catch (err) {
       setLoadError(err.message)
     } finally {
@@ -57,6 +67,21 @@ function TenantAnalytics() {
         <Link to="/tenants" className="back-link">
           ← Tenants &amp; Leases
         </Link>
+
+        <div className="analytics-filters">
+          <select
+            className="tenants-property-filter"
+            value={propertyFilter}
+            onChange={(e) => setPropertyFilter(e.target.value)}
+          >
+            <option value="">All properties</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {loadError && <p className="form-error">{loadError}</p>}
 

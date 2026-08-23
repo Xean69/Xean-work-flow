@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getTenants, getAddons, createTenant, updateTenant, deleteTenant } from '../api/client.js'
+import { getTenants, getAddons, getProperties, createTenant, updateTenant, deleteTenant } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Badge from '../components/Badge.jsx'
 import Modal from '../components/Modal.jsx'
@@ -48,11 +48,13 @@ function formatDate(value) {
 function Tenants() {
   const [rows, setRows] = useState([])
   const [addons, setAddons] = useState([])
+  const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   // null = closed, {} = add form, { row } = editing, { presetUnitId } = assigning a specific vacant unit
   const [formState, setFormState] = useState(null)
   const [search, setSearch] = useState('')
+  const [propertyFilter, setPropertyFilter] = useState('')
 
   useEffect(() => {
     load()
@@ -62,9 +64,10 @@ function Tenants() {
     setLoading(true)
     setLoadError('')
     try {
-      const [tenantRows, addonRows] = await Promise.all([getTenants(), getAddons()])
+      const [tenantRows, addonRows, propertyRows] = await Promise.all([getTenants(), getAddons(), getProperties()])
       setRows(tenantRows)
       setAddons(addonRows)
+      setProperties(propertyRows)
     } catch (err) {
       setLoadError(err.message)
     } finally {
@@ -133,13 +136,15 @@ function Tenants() {
 
   // Client-side only — the full portfolio is already loaded in `rows`, so
   // there's no reason to round-trip to the backend just to filter a list
-  // that's already sitting in memory.
+  // that's already sitting in memory. Search and the property dropdown
+  // apply together (AND), not as alternatives.
   const query = search.trim().toLowerCase()
-  const visibleRows = query
-    ? rows.filter((r) =>
-        [r.full_name, r.email, r.phone].some((field) => field && field.toLowerCase().includes(query))
-      )
-    : rows
+  const visibleRows = rows
+    .filter((r) => !propertyFilter || String(r.property_id) === propertyFilter)
+    .filter(
+      (r) =>
+        !query || [r.full_name, r.email, r.phone].some((field) => field && field.toLowerCase().includes(query))
+    )
 
   return (
     <div>
@@ -166,19 +171,33 @@ function Tenants() {
         )}
 
         {rows.length > 0 && (
-          <input
-            type="text"
-            className="tenants-search"
-            placeholder="Search by name, email, or phone…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="tenants-filters">
+            <input
+              type="text"
+              className="tenants-search"
+              placeholder="Search by name, email, or phone…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <select
+              className="tenants-property-filter"
+              value={propertyFilter}
+              onChange={(e) => setPropertyFilter(e.target.value)}
+            >
+              <option value="">All properties</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
 
         {rows.length > 0 && visibleRows.length === 0 && (
           <div className="empty-state card">
             <h3>No matches</h3>
-            <p>No tenant matches "{search}".</p>
+            <p>No tenant matches the current search and filter.</p>
           </div>
         )}
 

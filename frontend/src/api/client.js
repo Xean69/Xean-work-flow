@@ -86,8 +86,8 @@ export function getTenants() {
   return request("/tenants");
 }
 
-export function getTenantAnalytics() {
-  return request("/tenants/analytics");
+export function getTenantAnalytics(propertyId) {
+  return request(propertyId ? `/tenants/analytics?property_id=${propertyId}` : "/tenants/analytics");
 }
 
 export function createTenant(data) {

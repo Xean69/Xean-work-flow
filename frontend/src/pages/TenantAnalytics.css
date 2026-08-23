@@ -10,6 +10,26 @@
   text-decoration: none;
 }
 
+.analytics-filters {
+  margin-bottom: 16px;
+}
+
+.tenants-property-filter {
+  width: 100%;
+  max-width: 220px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--ink);
+}
+.tenants-property-filter:focus {
+  outline: 2px solid var(--brass);
+  outline-offset: -1px;
+}
+
 .analytics-days-warn {
   color: var(--amber);
   font-weight: 600;

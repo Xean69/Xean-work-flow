@@ -225,16 +225,19 @@ function daysBetween(dueDate) {
 // Declared before GET /:id below so Express doesn't match "analytics" as an
 // :id first. Every tenant's ledger-wide balance (see getPortfolioBalances)
 // splits into the pending/current counts and the pending table; vacancy is
-// a separate, unrelated count straight off units.status.
+// a separate, unrelated count straight off units.status. `property_id` is an
+// optional query param (the page's property filter) — narrows every figure
+// down to one property instead of the whole portfolio.
 router.get(
   "/analytics",
   asyncHandler(async (req, res) => {
+    const propertyId = req.query.property_id ? Number(req.query.property_id) : null;
     const [balances, vacantResult] = await Promise.all([
-      getPortfolioBalances(req.businessId),
+      getPortfolioBalances(req.businessId, propertyId),
       pool.query(
         `SELECT COUNT(*) FROM units u JOIN properties p ON p.id = u.property_id
-         WHERE p.business_id = $1 AND u.status = 'vacant'`,
-        [req.businessId]
+         WHERE p.business_id = $1 AND u.status = 'vacant' AND ($2::int IS NULL OR p.id = $2)`,
+        [req.businessId, propertyId]
       ),
     ]);
 

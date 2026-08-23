@@ -167,8 +167,10 @@ export async function getBalanceDue(tenantId) {
 // Tenants & Leases analytics page, which needs every tenant's balance to
 // build its pending/current summary, not just the ones already known to owe
 // money. Also returns each tenant's oldest still-outstanding charge's
-// due_date, which is what "days owing" is measured from.
-export async function getPortfolioBalances(businessId) {
+// due_date, which is what "days owing" is measured from. `propertyId` is
+// optional — when given, narrows the whole portfolio down to one property's
+// tenants (backing the analytics page's property filter).
+export async function getPortfolioBalances(businessId, propertyId) {
   const { rows } = await pool.query(
     `SELECT
        t.id AS tenant_id,
@@ -185,9 +187,9 @@ export async function getPortfolioBalances(businessId) {
      LEFT JOIN LATERAL (
        SELECT SUM(amount) AS allocated FROM payment_allocations WHERE charge_id = c.id
      ) alloc ON true
-     WHERE t.business_id = $1
+     WHERE t.business_id = $1 AND ($2::int IS NULL OR p.id = $2)
      GROUP BY t.id, t.full_name, t.phone, u.unit_number, p.name`,
-    [businessId]
+    [businessId, propertyId ?? null]
   );
   return rows.map((r) => ({ ...r, balance_due: Math.max(0, Number(r.balance_due)) }));
 }
