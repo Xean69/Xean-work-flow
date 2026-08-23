@@ -1,6 +1,6 @@
 {
-  "name": "Xean Portal",
-  "short_name": "Xean Portal",
+  "name": "Xean Tenant",
+  "short_name": "Xean Tenant",
   "description": "Tenant portal for Xean",
   "id": "/portal/home",
   "start_url": "/portal/home",
@@ -9,9 +9,9 @@
   "background_color": "#f7f4ee",
   "theme_color": "#1b2430",
   "icons": [
-    { "src": "/pwa-64x64.png", "sizes": "64x64", "type": "image/png" },
-    { "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/maskable-icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/pwa-tenant-64x64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/pwa-tenant-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/pwa-tenant-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/maskable-icon-tenant-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

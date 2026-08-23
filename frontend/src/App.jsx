@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import PortalLayout from './portal/PortalLayout.jsx'
 import PortalLogin from './portal/pages/Login.jsx'
@@ -36,9 +37,39 @@ import Team from './pages/Team.jsx'
 import Upgrade from './pages/Upgrade.jsx'
 import TenantInspection from './pages/TenantInspection.jsx'
 
+// index.html's inline script picks the right manifest and apple-touch-icon
+// (app vs. portal) on the initial full-page load, but this is a single-page
+// app — navigating via a React Router <Link> (e.g. the landing footer's
+// "Tenant Portal" link) never reloads the document, so that one-time script
+// never runs again. Without this, a tenant who reaches /portal/login by
+// clicking through from the marketing site (rather than a direct URL/
+// bookmark) gets an installed PWA still wired to the manager's manifest and
+// icon — wrong start_url, wrong icon, wrong name. This re-applies the same
+// swap on every client-side route change so both stay correct regardless of
+// how the user got there.
+function ManifestSync() {
+  const location = useLocation()
+  useEffect(() => {
+    const isPortal = location.pathname.startsWith('/portal')
+    const manifestLink = document.getElementById('app-manifest')
+    if (manifestLink) {
+      const href = isPortal ? '/manifest-portal.webmanifest' : '/manifest-app.webmanifest'
+      if (manifestLink.getAttribute('href') !== href) manifestLink.setAttribute('href', href)
+    }
+    const touchIconLink = document.getElementById('apple-touch-icon')
+    if (touchIconLink) {
+      const href = isPortal ? '/apple-touch-icon-tenant-180x180.png' : '/apple-touch-icon-180x180.png'
+      if (touchIconLink.getAttribute('href') !== href) touchIconLink.setAttribute('href', href)
+    }
+  }, [location.pathname])
+  return null
+}
+
 function App() {
   return (
-    <Routes>
+    <>
+      <ManifestSync />
+      <Routes>
       {/* Tenant portal: entirely separate from the manager dashboard below
           — its own layout, its own auth, no shared navigation. */}
       <Route path="/portal/login" element={<PortalLogin />} />
@@ -85,7 +116,8 @@ function App() {
         <Route path="/team" element={<Team />} />
         <Route path="/upgrade" element={<Upgrade />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }
 

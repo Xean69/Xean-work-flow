@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <link rel="apple-touch-icon" id="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1b2430" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,14 +13,19 @@
     <title>Xean</title>
 
     <!-- The manager dashboard and tenant portal are two different install
-         targets (different start_url/scope so an installed icon returns to
-         the right app) sharing one SPA build — this picks the right static
-         manifest before the browser evaluates installability. Must run
-         synchronously, before body parsing, not from a React effect. -->
+         targets (different start_url/scope/icons so an installed icon
+         returns to the right app and looks distinct on the home screen)
+         sharing one SPA build — this picks the right manifest and apple-
+         touch-icon before the browser evaluates installability. Handles
+         only the initial full-page load; App.jsx's ManifestSync re-applies
+         the same swap on every client-side route change too, since an SPA
+         navigation (e.g. the landing page's "Tenant Portal" link) never
+         re-runs this script. -->
     <link rel="manifest" id="app-manifest" href="/manifest-app.webmanifest" />
     <script>
       if (location.pathname.startsWith('/portal')) {
         document.getElementById('app-manifest').href = '/manifest-portal.webmanifest'
+        document.getElementById('apple-touch-icon').href = '/apple-touch-icon-tenant-180x180.png'
       }
     </script>
   </head>
