@@ -7,7 +7,7 @@
     "edit": "تعديل",
     "delete": "حذف"
   },
-  "aiReadNote": "⚡ قراءة الذكاء الاصطناعي: {{urgency}} · {{trade}} — {{reasoning}}",
+  "aiReadNote": "⚡ تحليل الذكاء الاصطناعي: {{urgency}} · {{trade}} — {{reasoning}}",
   "aiTrade": {
     "plumbing": "سباكة",
     "electrical": "كهرباء",
@@ -15,7 +15,7 @@
     "appliance": "أجهزة منزلية",
     "structural": "إنشائي",
     "pest_control": "مكافحة الآفات",
-    "locksmith": "أقفال ومفاتيح",
+    "locksmith": "أقفال",
     "general": "عام"
   },
   "aiUrgency": {
@@ -27,7 +27,7 @@
   "attachTitle": "إرفاق صورة أو فيديو أو مستند",
   "attachmentAlt": "مرفق",
   "columns": {
-    "new": "جديد",
+    "new": "جديدة",
     "in_progress": "قيد التنفيذ",
     "resolved": "تم الحل"
   },
@@ -36,9 +36,13 @@
   "downloadAttachment": "تنزيل المرفق",
   "editTicketModalTitle": "تعديل الطلب",
   "emergency": "🚨 طارئ",
-  "emergencyNote": "🚨 صُنّف كحالة طارئة من قبل المستأجر",
+  "emergencyNote": "🚨 صنّفه المستأجر كحالة طارئة",
   "emptyNoUnitsBody": "أضف عقارًا وبعض الوحدات أولًا، ثم عد لتسجيل طلبات الصيانة.",
   "emptyNoUnitsTitle": "لا توجد وحدات بعد",
+  "entryGranted": "🔑 الدخول مسموح — {{date}}",
+  "entryNotGranted": "🔒 لا إذن بالدخول",
+  "entryNotGrantedNote": "لم يُمنح إذن الدخول — نسّق الوصول مع المستأجر بشكل منفصل.",
+  "entryPermittedNote": "الدخول مسموح — متاح {{date}}، في أي وقت بين 9 صباحًا و5 مساءً.",
   "loading": "جارٍ التحميل…",
   "newCommentTitle": "تعليق جديد",
   "newTicket": "+ طلب جديد",

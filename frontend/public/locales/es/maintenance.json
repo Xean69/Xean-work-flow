@@ -7,7 +7,7 @@
     "edit": "Editar",
     "delete": "Eliminar"
   },
-  "aiReadNote": "⚡ Lectura de IA: {{urgency}} · {{trade}} — {{reasoning}}",
+  "aiReadNote": "⚡ Lectura IA: {{urgency}} · {{trade}} — {{reasoning}}",
   "aiTrade": {
     "plumbing": "Fontanería",
     "electrical": "Electricidad",
@@ -27,26 +27,30 @@
   "attachTitle": "Adjuntar una foto, un vídeo o un documento",
   "attachmentAlt": "Adjunto",
   "columns": {
-    "new": "Nuevas",
+    "new": "Nuevos",
     "in_progress": "En curso",
-    "resolved": "Resueltas"
+    "resolved": "Resueltos"
   },
   "commentPlaceholder": "Escribe un comentario…",
   "confirmDelete": "¿Eliminar «{{title}}»?",
   "downloadAttachment": "Descargar adjunto",
-  "editTicketModalTitle": "Editar incidencia",
+  "editTicketModalTitle": "Editar ticket",
   "emergency": "🚨 Emergencia",
-  "emergencyNote": "🚨 Marcada como emergencia por el inquilino",
+  "emergencyNote": "🚨 Marcado como emergencia por el inquilino",
   "emptyNoUnitsBody": "Añade primero una propiedad y algunas unidades, y luego vuelve para registrar solicitudes de mantenimiento.",
   "emptyNoUnitsTitle": "Aún no hay unidades",
+  "entryGranted": "🔑 Entrada permitida — {{date}}",
+  "entryNotGranted": "🔒 Sin permiso de entrada",
+  "entryNotGrantedNote": "No se concedió permiso de entrada — coordina el acceso con el inquilino por separado.",
+  "entryPermittedNote": "Entrada permitida — disponible el {{date}}, en cualquier momento entre las 9:00 y las 17:00.",
   "loading": "Cargando…",
   "newCommentTitle": "Nuevo comentario",
-  "newTicket": "+ Nueva incidencia",
-  "newTicketModalTitle": "Nueva incidencia",
-  "noCommentsYet": "Aún no hay comentarios: saluda o pide una foto.",
-  "noTickets": "Sin incidencias",
+  "newTicket": "+ Nuevo ticket",
+  "newTicketModalTitle": "Nuevo ticket",
+  "noCommentsYet": "Aún no hay comentarios — saluda o pide una foto.",
+  "noTickets": "Sin tickets",
   "send": "Enviar",
   "subtitle": "Sigue y prioriza las solicitudes de toda tu cartera",
-  "ticketFallbackTitle": "Incidencia",
+  "ticketFallbackTitle": "Ticket",
   "title": "Mantenimiento"
 }

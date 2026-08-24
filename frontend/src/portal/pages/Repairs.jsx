@@ -19,6 +19,15 @@ function formatDate(value, locale) {
   return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// entry_date is a plain calendar date (no time component), unlike
+// created_at above — displaying it via the viewer's local timezone (like
+// formatDate does, correctly, for a real timestamp) could roll it back a
+// day for a viewer west of UTC. Reading it in UTC guarantees the displayed
+// day always matches the date the tenant actually picked.
+function formatEntryDate(value, locale) {
+  return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
 function formatTime(value, locale) {
   return new Date(value).toLocaleString(locale, {
     month: 'short',
@@ -60,6 +69,8 @@ function Repairs() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('medium')
+  const [entryPermission, setEntryPermission] = useState('')
+  const [entryDate, setEntryDate] = useState('')
   const [reportFile, setReportFile] = useState(null)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -101,11 +112,15 @@ function Repairs() {
       formData.append('title', title)
       if (description) formData.append('description', description)
       formData.append('priority', priority)
+      formData.append('entry_permission', entryPermission)
+      if (entryPermission === 'yes') formData.append('entry_date', entryDate)
       if (reportFile) formData.append('attachment', reportFile)
       const created = await createPortalMaintenance(formData)
       setTitle('')
       setDescription('')
       setPriority('medium')
+      setEntryPermission('')
+      setEntryDate('')
       setReportFile(null)
       setShowForm(false)
       await load()
@@ -230,6 +245,39 @@ function Repairs() {
             </div>
 
             <div className="portal-field">
+              <label htmlFor="entry-permission">{t('entryPermissionQuestion')}</label>
+              <select
+                id="entry-permission"
+                value={entryPermission}
+                onChange={(e) => {
+                  setEntryPermission(e.target.value)
+                  if (e.target.value !== 'yes') setEntryDate('')
+                }}
+                required
+              >
+                <option value="" disabled>
+                  {t('entryPermissionChoose')}
+                </option>
+                <option value="yes">{t('entryPermissionYes')}</option>
+                <option value="no">{t('entryPermissionNo')}</option>
+              </select>
+            </div>
+
+            {entryPermission === 'yes' && (
+              <div className="portal-field">
+                <label htmlFor="entry-date">{t('entryDateLabel')}</label>
+                <input
+                  id="entry-date"
+                  type="date"
+                  value={entryDate}
+                  onChange={(e) => setEntryDate(e.target.value)}
+                  required
+                />
+                <span style={{ fontSize: 12, color: 'var(--slate)' }}>{t('entryWindowNote')}</span>
+              </div>
+            )}
+
+            <div className="portal-field">
               <label htmlFor="attachment">{t('photoOrVideoOptional')}</label>
               <input
                 id="attachment"
@@ -293,6 +341,13 @@ function Repairs() {
               </div>
             </div>
             {r.is_emergency && <div className="portal-emergency-tag">{t('emergency')}</div>}
+            {r.entry_permission != null && (
+              <div className={'portal-entry-tag ' + (r.entry_permission ? 'portal-entry-tag-granted' : 'portal-entry-tag-denied')}>
+                {r.entry_permission
+                  ? t('entryGranted', { date: formatEntryDate(r.entry_date, i18n.language) })
+                  : t('entryNotGranted')}
+              </div>
+            )}
             {r.description && <p style={{ marginTop: 6 }}>{r.description}</p>}
             {r.ai_classification_status === 'success' && (
               <div className="portal-ai-tag">

@@ -448,15 +448,28 @@ export function parseExpenseBody(body) {
 // Used only by the tenant portal's "report an issue" form — unit_id,
 // tenant_id, and status are never taken from the request; they're derived
 // server-side from the logged-in tenant's session.
+//
+// entry_permission is required on every report, independent of the
+// separate mid-conversation "flag as emergency" action, which never goes
+// through this parser at all. entry_date is only meaningful (and only
+// required) when permission is granted — forced to null otherwise so the
+// two can never end up disagreeing, regardless of what a client sends.
 export function parsePortalRepairBody(body) {
   const priority = body.priority === undefined ? "medium" : body.priority;
   if (!MAINTENANCE_PRIORITIES.includes(priority)) {
     throw new ApiError(400, `priority must be one of: ${MAINTENANCE_PRIORITIES.join(", ")}`);
   }
+  if (body.entry_permission !== "yes" && body.entry_permission !== "no") {
+    throw new ApiError(400, "entry_permission must be 'yes' or 'no'");
+  }
+  const entryPermission = body.entry_permission === "yes";
+  const entryDate = entryPermission ? requireString(body.entry_date, "entry_date") : null;
   return {
     title: requireString(body.title, "title"),
     description: optionalString(body.description),
     priority,
+    entryPermission,
+    entryDate,
   };
 }
 

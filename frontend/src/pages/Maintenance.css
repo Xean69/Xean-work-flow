@@ -111,6 +111,28 @@
   color: var(--red);
 }
 
+.ticket-entry-tag-granted,
+.ticket-entry-tag-denied {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.ticket-entry-tag-granted {
+  background: var(--green-bg);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+.ticket-entry-tag-denied {
+  background: var(--amber-bg);
+  border: 1px solid var(--amber);
+  color: var(--amber);
+}
+
 .ticket-thread-emergency-note {
   font-size: 12.5px;
   font-weight: 600;
@@ -120,6 +142,25 @@
   border-radius: 8px;
   padding: 8px 10px;
   margin-bottom: 10px;
+}
+
+.ticket-thread-entry-note-granted,
+.ticket-thread-entry-note-denied {
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.ticket-thread-entry-note-granted {
+  color: var(--green);
+  background: var(--green-bg);
+  border: 1px solid var(--green);
+}
+.ticket-thread-entry-note-denied {
+  color: var(--amber);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber);
 }
 
 .ticket-title-link {

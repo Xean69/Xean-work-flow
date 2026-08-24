@@ -249,7 +249,7 @@ async function classifyAndPromote(ticketId, { businessId, propertyName, unitNumb
     `UPDATE maintenance_requests
      SET status = 'new', ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
      WHERE id = $5
-     RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency`,
+     RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency, entry_permission, entry_date::text AS entry_date`,
     [result.urgency, result.trade, result.reasoning, result.status, ticketId]
   );
 
@@ -275,6 +275,7 @@ router.get(
       `SELECT
          m.id, m.title, m.description, m.status, m.priority, m.created_at, m.resolved_at,
          m.ai_urgency, m.ai_trade, m.ai_reasoning, m.ai_classification_status, m.is_emergency,
+         m.entry_permission, m.entry_date::text AS entry_date,
          EXISTS (
            SELECT 1 FROM maintenance_comments c
            WHERE c.request_id = m.id
@@ -320,10 +321,20 @@ router.post(
     // tenant flags an emergency (see generatePendingChatReply and the
     // /emergency route below).
     const { rows } = await pool.query(
-      `INSERT INTO maintenance_requests (business_id, unit_id, tenant_id, title, description, status, priority)
-       VALUES ($1, $2, $3, $4, $5, 'pending', $6)
-       RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency`,
-      [unitRows[0]?.business_id, tenantRows[0].unit_id, req.tenantId, data.title, data.description, data.priority]
+      `INSERT INTO maintenance_requests
+         (business_id, unit_id, tenant_id, title, description, status, priority, entry_permission, entry_date)
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8)
+       RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency, entry_permission, entry_date::text AS entry_date`,
+      [
+        unitRows[0]?.business_id,
+        tenantRows[0].unit_id,
+        req.tenantId,
+        data.title,
+        data.description,
+        data.priority,
+        data.entryPermission,
+        data.entryDate,
+      ]
     );
     let ticket = rows[0];
 
@@ -395,7 +406,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id, title, description, status, priority, created_at, resolved_at,
-              ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency
+              ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency,
+              entry_permission, entry_date::text AS entry_date
        FROM maintenance_requests
        WHERE id = $1 AND tenant_id = $2`,
       [req.params.id, req.tenantId]

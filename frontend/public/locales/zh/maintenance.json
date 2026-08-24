@@ -15,12 +15,12 @@
     "appliance": "家电",
     "structural": "结构",
     "pest_control": "除虫",
-    "locksmith": "锁具",
+    "locksmith": "开锁",
     "general": "综合"
   },
   "aiUrgency": {
     "high": "紧急",
-    "medium": "一般",
+    "medium": "中等",
     "low": "常规"
   },
   "assistant": "助手",
@@ -32,13 +32,17 @@
     "resolved": "已解决"
   },
   "commentPlaceholder": "输入评论…",
-  "confirmDelete": "删除“{{title}}”？",
+  "confirmDelete": "确定删除“{{title}}”？",
   "downloadAttachment": "下载附件",
   "editTicketModalTitle": "编辑工单",
   "emergency": "🚨 紧急",
-  "emergencyNote": "🚨 租户标记为紧急情况",
-  "emptyNoUnitsBody": "请先添加房产和房源，再回来登记维修请求。",
-  "emptyNoUnitsTitle": "暂无房源",
+  "emergencyNote": "🚨 租客标记为紧急情况",
+  "emptyNoUnitsBody": "请先添加房产和房间，再回来登记维修请求。",
+  "emptyNoUnitsTitle": "暂无房间",
+  "entryGranted": "🔑 可入内 — {{date}}",
+  "entryNotGranted": "🔒 未授权入内",
+  "entryNotGrantedNote": "未授权入内 — 请另行与租客协调进入时间。",
+  "entryPermittedNote": "允许入内 — {{date}} 可上门，上午9点至下午5点之间均可。",
   "loading": "加载中…",
   "newCommentTitle": "新评论",
   "newTicket": "+ 新建工单",
@@ -46,7 +50,7 @@
   "noCommentsYet": "暂无评论 — 打个招呼，或索取照片。",
   "noTickets": "暂无工单",
   "send": "发送",
-  "subtitle": "跟踪并分类处理全部房产的维修请求",
+  "subtitle": "跟踪并分派名下所有房产的维修请求",
   "ticketFallbackTitle": "工单",
   "title": "维修"
 }

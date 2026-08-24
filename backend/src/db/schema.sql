@@ -864,3 +864,27 @@ BEGIN
       CHECK (language IN ('en', 'es', 'fr', 'pt', 'zh', 'ar'));
   END IF;
 END $$;
+
+-- ============================================================================
+-- Entry permission on repair reports
+--
+-- Asked once, at report time, in the tenant portal's "Report an issue" form
+-- — entirely separate from the mid-conversation "flag as emergency" action,
+-- which never touches these columns. NULL means "not asked" (every ticket
+-- created before this shipped), distinct from an explicit "no". entry_date
+-- is only ever meaningful alongside entry_permission = true; the CHECK
+-- keeps the two from ever disagreeing, regardless of what a client sends.
+-- ============================================================================
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS entry_permission BOOLEAN;
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS entry_date DATE;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_requests_entry_date_check') THEN
+    ALTER TABLE maintenance_requests ADD CONSTRAINT maintenance_requests_entry_date_check
+      CHECK (
+        (entry_permission IS true AND entry_date IS NOT NULL) OR
+        (entry_permission IS NOT true AND entry_date IS NULL)
+      );
+  END IF;
+END $$;

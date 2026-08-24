@@ -40,6 +40,15 @@ function formatTime(value, locale) {
   })
 }
 
+// entry_date is a plain calendar date (no time component) — pg returns it
+// as a UTC-midnight Date, so formatting with the viewer's local timezone
+// (like formatTime above, correctly, for real timestamps) could roll it
+// back a day in a negative-UTC-offset timezone. Reading it in UTC instead
+// guarantees the displayed day always matches the date actually stored.
+function formatEntryDate(value, locale) {
+  return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
 const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.pdf,.mp4,.mov,.webm'
 
 // resource_type comes straight from Cloudinary ('image', 'video', or 'raw'
@@ -222,6 +231,13 @@ function Maintenance() {
                         {t.tenant_name ? ` · ${t.tenant_name}` : ''}
                       </div>
                       {t.is_emergency && <div className="ticket-emergency-tag">{tr('emergency')}</div>}
+                      {t.entry_permission != null && (
+                        <div className={t.entry_permission ? 'ticket-entry-tag-granted' : 'ticket-entry-tag-denied'}>
+                          {t.entry_permission
+                            ? tr('entryGranted', { date: formatEntryDate(t.entry_date, i18n.language) })
+                            : tr('entryNotGranted')}
+                        </div>
+                      )}
                       <AiTag ticket={t} />
 
                       <div className="ticket-actions">
@@ -286,6 +302,13 @@ function Maintenance() {
               </p>
               {threadData.description && <p className="ticket-thread-description">{threadData.description}</p>}
               {threadData.is_emergency && <p className="ticket-thread-emergency-note">{tr('emergencyNote')}</p>}
+              {threadData.entry_permission != null && (
+                <p className={threadData.entry_permission ? 'ticket-thread-entry-note-granted' : 'ticket-thread-entry-note-denied'}>
+                  {threadData.entry_permission
+                    ? tr('entryPermittedNote', { date: formatEntryDate(threadData.entry_date, i18n.language) })
+                    : tr('entryNotGrantedNote')}
+                </p>
+              )}
               {threadData.ai_classification_status === 'success' && (
                 <p className="ticket-thread-ai-note">
                   {tr('aiReadNote', {

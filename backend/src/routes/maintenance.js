@@ -46,7 +46,15 @@ router.get(
            WHERE c.request_id = m.id
              AND c.sender IN ('tenant', 'ai')
              AND c.created_at > COALESCE(m.manager_last_read_at, '-infinity'::timestamptz)
-         ) AS unread_by_manager
+         ) AS unread_by_manager,
+         -- Overrides m.*'s entry_date (last column with a given name wins in
+         -- node-pg's row-to-object mapping) — DATE columns carry no
+         -- timezone, but node-pg's default parser reads them as local
+         -- midnight in the server's own timezone, which can serialize to a
+         -- different UTC calendar day. Casting to text sidesteps that
+         -- entirely instead of depending on what timezone the server
+         -- happens to run in.
+         m.entry_date::text AS entry_date
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
@@ -144,7 +152,8 @@ router.get(
          u.unit_number,
          p.id AS property_id,
          p.name AS property_name,
-         t.full_name AS tenant_name
+         t.full_name AS tenant_name,
+         m.entry_date::text AS entry_date
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
