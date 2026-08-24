@@ -74,6 +74,36 @@
   cursor: default;
 }
 
+.nav-item-group {
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: start;
+}
+
+.nav-chevron {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: auto;
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.nav-chevron-open {
+  transform: rotate(90deg);
+}
+
+.nav-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-subitem {
+  padding-inline-start: 39px;
+  font-size: 13px;
+}
+
 .nav-badge {
   margin-inline-start: auto;
   background: var(--red);

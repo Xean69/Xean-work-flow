@@ -16,6 +16,7 @@ export const ROUTE_ROLES = {
   '/expenses': ['owner', 'manager', 'accountant'],
   '/compliance': ['owner', 'manager'],
   '/voice': ['owner', 'manager'],
+  '/intercom': ['owner', 'manager'],
   '/licensing': ['owner', 'manager'],
   '/statements': ['owner', 'manager', 'accountant'],
   '/insights': ['owner', 'manager'],

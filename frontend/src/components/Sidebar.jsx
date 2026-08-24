@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ROUTE_ROLES, ROLE_LABELS } from '../utils/permissions.js'
 import './Sidebar.css'
@@ -107,14 +108,17 @@ const aiToolsNav = [
     ),
   },
   {
-    to: '/voice',
-    labelKey: 'nav.voice',
+    labelKey: 'nav.telecom',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="9" y="2" width="6" height="12" rx="3" />
         <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
       </svg>
     ),
+    children: [
+      { to: '/voice', labelKey: 'nav.voice' },
+      { to: '/intercom', labelKey: 'nav.intercom' },
+    ],
   },
   {
     to: '/licensing',
@@ -175,10 +179,56 @@ const languageNav = {
 // Every nav item's visibility is driven by the same ROUTE_ROLES map the
 // backend's role checks mirror — so a role that can't reach a page never
 // even sees a link to it, instead of clicking through to a redirect.
-function NavItems({ items, role, t }) {
-  return items
-    .filter((item) => ROUTE_ROLES[item.to]?.includes(role))
-    .map((item) => (
+//
+// An item with `children` instead of `to` is an expandable group (e.g.
+// Telecom) rather than a link — it renders as a toggle button, and each
+// child goes through the exact same role filter individually, so the
+// group only shows up at all once at least one child is visible.
+function NavItems({ items, role, t, openGroups, onToggleGroup }) {
+  return items.map((item) => {
+    if (item.children) {
+      const visibleChildren = item.children.filter((child) => ROUTE_ROLES[child.to]?.includes(role))
+      if (visibleChildren.length === 0) return null
+      const isOpen = openGroups.has(item.labelKey)
+      return (
+        <div key={item.labelKey}>
+          <button
+            type="button"
+            className="nav-item nav-item-group"
+            onClick={() => onToggleGroup(item.labelKey)}
+            aria-expanded={isOpen}
+          >
+            {item.icon}
+            {t(item.labelKey)}
+            <svg
+              className={'nav-chevron' + (isOpen ? ' nav-chevron-open' : '')}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </button>
+          {isOpen && (
+            <div className="nav-subgroup">
+              {visibleChildren.map((child) => (
+                <NavLink
+                  key={child.to}
+                  to={child.to}
+                  className={({ isActive }) => 'nav-item nav-subitem' + (isActive ? ' active' : '')}
+                >
+                  {t(child.labelKey)}
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (!ROUTE_ROLES[item.to]?.includes(role)) return null
+    return (
       <NavLink
         key={item.to}
         to={item.to}
@@ -189,12 +239,35 @@ function NavItems({ items, role, t }) {
         {t(item.labelKey)}
         {item.badge != null && <span className="nav-badge">{item.badge}</span>}
       </NavLink>
-    ))
+    )
+  })
 }
 
 function Sidebar({ admin, onLogout, open }) {
   const role = admin?.role
   const { t } = useTranslation('common')
+  const location = useLocation()
+  const [openGroups, setOpenGroups] = useState(() => new Set())
+
+  // Auto-expand a group the first time one of its children becomes the
+  // active route — covers a direct link/bookmark to e.g. /intercom landing
+  // with the group already open. Only adds to the set, never removes, so
+  // it doesn't fight a manual collapse on an unrelated navigation.
+  useEffect(() => {
+    const activeGroup = aiToolsNav.find((item) =>
+      item.children?.some((child) => location.pathname.startsWith(child.to))
+    )
+    if (activeGroup) setOpenGroups((prev) => new Set(prev).add(activeGroup.labelKey))
+  }, [location.pathname])
+
+  function toggleGroup(key) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   return (
     <aside className={'sidebar' + (open ? ' sidebar-open' : '')}>
@@ -206,14 +279,14 @@ function Sidebar({ admin, onLogout, open }) {
       </div>
 
       <nav>
-        <NavItems items={mainNav} role={role} t={t} />
+        <NavItems items={mainNav} role={role} t={t} openGroups={openGroups} onToggleGroup={toggleGroup} />
 
         <div className="nav-section-label">{t('nav.aiTools')}</div>
-        <NavItems items={aiToolsNav} role={role} t={t} />
+        <NavItems items={aiToolsNav} role={role} t={t} openGroups={openGroups} onToggleGroup={toggleGroup} />
 
         <div className="nav-section-label">{t('nav.workspace')}</div>
-        {role === 'owner' && <NavItems items={[teamNav]} role={role} t={t} />}
-        <NavItems items={[languageNav]} role={role} t={t} />
+        {role === 'owner' && <NavItems items={[teamNav]} role={role} t={t} openGroups={openGroups} onToggleGroup={toggleGroup} />}
+        <NavItems items={[languageNav]} role={role} t={t} openGroups={openGroups} onToggleGroup={toggleGroup} />
         <div className="nav-item nav-item-inert">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3.2" />

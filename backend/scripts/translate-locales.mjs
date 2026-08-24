@@ -159,8 +159,13 @@ Rules:
 
 async function main() {
   const targetLang = process.argv[2];
+  // Optional — regenerate just one namespace (e.g. after editing a single
+  // English source file) instead of every namespace for the language.
+  // Useful for keeping unrelated files from picking up harmless re-roll
+  // drift on a rerun; omit it to do the full set, same as before.
+  const onlyNamespace = process.argv[3];
   if (!targetLang || !LANGUAGE_NAMES[targetLang]) {
-    console.error(`Usage: node scripts/translate-locales.mjs <langCode>`);
+    console.error(`Usage: node scripts/translate-locales.mjs <langCode> [namespace]`);
     console.error(`  langCode must be one of: ${Object.keys(LANGUAGE_NAMES).join(", ")}`);
     process.exit(1);
   }
@@ -170,7 +175,9 @@ async function main() {
     const targetDir = path.join(localeDir, targetLang);
     mkdirSync(targetDir, { recursive: true });
 
-    const files = readdirSync(enDir).filter((f) => f.endsWith(".json"));
+    const files = readdirSync(enDir)
+      .filter((f) => f.endsWith(".json"))
+      .filter((f) => !onlyNamespace || f === `${onlyNamespace}.json`);
     for (const file of files) {
       const namespaceName = file.replace(/\.json$/, "");
       const englishContent = JSON.parse(readFileSync(path.join(enDir, file), "utf8"));

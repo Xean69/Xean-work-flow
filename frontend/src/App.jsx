@@ -32,6 +32,7 @@ import Inbox from './pages/Inbox.jsx'
 import Expenses from './pages/Expenses.jsx'
 import Compliance from './pages/Compliance.jsx'
 import VoiceCalls from './pages/VoiceCalls.jsx'
+import Intercom from './pages/Intercom.jsx'
 import STRLicensing from './pages/STRLicensing.jsx'
 import OwnerStatements from './pages/OwnerStatements.jsx'
 import Insights from './pages/Insights.jsx'
@@ -115,6 +116,7 @@ function App() {
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/compliance" element={<Compliance />} />
         <Route path="/voice" element={<VoiceCalls />} />
+        <Route path="/intercom" element={<Intercom />} />
         <Route path="/licensing" element={<STRLicensing />} />
         <Route path="/statements" element={<OwnerStatements />} />
         <Route path="/insights" element={<Insights />} />

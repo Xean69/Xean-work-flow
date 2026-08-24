@@ -28,7 +28,7 @@ function VoiceCalls() {
   return (
     <div>
       <PageHeader
-        title="Voice Calls"
+        title="Voice"
         subtitle="Tenants can call in a maintenance issue — it's transcribed and triaged automatically"
       >
         <button className="btn btn-ghost">Call line settings</button>
