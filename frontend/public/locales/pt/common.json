@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "dashboard": "Painel",
+    "properties": "Imóveis",
+    "tenants": "Inquilinos e Contratos",
+    "stays": "Estadias de Hóspedes",
+    "maintenance": "Manutenção",
+    "documents": "Documentos",
+    "inbox": "Caixa de entrada",
+    "expenses": "Despesas",
+    "compliance": "Conformidade",
+    "voice": "Chamadas de voz",
+    "licensing": "Licenciamento AL",
+    "statements": "Extratos do Proprietário",
+    "insights": "Análises",
+    "team": "Equipa",
+    "language": "Idioma",
+    "aiTools": "Ferramentas de IA",
+    "workspace": "Espaço de trabalho",
+    "settings": "Definições",
+    "tenantPortal": "Portal do Inquilino",
+    "logout": "Terminar sessão"
+  }
+}

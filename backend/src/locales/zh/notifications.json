@@ -1,0 +1,35 @@
+{
+  "defaultTenantName": "您好",
+  "docType": {
+    "lease": "租约",
+    "invoice": "账单",
+    "inspection": "检查报告",
+    "application": "申请表",
+    "other": "文件"
+  },
+  "maintenanceReply": {
+    "subject": "“{{ticketTitle}}”有新回复",
+    "heading": "物业经理已回复",
+    "body": "{{tenantName}}，您好，“{{ticketTitle}}”有新回复：",
+    "cta": "前往维修查看"
+  },
+  "newDocument": {
+    "subject": "账户中新增{{docTypeLabel}}",
+    "heading": "新{{docTypeLabel}}",
+    "body": "{{tenantName}}，您好，物业经理向您的账户添加了一份新文件：",
+    "cta": "前往门户查看"
+  },
+  "newMessage": {
+    "subject": "物业经理发来新消息",
+    "heading": "新消息",
+    "body": "{{tenantName}}，您好，物业经理给您发来一条消息：",
+    "cta": "前往消息查看"
+  },
+  "passwordReset": {
+    "subject": "重置租户门户密码",
+    "heading": "重置密码",
+    "line1": "我们收到了重置您租户门户密码的请求。",
+    "line2": "该链接1小时后失效，且仅可使用一次。若非本人操作，请忽略此邮件。",
+    "cta": "重置密码"
+  }
+}

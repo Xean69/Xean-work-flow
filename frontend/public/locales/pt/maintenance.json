@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "start": "Iniciar →",
+    "backToNew": "← Novo",
+    "resolve": "Resolver ✓",
+    "reopen": "↺ Reabrir",
+    "edit": "Editar",
+    "delete": "Excluir"
+  },
+  "aiReadNote": "⚡ Leitura da IA: {{urgency}} · {{trade}} — {{reasoning}}",
+  "aiTrade": {
+    "appliance": "Eletrodomésticos",
+    "electrical": "Elétrica",
+    "general": "Geral",
+    "hvac": "Climatização",
+    "locksmith": "Chaveiro",
+    "pest_control": "Controle de pragas",
+    "plumbing": "Hidráulica",
+    "structural": "Estrutural"
+  },
+  "aiUrgency": {
+    "high": "Urgente",
+    "medium": "Moderada",
+    "low": "Rotina"
+  },
+  "assistant": "Assistente",
+  "attachTitle": "Anexar foto, vídeo ou documento",
+  "attachmentAlt": "Anexo",
+  "columns": {
+    "in_progress": "Em andamento",
+    "new": "Novos",
+    "resolved": "Resolvidos"
+  },
+  "commentPlaceholder": "Escreva um comentário…",
+  "confirmDelete": "Excluir \"{{title}}\"?",
+  "downloadAttachment": "Baixar anexo",
+  "editTicketModalTitle": "Editar chamado",
+  "emergency": "🚨 Emergência",
+  "emergencyNote": "🚨 Marcado como emergência pelo inquilino",
+  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas unidades, depois volte para registrar solicitações de manutenção.",
+  "emptyNoUnitsTitle": "Nenhuma unidade ainda",
+  "loading": "Carregando…",
+  "newCommentTitle": "Novo comentário",
+  "newTicket": "+ Novo chamado",
+  "newTicketModalTitle": "Novo chamado",
+  "noCommentsYet": "Nenhum comentário ainda — diga olá ou peça uma foto.",
+  "noTickets": "Nenhum chamado",
+  "send": "Enviar",
+  "subtitle": "Acompanhe e triagem de solicitações em todo o seu portfólio",
+  "ticketFallbackTitle": "Chamado",
+  "title": "Manutenção"
+}

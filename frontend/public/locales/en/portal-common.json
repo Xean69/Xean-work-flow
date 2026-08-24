@@ -1,0 +1,11 @@
+{
+  "nav": {
+    "home": "Home",
+    "repairs": "Repairs",
+    "messages": "Messages",
+    "addons": "Add-ons",
+    "lease": "Lease",
+    "language": "Language"
+  },
+  "logout": "Log out"
+}

@@ -3,7 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireAdminAuth } from "../utils/auth.js";
-import { parseSignupBody, parseForgotPasswordBody, parseAdminResetPasswordBody } from "../utils/validate.js";
+import { parseSignupBody, parseForgotPasswordBody, parseAdminResetPasswordBody, parseLanguageBody } from "../utils/validate.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { sendAdminPasswordResetEmail } from "../services/email.js";
 import { computeTrialStatus } from "../utils/trial.js";
@@ -116,7 +116,7 @@ router.get(
   requireAdminAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.role, a.business_id, b.business_name, b.created_at AS trial_started_at
+      `SELECT a.id, a.email, a.role, a.language, a.business_id, b.business_name, b.created_at AS trial_started_at
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,
@@ -124,6 +124,22 @@ router.get(
     );
     if (!rows[0]) throw new ApiError(404, "Admin not found");
     res.json({ ...rows[0], trial_status: computeTrialStatus(rows[0].trial_started_at) });
+  })
+);
+
+// Only the account's own language, never someone else's — req.adminId
+// (from the session) is both the target and the auth check, same shape as
+// every other self-service "update my own account" route.
+router.patch(
+  "/me/language",
+  requireAdminAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseLanguageBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE admins SET language = $1 WHERE id = $2 RETURNING id, language",
+      [data.language, req.adminId]
+    );
+    res.json(rows[0]);
   })
 );
 

@@ -41,6 +41,10 @@ export function getMe() {
   return request("/me");
 }
 
+export function updateTenantLanguage(language) {
+  return request("/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
+}
+
 export function getPortalDocuments() {
   return request("/documents");
 }

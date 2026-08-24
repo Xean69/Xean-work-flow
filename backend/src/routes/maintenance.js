@@ -90,7 +90,7 @@ router.post(
     // A ticket added directly on the dashboard still notifies the other
     // managers/owner on the team — not just the one who created it.
     const { rows: contextRows } = await pool.query(
-      `SELECT p.name AS property_name, u.unit_number, t.full_name AS tenant_name
+      `SELECT p.name AS property_name, u.unit_number, t.full_name AS tenant_name, t.language AS tenant_language
        FROM units u
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN tenants t ON t.id = $2
@@ -117,6 +117,7 @@ router.post(
         trade: result.trade,
         urgency: result.urgency,
         comments: [],
+        language: contextRows[0]?.tenant_language,
       });
       if (firstReply) {
         await pool.query(
@@ -174,7 +175,7 @@ router.post(
     if (req.file) assertChatAttachmentSizeOk(req.file);
     const data = parseMessageBody(req.body, { requireBody: !req.file });
     const { rows: ticketRows } = await pool.query(
-      `SELECT m.id, m.title, t.email AS tenant_email, t.full_name AS tenant_name
+      `SELECT m.id, m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
        FROM maintenance_requests m
        LEFT JOIN tenants t ON t.id = m.tenant_id
        WHERE m.id = $1 AND m.business_id = $2`,
@@ -220,6 +221,7 @@ router.post(
       tenantName: ticketRows[0].tenant_name,
       ticketTitle: ticketRows[0].title,
       commentBody: data.body || "(sent an attachment)",
+      language: ticketRows[0].tenant_language,
     });
 
     res.status(201).json(rows[0]);

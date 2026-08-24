@@ -5,6 +5,7 @@ import TrialBanner from './TrialBanner.jsx'
 import OfflineBanner from './OfflineBanner.jsx'
 import { getMe, logout } from '../api/client.js'
 import { canAccessPath, defaultRouteForRole } from '../utils/permissions.js'
+import { applyLanguage, ADMIN_LANG_KEY } from '../i18n/sync.js'
 import './Layout.css'
 
 // Guards every dashboard route: fetches the logged-in admin once here (not
@@ -40,6 +41,13 @@ function Layout() {
       navigate(defaultRouteForRole(admin.role), { replace: true })
     }
   }, [admin, location.pathname])
+
+  // Reconciles the pre-paint cached guess (see main.jsx) with the account's
+  // real language once it's known, and re-applies it any time it changes
+  // (e.g. right after picking a new one on the Language page).
+  useEffect(() => {
+    if (admin) applyLanguage(admin.language, ADMIN_LANG_KEY)
+  }, [admin?.language])
 
   // Close the mobile drawer on every navigation — otherwise it stays open
   // over the page you just picked.
@@ -82,7 +90,7 @@ function Layout() {
             Xean
           </div>
         </div>
-        {allowed && <Outlet context={{ admin }} />}
+        {allowed && <Outlet context={{ admin, refreshAdmin: () => getMe().then(setAdmin) }} />}
       </div>
     </div>
   )

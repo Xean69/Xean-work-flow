@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ROUTE_ROLES, ROLE_LABELS } from '../utils/permissions.js'
 import './Sidebar.css'
 
 const mainNav = [
   {
     to: '/dashboard',
-    label: 'Dashboard',
+    labelKey: 'nav.dashboard',
     end: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -18,7 +19,7 @@ const mainNav = [
   },
   {
     to: '/properties',
-    label: 'Properties',
+    labelKey: 'nav.properties',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M3 10.5 12 3l9 7.5" />
@@ -28,7 +29,7 @@ const mainNav = [
   },
   {
     to: '/tenants',
-    label: 'Tenants & Leases',
+    labelKey: 'nav.tenants',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <circle cx="9" cy="8" r="3.2" />
@@ -40,7 +41,7 @@ const mainNav = [
   },
   {
     to: '/stays',
-    label: 'Guest Stays',
+    labelKey: 'nav.stays',
     badge: 3,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -52,7 +53,7 @@ const mainNav = [
   },
   {
     to: '/maintenance',
-    label: 'Maintenance',
+    labelKey: 'nav.maintenance',
     badge: 5,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -62,7 +63,7 @@ const mainNav = [
   },
   {
     to: '/documents',
-    label: 'Documents',
+    labelKey: 'nav.documents',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
@@ -75,7 +76,7 @@ const mainNav = [
 const aiToolsNav = [
   {
     to: '/inbox',
-    label: 'Inbox',
+    labelKey: 'nav.inbox',
     badge: 4,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -86,7 +87,7 @@ const aiToolsNav = [
   },
   {
     to: '/expenses',
-    label: 'Expenses',
+    labelKey: 'nav.expenses',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="6" width="18" height="13" rx="2" />
@@ -97,7 +98,7 @@ const aiToolsNav = [
   },
   {
     to: '/compliance',
-    label: 'Compliance',
+    labelKey: 'nav.compliance',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M9 12l2 2 4-4" />
@@ -107,7 +108,7 @@ const aiToolsNav = [
   },
   {
     to: '/voice',
-    label: 'Voice Calls',
+    labelKey: 'nav.voice',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="9" y="2" width="6" height="12" rx="3" />
@@ -117,7 +118,7 @@ const aiToolsNav = [
   },
   {
     to: '/licensing',
-    label: 'STR Licensing',
+    labelKey: 'nav.licensing',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -127,7 +128,7 @@ const aiToolsNav = [
   },
   {
     to: '/statements',
-    label: 'Owner Statements',
+    labelKey: 'nav.statements',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
@@ -137,7 +138,7 @@ const aiToolsNav = [
   },
   {
     to: '/insights',
-    label: 'Insights',
+    labelKey: 'nav.insights',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
@@ -149,7 +150,7 @@ const aiToolsNav = [
 
 const teamNav = {
   to: '/team',
-  label: 'Team',
+  labelKey: 'nav.team',
   icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="9" cy="8" r="3.2" />
@@ -160,10 +161,21 @@ const teamNav = {
   ),
 }
 
+const languageNav = {
+  to: '/language',
+  labelKey: 'nav.language',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </svg>
+  ),
+}
+
 // Every nav item's visibility is driven by the same ROUTE_ROLES map the
 // backend's role checks mirror — so a role that can't reach a page never
 // even sees a link to it, instead of clicking through to a redirect.
-function NavItems({ items, role }) {
+function NavItems({ items, role, t }) {
   return items
     .filter((item) => ROUTE_ROLES[item.to]?.includes(role))
     .map((item) => (
@@ -174,7 +186,7 @@ function NavItems({ items, role }) {
         className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
       >
         {item.icon}
-        {item.label}
+        {t(item.labelKey)}
         {item.badge != null && <span className="nav-badge">{item.badge}</span>}
       </NavLink>
     ))
@@ -182,6 +194,7 @@ function NavItems({ items, role }) {
 
 function Sidebar({ admin, onLogout, open }) {
   const role = admin?.role
+  const { t } = useTranslation('common')
 
   return (
     <aside className={'sidebar' + (open ? ' sidebar-open' : '')}>
@@ -193,19 +206,20 @@ function Sidebar({ admin, onLogout, open }) {
       </div>
 
       <nav>
-        <NavItems items={mainNav} role={role} />
+        <NavItems items={mainNav} role={role} t={t} />
 
-        <div className="nav-section-label">AI Tools</div>
-        <NavItems items={aiToolsNav} role={role} />
+        <div className="nav-section-label">{t('nav.aiTools')}</div>
+        <NavItems items={aiToolsNav} role={role} t={t} />
 
-        <div className="nav-section-label">Workspace</div>
-        {role === 'owner' && <NavItems items={[teamNav]} role={role} />}
+        <div className="nav-section-label">{t('nav.workspace')}</div>
+        {role === 'owner' && <NavItems items={[teamNav]} role={role} t={t} />}
+        <NavItems items={[languageNav]} role={role} t={t} />
         <div className="nav-item nav-item-inert">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3.2" />
             <path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 8.2 4.3l.1.1a1.7 1.7 0 0 0 1.9.3H10.3a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9V9.5a1.7 1.7 0 0 0 1.6 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z" />
           </svg>
-          Settings
+          {t('nav.settings')}
         </div>
 
         {/* Opens the tenant-facing login in a new tab — a quick jump-off point
@@ -216,7 +230,7 @@ function Sidebar({ admin, onLogout, open }) {
             <path d="M15 3h6v6" />
             <path d="M10 14 21 3" />
           </svg>
-          Tenant Portal ↗
+          {t('nav.tenantPortal')} ↗
         </a>
       </nav>
 
@@ -229,7 +243,7 @@ function Sidebar({ admin, onLogout, open }) {
           <div className="sidebar-email">{admin?.email ?? ''}</div>
           {role && <span className="sidebar-role-badge">{ROLE_LABELS[role]}</span>}
         </div>
-        <button type="button" className="sidebar-logout" onClick={onLogout} title="Log out">
+        <button type="button" className="sidebar-logout" onClick={onLogout} title={t('nav.logout')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <path d="M16 17l5-5-5-5" />

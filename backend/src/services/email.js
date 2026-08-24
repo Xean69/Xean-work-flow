@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import pool from "../db.js";
+import { tr } from "../i18n/notifications.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -149,16 +150,17 @@ export async function notifyManagersOfTenantMessage({ businessId, tenantName, me
   }
 }
 
-export async function notifyTenantOfMaintenanceReply({ tenantEmail, tenantName, ticketTitle, commentBody }) {
+export async function notifyTenantOfMaintenanceReply({ tenantEmail, tenantName, ticketTitle, commentBody, language }) {
   try {
     if (!tenantEmail) return; // no portal login / no email on file — nothing to send
+    const name = tenantName || tr(language, "defaultTenantName");
     await sendEmail({
       to: tenantEmail,
-      subject: `New reply on "${ticketTitle}"`,
+      subject: tr(language, "maintenanceReply.subject", { ticketTitle }),
       html: renderEmail({
-        heading: "Your property manager replied",
-        lines: [`Hi ${tenantName || "there"}, there's a new reply on "<strong>${ticketTitle}</strong>":`, commentBody],
-        ctaText: "View in Repairs",
+        heading: tr(language, "maintenanceReply.heading"),
+        lines: [tr(language, "maintenanceReply.body", { tenantName: name, ticketTitle: `<strong>${ticketTitle}</strong>` }), commentBody],
+        ctaText: tr(language, "maintenanceReply.cta"),
         ctaUrl: `${APP_BASE_URL}/portal/repairs`,
       }),
     });
@@ -192,18 +194,15 @@ export async function sendAdminPasswordResetEmail({ email, token }) {
   }
 }
 
-export async function sendTenantPasswordResetEmail({ email, token }) {
+export async function sendTenantPasswordResetEmail({ email, token, language }) {
   try {
     await sendEmail({
       to: email,
-      subject: "Reset your tenant portal password",
+      subject: tr(language, "passwordReset.subject"),
       html: renderEmail({
-        heading: "Reset your password",
-        lines: [
-          "We received a request to reset your tenant portal password.",
-          "This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.",
-        ],
-        ctaText: "Reset password",
+        heading: tr(language, "passwordReset.heading"),
+        lines: [tr(language, "passwordReset.line1"), tr(language, "passwordReset.line2")],
+        ctaText: tr(language, "passwordReset.cta"),
         ctaUrl: `${APP_BASE_URL}/portal/reset-password?token=${token}`,
       }),
     });
@@ -218,19 +217,20 @@ export async function sendTenantPasswordResetEmail({ email, token }) {
 // automatic on-upload call site ignores the return value (same
 // never-block-the-real-action behavior as everywhere else); the resend
 // route reports it back to whoever clicked the button.
-export async function notifyTenantOfNewDocument({ tenantEmail, tenantName, docTypeLabel, fileName }) {
+const KNOWN_DOC_TYPES = ["lease", "invoice", "inspection", "application"];
+
+export async function notifyTenantOfNewDocument({ tenantEmail, tenantName, docType, fileName, language }) {
   try {
     if (!tenantEmail) return false;
+    const name = tenantName || tr(language, "defaultTenantName");
+    const docTypeLabel = tr(language, `docType.${KNOWN_DOC_TYPES.includes(docType) ? docType : "other"}`);
     return await sendEmail({
       to: tenantEmail,
-      subject: `New ${docTypeLabel.toLowerCase()} added to your account`,
+      subject: tr(language, "newDocument.subject", { docTypeLabel: docTypeLabel.toLowerCase() }),
       html: renderEmail({
-        heading: `New ${docTypeLabel.toLowerCase()}`,
-        lines: [
-          `Hi ${tenantName || "there"}, your property manager added a new document to your account:`,
-          `<strong>${fileName}</strong>`,
-        ],
-        ctaText: "View in Portal",
+        heading: tr(language, "newDocument.heading", { docTypeLabel: docTypeLabel.toLowerCase() }),
+        lines: [tr(language, "newDocument.body", { tenantName: name }), `<strong>${fileName}</strong>`],
+        ctaText: tr(language, "newDocument.cta"),
         ctaUrl: `${APP_BASE_URL}/portal/lease`,
       }),
     });
@@ -240,16 +240,17 @@ export async function notifyTenantOfNewDocument({ tenantEmail, tenantName, docTy
   }
 }
 
-export async function notifyTenantOfNewMessage({ tenantEmail, tenantName, messageBody }) {
+export async function notifyTenantOfNewMessage({ tenantEmail, tenantName, messageBody, language }) {
   try {
     if (!tenantEmail) return;
+    const name = tenantName || tr(language, "defaultTenantName");
     await sendEmail({
       to: tenantEmail,
-      subject: "New message from your property manager",
+      subject: tr(language, "newMessage.subject"),
       html: renderEmail({
-        heading: "New message",
-        lines: [`Hi ${tenantName || "there"}, your property manager sent you a message:`, messageBody],
-        ctaText: "View in Messages",
+        heading: tr(language, "newMessage.heading"),
+        lines: [tr(language, "newMessage.body", { tenantName: name }), messageBody],
+        ctaText: tr(language, "newMessage.cta"),
         ctaUrl: `${APP_BASE_URL}/portal/messages`,
       }),
     });

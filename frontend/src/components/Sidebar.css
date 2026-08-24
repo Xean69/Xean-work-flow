@@ -75,7 +75,7 @@
 }
 
 .nav-badge {
-  margin-left: auto;
+  margin-inline-start: auto;
   background: var(--red);
   color: #fff;
   font-size: 10.5px;
@@ -131,7 +131,7 @@
   border-radius: 999px;
 }
 .sidebar-logout {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex-shrink: 0;
   width: 28px;
   height: 28px;
@@ -160,7 +160,10 @@
 @media (max-width: 860px) {
   .sidebar {
     position: fixed;
-    inset: 0 auto 0 0;
+    top: 0;
+    bottom: 0;
+    inset-inline-start: 0;
+    inset-inline-end: auto;
     width: 260px;
     max-width: 82vw;
     z-index: 101;
@@ -171,5 +174,13 @@
   .sidebar.sidebar-open {
     transform: translateX(0);
     box-shadow: 8px 0 28px rgba(27, 36, 48, 0.3);
+  }
+  /* transform is physical, not logical — it doesn't flip on its own the
+     way inset-inline-start/end just did above, so the off-canvas slide
+     needs an explicit mirror: closed means "hidden off the inline-start
+     edge," which is +100% (toward the right) once the sidebar itself has
+     moved to sit on the right under RTL. */
+  [dir='rtl'] .sidebar {
+    transform: translateX(100%);
   }
 }

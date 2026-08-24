@@ -1,0 +1,50 @@
+{
+  "title": "Tenants & Leases",
+  "subtitleLoading": "Loading…",
+  "subtitle_one": "{{count}} active tenant across your portfolio",
+  "subtitle_other": "{{count}} active tenants across your portfolio",
+  "viewAnalytics": "View Analytics",
+  "addTenant": "+ Add tenant",
+  "addTenantModalTitle": "Add tenant",
+  "editTenant": "Edit tenant",
+  "searchPlaceholder": "Search by name, email, or phone…",
+  "allProperties": "All properties",
+  "emptyNoUnitsTitle": "No units yet",
+  "emptyNoUnitsBody": "Add a property and some units first, then come back to assign tenants.",
+  "emptyNoMatchesTitle": "No matches",
+  "emptyNoMatchesBody": "No tenant matches the current search and filter.",
+  "table": {
+    "tenant": "Tenant",
+    "propertyUnit": "Property / Unit",
+    "rent": "Rent",
+    "thisMonth": "This month",
+    "leaseEnds": "Lease ends",
+    "status": "Status",
+    "portalLogin": "Portal login",
+    "moveInInspection": "Move-in inspection",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "status": {
+    "active": "Active",
+    "renewal_due": "Renewal due",
+    "urgent_renewal": "Urgent renewal",
+    "vacant": "Vacant"
+  },
+  "paymentStatus": {
+    "paid": "Paid",
+    "partial": "Partial",
+    "unpaid": "Unpaid"
+  },
+  "portalLoginStatus": {
+    "active": "Active",
+    "notSet": "Not set"
+  },
+  "inspectionStatus": {
+    "none": "No inspection",
+    "draft": "Draft",
+    "pending_signature": "Pending signature",
+    "signed": "Signed"
+  },
+  "confirmRemove": "Remove {{name}} from unit {{unit}}?"
+}

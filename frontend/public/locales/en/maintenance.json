@@ -1,0 +1,52 @@
+{
+  "title": "Maintenance",
+  "subtitle": "Track and triage requests across your portfolio",
+  "newTicket": "+ New ticket",
+  "emptyNoUnitsTitle": "No units yet",
+  "emptyNoUnitsBody": "Add a property and some units first, then come back to log maintenance requests.",
+  "columns": {
+    "new": "New",
+    "in_progress": "In Progress",
+    "resolved": "Resolved"
+  },
+  "noTickets": "No tickets",
+  "newCommentTitle": "New comment",
+  "emergency": "🚨 Emergency",
+  "aiUrgency": {
+    "high": "Urgent",
+    "medium": "Moderate",
+    "low": "Routine"
+  },
+  "aiTrade": {
+    "plumbing": "Plumbing",
+    "electrical": "Electrical",
+    "hvac": "HVAC",
+    "appliance": "Appliance",
+    "structural": "Structural",
+    "pest_control": "Pest control",
+    "locksmith": "Locksmith",
+    "general": "General"
+  },
+  "actions": {
+    "start": "Start →",
+    "backToNew": "← New",
+    "resolve": "Resolve ✓",
+    "reopen": "↺ Reopen",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "confirmDelete": "Delete \"{{title}}\"?",
+  "editTicketModalTitle": "Edit ticket",
+  "newTicketModalTitle": "New ticket",
+  "ticketFallbackTitle": "Ticket",
+  "loading": "Loading…",
+  "emergencyNote": "🚨 Flagged as an emergency by the tenant",
+  "aiReadNote": "⚡ AI read: {{urgency}} · {{trade}} — {{reasoning}}",
+  "noCommentsYet": "No comments yet — say hello, or ask for a photo.",
+  "assistant": "Assistant",
+  "attachTitle": "Attach a photo, video, or document",
+  "commentPlaceholder": "Type a comment…",
+  "send": "Send",
+  "downloadAttachment": "Download attachment",
+  "attachmentAlt": "Attachment"
+}

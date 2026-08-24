@@ -47,6 +47,10 @@ export function getMe() {
   return request("/admin/me");
 }
 
+export function updateAdminLanguage(language) {
+  return request("/admin/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
+}
+
 export function getProperties() {
   return request("/properties");
 }

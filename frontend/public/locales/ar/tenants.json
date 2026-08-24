@@ -1,0 +1,54 @@
+{
+  "title": "المستأجرون وعقود الإيجار",
+  "subtitleLoading": "جارٍ التحميل…",
+  "subtitle_zero": "لا يوجد مستأجرون نشطون في محفظتك",
+  "subtitle_one": "مستأجر نشط واحد في محفظتك",
+  "subtitle_two": "مستأجران نشطان في محفظتك",
+  "subtitle_few": "{{count}} مستأجرين نشطين في محفظتك",
+  "subtitle_many": "{{count}} مستأجرًا نشطًا في محفظتك",
+  "subtitle_other": "{{count}} مستأجر نشط في محفظتك",
+  "viewAnalytics": "عرض التحليلات",
+  "addTenant": "+ إضافة مستأجر",
+  "addTenantModalTitle": "إضافة مستأجر",
+  "editTenant": "تعديل المستأجر",
+  "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو الهاتف…",
+  "allProperties": "جميع العقارات",
+  "emptyNoUnitsTitle": "لا توجد وحدات بعد",
+  "emptyNoUnitsBody": "أضف عقارًا وبعض الوحدات أولًا، ثم عد لتعيين المستأجرين.",
+  "emptyNoMatchesTitle": "لا توجد نتائج",
+  "emptyNoMatchesBody": "لا يوجد مستأجر يطابق البحث والتصفية الحاليين.",
+  "table": {
+    "tenant": "المستأجر",
+    "propertyUnit": "العقار / الوحدة",
+    "rent": "الإيجار",
+    "thisMonth": "هذا الشهر",
+    "leaseEnds": "نهاية العقد",
+    "status": "الحالة",
+    "portalLogin": "الدخول للبوابة",
+    "moveInInspection": "معاينة الاستلام",
+    "edit": "تعديل",
+    "delete": "حذف"
+  },
+  "status": {
+    "active": "نشط",
+    "renewal_due": "تجديد مستحق",
+    "urgent_renewal": "تجديد عاجل",
+    "vacant": "شاغرة"
+  },
+  "paymentStatus": {
+    "paid": "مدفوع",
+    "partial": "جزئي",
+    "unpaid": "غير مدفوع"
+  },
+  "portalLoginStatus": {
+    "active": "مفعّل",
+    "notSet": "غير محدد"
+  },
+  "inspectionStatus": {
+    "none": "لا توجد معاينة",
+    "draft": "مسودة",
+    "pending_signature": "بانتظار التوقيع",
+    "signed": "موقّعة"
+  },
+  "confirmRemove": "إزالة {{name}} من الوحدة {{unit}}؟"
+}

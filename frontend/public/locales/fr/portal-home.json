@@ -1,0 +1,16 @@
+{
+  "greeting": "Bonjour {{firstName}}",
+  "renewalNoticeWithDays": "Votre bail se termine le {{date}} — dans {{count}} jours. Contactez votre gestionnaire immobilier pour le renouveler.",
+  "renewalNoticeOverdue": "Votre bail se termine le {{date}}. Contactez votre gestionnaire immobilier pour le renouveler.",
+  "yourHome": "Votre logement",
+  "unit": "Logement {{unitNumber}}",
+  "monthlyRent": "Loyer mensuel",
+  "paymentStatus": {
+    "paid": "Payé",
+    "partial": "Partiel",
+    "unpaid": "À payer"
+  },
+  "paidInFull": "Intégralement payé pour {{period}}.",
+  "partiallyPaid": "Partiellement payé pour {{period}} — contactez votre gestionnaire immobilier au sujet du solde restant.",
+  "notYetPaid": "Pas encore marqué comme payé pour {{period}}. Contactez votre gestionnaire immobilier pour les modalités de paiement."
+}

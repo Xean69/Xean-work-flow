@@ -21,6 +21,7 @@ export const ROUTE_ROLES = {
   '/insights': ['owner', 'manager'],
   '/team': ['owner'],
   '/upgrade': ['owner', 'manager', 'accountant'],
+  '/language': ['owner', 'manager', 'accountant'],
 }
 
 // /properties/123 -> /properties, etc. — nested routes are governed by

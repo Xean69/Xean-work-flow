@@ -35,6 +35,18 @@ export function requireAdminPassword(value) {
   return value;
 }
 
+// The 6 languages this pass supports, mirrored by schema.sql's CHECK
+// constraints and frontend/src/i18n/languages.js — adding a 7th means
+// updating all three, plus a translate-locales.mjs generation pass.
+export const SUPPORTED_LANGUAGES = ["en", "es", "fr", "pt", "zh", "ar"];
+
+export function parseLanguageBody(body) {
+  if (!SUPPORTED_LANGUAGES.includes(body.language)) {
+    throw new ApiError(400, `language must be one of: ${SUPPORTED_LANGUAGES.join(", ")}`);
+  }
+  return { language: body.language };
+}
+
 export function parseForgotPasswordBody(body) {
   return { email: requireString(body.email, "email") };
 }

@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getMe, logout } from './portalApi.js'
 import PortalOfflineBanner from './PortalOfflineBanner.jsx'
+import { applyLanguage, TENANT_LANG_KEY } from '../i18n/sync.js'
 import './portal.css'
 
 const NAV_ITEMS = [
-  { to: '/portal/home', label: 'Home', icon: '🏠' },
-  { to: '/portal/repairs', label: 'Repairs', icon: '🔧' },
-  { to: '/portal/messages', label: 'Messages', icon: '💬' },
-  { to: '/portal/addons', label: 'Add-ons', icon: '💳' },
-  { to: '/portal/lease', label: 'Lease', icon: '📄' },
+  { to: '/portal/home', labelKey: 'nav.home', icon: '🏠' },
+  { to: '/portal/repairs', labelKey: 'nav.repairs', icon: '🔧' },
+  { to: '/portal/messages', labelKey: 'nav.messages', icon: '💬' },
+  { to: '/portal/addons', labelKey: 'nav.addons', icon: '💳' },
+  { to: '/portal/lease', labelKey: 'nav.lease', icon: '📄' },
+  { to: '/portal/language', labelKey: 'nav.language', icon: '🌐' },
 ]
 
 // Guards every /portal/* route except login: fetches the logged-in tenant
@@ -20,6 +23,7 @@ function PortalLayout() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation('portal-common')
 
   useEffect(() => {
     getMe()
@@ -27,6 +31,11 @@ function PortalLayout() {
       .catch(() => navigate('/portal/login', { replace: true }))
       .finally(() => setLoading(false))
   }, [])
+
+  // Same reconcile-then-track pattern as the manager side's Layout.jsx.
+  useEffect(() => {
+    if (tenant) applyLanguage(tenant.language, TENANT_LANG_KEY)
+  }, [tenant?.language])
 
   // React Router doesn't reset scroll position on navigation the way a
   // full page load does. Without this, switching from a tall page (e.g.
@@ -63,25 +72,25 @@ function PortalLayout() {
               to={item.to}
               className={({ isActive }) => 'portal-topnav-link' + (isActive ? ' active' : '')}
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
 
         <button className="portal-logout" onClick={handleLogout}>
-          Log out
+          {t('logout')}
         </button>
       </header>
 
       <main className="portal-main">
-        <Outlet context={{ tenant }} />
+        <Outlet context={{ tenant, refreshTenant: () => getMe().then(setTenant) }} />
       </main>
 
       <nav className="portal-tabbar">
         {NAV_ITEMS.map((item) => (
           <NavLink key={item.to} to={item.to} className={({ isActive }) => 'portal-tab' + (isActive ? ' active' : '')}>
             <span className="portal-tab-icon">{item.icon}</span>
-            {item.label}
+            {t(item.labelKey)}
           </NavLink>
         ))}
       </nav>

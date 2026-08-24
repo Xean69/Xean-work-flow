@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "dashboard": "Panel",
+    "properties": "Propiedades",
+    "tenants": "Inquilinos y contratos",
+    "stays": "Estancias de huéspedes",
+    "maintenance": "Mantenimiento",
+    "documents": "Documentos",
+    "inbox": "Bandeja de entrada",
+    "expenses": "Gastos",
+    "compliance": "Cumplimiento",
+    "voice": "Llamadas de voz",
+    "licensing": "Licencias de alquiler turístico",
+    "statements": "Estados del propietario",
+    "insights": "Análisis",
+    "team": "Equipo",
+    "language": "Idioma",
+    "aiTools": "Herramientas de IA",
+    "workspace": "Espacio de trabajo",
+    "settings": "Ajustes",
+    "tenantPortal": "Portal del inquilino",
+    "logout": "Cerrar sesión"
+  }
+}

@@ -62,7 +62,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseMessageBody(req.body);
     const { rows: tenantRows } = await pool.query(
-      "SELECT id, email, full_name FROM tenants WHERE id = $1 AND business_id = $2",
+      "SELECT id, email, full_name, language FROM tenants WHERE id = $1 AND business_id = $2",
       [req.params.tenantId, req.businessId]
     );
     if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
@@ -78,6 +78,7 @@ router.post(
       tenantEmail: tenantRows[0].email,
       tenantName: tenantRows[0].full_name,
       messageBody: data.body,
+      language: tenantRows[0].language,
     });
 
     res.status(201).json(rows[0]);

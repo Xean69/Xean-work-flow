@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "start": "بدء →",
+    "backToNew": "← جديد",
+    "resolve": "حل ✓",
+    "reopen": "↺ إعادة فتح",
+    "edit": "تعديل",
+    "delete": "حذف"
+  },
+  "aiReadNote": "⚡ قراءة الذكاء الاصطناعي: {{urgency}} · {{trade}} — {{reasoning}}",
+  "aiTrade": {
+    "plumbing": "سباكة",
+    "electrical": "كهرباء",
+    "hvac": "تكييف وتدفئة",
+    "appliance": "أجهزة منزلية",
+    "structural": "إنشائي",
+    "pest_control": "مكافحة الآفات",
+    "locksmith": "أقفال ومفاتيح",
+    "general": "عام"
+  },
+  "aiUrgency": {
+    "high": "عاجل",
+    "medium": "متوسط",
+    "low": "روتيني"
+  },
+  "assistant": "المساعد",
+  "attachTitle": "إرفاق صورة أو فيديو أو مستند",
+  "attachmentAlt": "مرفق",
+  "columns": {
+    "new": "جديد",
+    "in_progress": "قيد التنفيذ",
+    "resolved": "تم الحل"
+  },
+  "commentPlaceholder": "اكتب تعليقًا…",
+  "confirmDelete": "حذف \"{{title}}\"؟",
+  "downloadAttachment": "تنزيل المرفق",
+  "editTicketModalTitle": "تعديل الطلب",
+  "emergency": "🚨 طارئ",
+  "emergencyNote": "🚨 صُنّف كحالة طارئة من قبل المستأجر",
+  "emptyNoUnitsBody": "أضف عقارًا وبعض الوحدات أولًا، ثم عد لتسجيل طلبات الصيانة.",
+  "emptyNoUnitsTitle": "لا توجد وحدات بعد",
+  "loading": "جارٍ التحميل…",
+  "newCommentTitle": "تعليق جديد",
+  "newTicket": "+ طلب جديد",
+  "newTicketModalTitle": "طلب جديد",
+  "noCommentsYet": "لا توجد تعليقات بعد — ألقِ التحية أو اطلب صورة.",
+  "noTickets": "لا توجد طلبات",
+  "send": "إرسال",
+  "subtitle": "تتبّع الطلبات وفرزها عبر محفظتك العقارية",
+  "ticketFallbackTitle": "طلب",
+  "title": "الصيانة"
+}

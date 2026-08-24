@@ -15,17 +15,6 @@ const router = Router();
 // per-route here rather than at the mount level.
 const staffOnly = requireRole("owner", "manager");
 
-// Tenant-facing wording for the notification email's subject/heading —
-// kept separate from the dashboard's own DOC_TYPE_LABELS (frontend) since
-// this is what the tenant reads, not the manager.
-const DOC_TYPE_EMAIL_LABEL = {
-  lease: "Lease",
-  invoice: "Invoice",
-  inspection: "Inspection",
-  application: "Application",
-  other: "Document",
-};
-
 async function assertPropertyInBusiness(propertyId, businessId) {
   if (propertyId == null) return;
   const { rows } = await pool.query("SELECT id FROM properties WHERE id = $1 AND business_id = $2", [
@@ -134,7 +123,7 @@ router.post(
     // failed send should never block the upload itself. The return value
     // only matters to the deliberate manual "Resend" route below.
     if (doc.tenant_id) {
-      const { rows: tenantRows } = await pool.query("SELECT full_name, email FROM tenants WHERE id = $1", [
+      const { rows: tenantRows } = await pool.query("SELECT full_name, email, language FROM tenants WHERE id = $1", [
         doc.tenant_id,
       ]);
       const tenant = tenantRows[0];
@@ -142,8 +131,9 @@ router.post(
         notifyTenantOfNewDocument({
           tenantEmail: tenant.email,
           tenantName: tenant.full_name,
-          docTypeLabel: DOC_TYPE_EMAIL_LABEL[doc.doc_type] || "Document",
+          docType: doc.doc_type,
           fileName: doc.file_name,
+          language: tenant.language,
         });
       }
     }
@@ -244,7 +234,7 @@ router.post(
   staffOnly,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT d.doc_type, d.file_name, t.full_name AS tenant_name, t.email AS tenant_email
+      `SELECT d.doc_type, d.file_name, t.full_name AS tenant_name, t.email AS tenant_email, t.language AS tenant_language
        FROM documents d
        LEFT JOIN tenants t ON t.id = d.tenant_id
        WHERE d.id = $1 AND d.business_id = $2`,
@@ -259,8 +249,9 @@ router.post(
     const sent = await notifyTenantOfNewDocument({
       tenantEmail: doc.tenant_email,
       tenantName: doc.tenant_name,
-      docTypeLabel: DOC_TYPE_EMAIL_LABEL[doc.doc_type] || "Document",
+      docType: doc.doc_type,
       fileName: doc.file_name,
+      language: doc.tenant_language,
     });
     if (!sent) throw new ApiError(502, "Failed to send the email, please try again");
     res.json({ sent: true });

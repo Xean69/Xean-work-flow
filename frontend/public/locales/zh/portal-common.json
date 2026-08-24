@@ -1,0 +1,11 @@
+{
+  "nav": {
+    "home": "首页",
+    "repairs": "报修",
+    "messages": "消息",
+    "addons": "增值服务",
+    "lease": "租约",
+    "language": "语言"
+  },
+  "logout": "退出登录"
+}

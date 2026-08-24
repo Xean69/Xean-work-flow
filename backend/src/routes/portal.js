@@ -3,7 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
-import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, requireString } from "../utils/validate.js";
+import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, parseLanguageBody, requireString } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply, generatePendingChatReply } from "../services/maintenanceChat.js";
 import { currentPeriod } from "../utils/period.js";
@@ -58,7 +58,7 @@ router.post(
   "/forgot-password",
   asyncHandler(async (req, res) => {
     const data = parseForgotPasswordBody(req.body);
-    const { rows } = await pool.query("SELECT id, email FROM tenants WHERE lower(email) = lower($1)", [
+    const { rows } = await pool.query("SELECT id, email, language FROM tenants WHERE lower(email) = lower($1)", [
       data.email,
     ]);
     const tenant = rows[0];
@@ -70,7 +70,7 @@ router.post(
         expiresAt,
         tenant.id,
       ]);
-      await sendTenantPasswordResetEmail({ email: tenant.email, token });
+      await sendTenantPasswordResetEmail({ email: tenant.email, token, language: tenant.language });
     }
 
     res.json({ message: "If that email exists, we've sent a reset link." });
@@ -101,7 +101,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
-         t.id, t.full_name, t.email, t.rent_amount, t.deposit_amount,
+         t.id, t.full_name, t.email, t.language, t.rent_amount, t.deposit_amount,
          t.lease_start, t.lease_end, t.first_period_rent_amount,
          u.unit_number,
          p.name AS property_name, p.address, p.city, p.province, p.postal_code,
@@ -143,6 +143,21 @@ router.get(
       current_period: currentPeriod(),
       payment_status: periodStatus.status,
     });
+  })
+);
+
+// Mirrors admin.js's PATCH /me/language — same self-service, own-account-
+// only update, just on the tenant side.
+router.patch(
+  "/me/language",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseLanguageBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE tenants SET language = $1 WHERE id = $2 RETURNING id, language",
+      [data.language, req.tenantId]
+    );
+    res.json(rows[0]);
   })
 );
 
@@ -284,7 +299,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parsePortalRepairBody(req.body);
     if (req.file) assertChatAttachmentSizeOk(req.file);
-    const { rows: tenantRows } = await pool.query("SELECT unit_id, full_name FROM tenants WHERE id = $1", [
+    const { rows: tenantRows } = await pool.query("SELECT unit_id, full_name, language FROM tenants WHERE id = $1", [
       req.tenantId,
     ]);
     if (!tenantRows[0]) throw new ApiError(404, "Tenant not found");
@@ -351,6 +366,7 @@ router.post(
       description: ticket.description,
       priority: ticket.priority,
       comments: initialAttachment ? [initialAttachment] : [],
+      language: tenantRows[0].language,
     });
     await pool.query(
       "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
@@ -410,8 +426,11 @@ router.post(
     // is present, parseMessageBody's own requireString rejects the request.
     const data = parseMessageBody(req.body, { requireBody: !req.file });
     const { rows: ticketRows } = await pool.query(
-      `SELECT id, business_id, title, description, status, ai_trade, ai_urgency, is_emergency
-       FROM maintenance_requests WHERE id = $1 AND tenant_id = $2`,
+      `SELECT m.id, m.business_id, m.title, m.description, m.status, m.ai_trade, m.ai_urgency, m.is_emergency,
+              t.language AS tenant_language
+       FROM maintenance_requests m
+       LEFT JOIN tenants t ON t.id = m.tenant_id
+       WHERE m.id = $1 AND m.tenant_id = $2`,
       [req.params.id, req.tenantId]
     );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
@@ -462,6 +481,7 @@ router.post(
         title: ticket.title,
         description: ticket.description,
         comments,
+        language: ticket.tenant_language,
       });
       await pool.query(
         "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
@@ -494,6 +514,7 @@ router.post(
         trade: ticket.ai_trade,
         urgency: ticket.ai_urgency,
         comments,
+        language: ticket.tenant_language,
       });
       if (reply) {
         await pool.query(

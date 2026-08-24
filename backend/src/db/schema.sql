@@ -840,3 +840,27 @@ ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS attachment_file_name T
 -- body stays NOT NULL and needs no schema change for attachment-only
 -- messages — an empty string ('') already satisfies NOT NULL; the app
 -- always inserts it explicitly rather than relying on a column default.
+
+-- ============================================================================
+-- Multi-language support
+--
+-- One language preference per account, independent on each side — a
+-- manager's language never affects what a tenant sees, and vice versa.
+-- Widening this to a 7th language later is just one more code in this CHECK
+-- constraint plus a translation-file generation pass (see
+-- backend/scripts/translate-locales.mjs) — no other schema change.
+-- ============================================================================
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admins_language_check') THEN
+    ALTER TABLE admins ADD CONSTRAINT admins_language_check
+      CHECK (language IN ('en', 'es', 'fr', 'pt', 'zh', 'ar'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tenants_language_check') THEN
+    ALTER TABLE tenants ADD CONSTRAINT tenants_language_check
+      CHECK (language IN ('en', 'es', 'fr', 'pt', 'zh', 'ar'));
+  END IF;
+END $$;

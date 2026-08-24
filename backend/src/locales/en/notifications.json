@@ -1,0 +1,35 @@
+{
+  "maintenanceReply": {
+    "subject": "New reply on \"{{ticketTitle}}\"",
+    "heading": "Your property manager replied",
+    "body": "Hi {{tenantName}}, there's a new reply on \"{{ticketTitle}}\":",
+    "cta": "View in Repairs"
+  },
+  "newDocument": {
+    "subject": "New {{docTypeLabel}} added to your account",
+    "heading": "New {{docTypeLabel}}",
+    "body": "Hi {{tenantName}}, your property manager added a new document to your account:",
+    "cta": "View in Portal"
+  },
+  "newMessage": {
+    "subject": "New message from your property manager",
+    "heading": "New message",
+    "body": "Hi {{tenantName}}, your property manager sent you a message:",
+    "cta": "View in Messages"
+  },
+  "passwordReset": {
+    "subject": "Reset your tenant portal password",
+    "heading": "Reset your password",
+    "line1": "We received a request to reset your tenant portal password.",
+    "line2": "This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.",
+    "cta": "Reset password"
+  },
+  "defaultTenantName": "there",
+  "docType": {
+    "lease": "Lease",
+    "invoice": "Invoice",
+    "inspection": "Inspection",
+    "application": "Application",
+    "other": "Document"
+  }
+}

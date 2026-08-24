@@ -13,6 +13,26 @@ const TRADE_LABEL = {
   general: "general",
 };
 
+const LANGUAGE_NAME = {
+  es: "Spanish",
+  fr: "French",
+  pt: "Portuguese",
+  zh: "Mandarin Chinese",
+  ar: "Arabic",
+};
+
+// Appended to a system prompt, never merged into SAFETY_RULES itself —
+// SAFETY_RULES stays English, one copy, so its allow-list can never drift
+// between languages (see the comment above SAFETY_RULES). This only tells
+// Claude which language to write its reply in; the instructions it's
+// following stay in English regardless, which the model follows reliably
+// without needing them translated too.
+function languageInstruction(language) {
+  const name = LANGUAGE_NAME[language];
+  if (!name) return ""; // English (or unset) needs no extra instruction
+  return `\n\nReply to the tenant in ${name}. The safety rules above always apply exactly as written, in every language — never suggest anything off the safe list no matter what language you're replying in.`;
+}
+
 // Shared between the pre-ticket decision prompt and the post-ticket
 // conversational prompt below, so the two behaviors' safety rules can never
 // drift apart. Deliberately narrow — anything not on the allow-list
@@ -107,7 +127,7 @@ function buildConversationBlocks(comments, speakerFor) {
 // no extended thinking (a bounded, single-turn reply task, and it needs to
 // feel responsive in a live chat) — same low-effort choice
 // services/maintenanceTriage.js already makes for a comparable job.
-export async function generateMaintenanceChatReply({ title, description, trade, urgency, comments }) {
+export async function generateMaintenanceChatReply({ title, description, trade, urgency, comments, language }) {
   try {
     const context = [
       `Ticket title: ${title}`,
@@ -136,7 +156,7 @@ export async function generateMaintenanceChatReply({ title, description, trade, 
       model: "claude-opus-5",
       max_tokens: 300,
       output_config: { effort: "low" },
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + languageInstruction(language),
       messages: [{ role: "user", content }],
     });
 
@@ -199,7 +219,7 @@ const FALLBACK_RESULT = {
   readyForTicket: true,
 };
 
-export async function generatePendingChatReply({ title, description, priority, comments }) {
+export async function generatePendingChatReply({ title, description, priority, comments, language }) {
   try {
     const context = [
       `Ticket title: ${title}`,
@@ -229,7 +249,7 @@ export async function generatePendingChatReply({ title, description, priority, c
       model: "claude-opus-5",
       max_tokens: 400,
       output_config: { effort: "low" },
-      system: PENDING_SYSTEM_PROMPT,
+      system: PENDING_SYSTEM_PROMPT + languageInstruction(language),
       tools: [PENDING_TOOL],
       tool_choice: { type: "tool", name: PENDING_TOOL.name },
       messages: [{ role: "user", content }],

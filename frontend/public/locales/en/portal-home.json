@@ -1,0 +1,16 @@
+{
+  "greeting": "Hi, {{firstName}}",
+  "renewalNoticeWithDays": "Your lease ends {{date}} — {{count}} days away. Reach out to your property manager about renewing.",
+  "renewalNoticeOverdue": "Your lease ends {{date}}. Reach out to your property manager about renewing.",
+  "yourHome": "Your home",
+  "unit": "Unit {{unitNumber}}",
+  "monthlyRent": "Monthly rent",
+  "paymentStatus": {
+    "paid": "Paid",
+    "partial": "Partial",
+    "unpaid": "Due"
+  },
+  "paidInFull": "Paid in full for {{period}}.",
+  "partiallyPaid": "Partially paid for {{period}} — contact your property manager about the remaining balance.",
+  "notYetPaid": "Not yet marked paid for {{period}}. Contact your property manager for payment instructions."
+}

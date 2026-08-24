@@ -1,0 +1,35 @@
+{
+  "maintenanceReply": {
+    "subject": "Nueva respuesta en «{{ticketTitle}}»",
+    "heading": "Tu administrador de la propiedad respondió",
+    "body": "Hola {{tenantName}}: hay una nueva respuesta en «{{ticketTitle}}»:",
+    "cta": "Ver en Reparaciones"
+  },
+  "newDocument": {
+    "subject": "Nuevo {{docTypeLabel}} añadido a tu cuenta",
+    "heading": "Nuevo {{docTypeLabel}}",
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad añadió un nuevo documento a tu cuenta:",
+    "cta": "Ver en el portal"
+  },
+  "newMessage": {
+    "subject": "Nuevo mensaje de tu administrador de la propiedad",
+    "heading": "Nuevo mensaje",
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad te envió un mensaje:",
+    "cta": "Ver en Mensajes"
+  },
+  "passwordReset": {
+    "subject": "Restablece la contraseña de tu portal de inquilino",
+    "heading": "Restablece tu contraseña",
+    "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal de inquilino.",
+    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo.",
+    "cta": "Restablecer contraseña"
+  },
+  "defaultTenantName": "hola",
+  "docType": {
+    "lease": "Contrato de arrendamiento",
+    "invoice": "Factura",
+    "inspection": "Inspección",
+    "application": "Solicitud",
+    "other": "Documento"
+  }
+}

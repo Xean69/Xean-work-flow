@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "properties": "Properties",
+    "tenants": "Tenants & Leases",
+    "stays": "Guest Stays",
+    "maintenance": "Maintenance",
+    "documents": "Documents",
+    "inbox": "Inbox",
+    "expenses": "Expenses",
+    "compliance": "Compliance",
+    "voice": "Voice Calls",
+    "licensing": "STR Licensing",
+    "statements": "Owner Statements",
+    "insights": "Insights",
+    "team": "Team",
+    "language": "Language",
+    "aiTools": "AI Tools",
+    "workspace": "Workspace",
+    "settings": "Settings",
+    "tenantPortal": "Tenant Portal",
+    "logout": "Log out"
+  }
+}

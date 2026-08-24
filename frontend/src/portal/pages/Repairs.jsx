@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   getPortalMaintenance,
   createPortalMaintenance,
@@ -7,33 +8,19 @@ import {
   flagPortalMaintenanceEmergency,
 } from '../portalApi.js'
 
-const STATUS_META = {
-  pending: { label: 'Chatting with assistant', variant: 'slate' },
-  new: { label: 'Submitted', variant: 'slate' },
-  in_progress: { label: 'In progress', variant: 'amber' },
-  resolved: { label: 'Resolved', variant: 'green' },
+const STATUS_VARIANT = {
+  pending: 'slate',
+  new: 'slate',
+  in_progress: 'amber',
+  resolved: 'green',
 }
 
-// Same mapping as the dashboard's Maintenance.jsx — raw classifier tokens
-// to the "⚡ Urgent · Plumbing" mockup labels.
-const AI_URGENCY_LABELS = { high: 'Urgent', medium: 'Moderate', low: 'Routine' }
-const AI_TRADE_LABELS = {
-  plumbing: 'Plumbing',
-  electrical: 'Electrical',
-  hvac: 'HVAC',
-  appliance: 'Appliance',
-  structural: 'Structural',
-  pest_control: 'Pest control',
-  locksmith: 'Locksmith',
-  general: 'General',
+function formatDate(value, locale) {
+  return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function formatTime(value) {
-  return new Date(value).toLocaleString(undefined, {
+function formatTime(value, locale) {
+  return new Date(value).toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -45,10 +32,11 @@ function formatTime(value) {
 // for anything else — PDFs, docs) — that's already exactly the distinction
 // needed to pick a preview.
 function AttachmentPreview({ url, resourceType, fileName }) {
+  const { t } = useTranslation('portal-repairs')
   if (resourceType === 'image') {
     return (
       <a href={url} target="_blank" rel="noreferrer">
-        <img src={url} alt={fileName || 'Attachment'} className="portal-bubble-attachment-img" />
+        <img src={url} alt={fileName || t('attachmentAlt')} className="portal-bubble-attachment-img" />
       </a>
     )
   }
@@ -57,7 +45,7 @@ function AttachmentPreview({ url, resourceType, fileName }) {
   }
   return (
     <a href={url} target="_blank" rel="noreferrer" className="portal-bubble-attachment-file">
-      📄 {fileName || 'Download attachment'}
+      📄 {fileName || t('downloadAttachment')}
     </a>
   )
 }
@@ -65,6 +53,7 @@ function AttachmentPreview({ url, resourceType, fileName }) {
 const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.pdf,.mp4,.mov,.webm'
 
 function Repairs() {
+  const { t, i18n } = useTranslation('portal-repairs')
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -187,7 +176,7 @@ function Repairs() {
   // Lives on the card header now, not just inside the expanded thread — can
   // be triggered for any ticket in the list, not only the one currently open.
   async function handleFlagEmergency(ticketId) {
-    if (!window.confirm('Flag this as an emergency? A manager will be notified right away.')) return
+    if (!window.confirm(t('confirmFlagEmergency'))) return
     setFlagging(ticketId)
     try {
       await flagPortalMaintenanceEmergency(ticketId)
@@ -201,28 +190,28 @@ function Repairs() {
   return (
     <div>
       <p className="portal-greeting" style={{ fontSize: 20 }}>
-        Repairs
+        {t('title')}
       </p>
 
       {showForm ? (
         <div className="portal-card">
-          <h2 style={{ marginBottom: 12 }}>Report an issue</h2>
+          <h2 style={{ marginBottom: 12 }}>{t('reportIssue')}</h2>
           <form onSubmit={handleSubmit}>
             {error && <p className="portal-error">{error}</p>}
 
             <div className="portal-field">
-              <label htmlFor="title">What's wrong?</label>
+              <label htmlFor="title">{t('whatsWrong')}</label>
               <input
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Leaky kitchen faucet"
+                placeholder={t('whatsWrongPlaceholder')}
                 required
               />
             </div>
 
             <div className="portal-field">
-              <label htmlFor="description">Details (optional)</label>
+              <label htmlFor="description">{t('detailsOptional')}</label>
               <textarea
                 id="description"
                 value={description}
@@ -232,16 +221,16 @@ function Repairs() {
             </div>
 
             <div className="portal-field">
-              <label htmlFor="priority">How urgent is it?</label>
+              <label htmlFor="priority">{t('howUrgent')}</label>
               <select id="priority" value={priority} onChange={(e) => setPriority(e.target.value)}>
-                <option value="low">Low — whenever's convenient</option>
-                <option value="medium">Medium — sometime this week</option>
-                <option value="high">High — needs attention soon</option>
+                <option value="low">{t('priorityLow')}</option>
+                <option value="medium">{t('priorityMedium')}</option>
+                <option value="high">{t('priorityHigh')}</option>
               </select>
             </div>
 
             <div className="portal-field">
-              <label htmlFor="attachment">Photo or video (optional)</label>
+              <label htmlFor="attachment">{t('photoOrVideoOptional')}</label>
               <input
                 id="attachment"
                 type="file"
@@ -259,72 +248,74 @@ function Repairs() {
                 onClick={() => setShowForm(false)}
                 disabled={submitting}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button type="submit" className="portal-btn portal-btn-primary" disabled={submitting}>
-                {submitting ? 'Sending…' : 'Submit'}
+                {submitting ? t('sending') : t('submit')}
               </button>
             </div>
           </form>
         </div>
       ) : (
         <button className="portal-btn portal-btn-primary" style={{ marginBottom: 16 }} onClick={() => setShowForm(true)}>
-          + Report an issue
+          {t('reportIssueButton')}
         </button>
       )}
 
       {!loading && requests.length === 0 && (
         <div className="portal-card">
-          <p>No repair requests yet.</p>
+          <p>{t('noRequestsYet')}</p>
         </div>
       )}
 
       {requests.map((r) => {
-        const status = STATUS_META[r.status]
         const isOpen = expandedId === r.id
         return (
           <div className="portal-card" key={r.id}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
               <h2>
                 {r.title}
-                {r.unread_by_tenant && <span className="portal-unread-dot" title="New reply" />}
+                {r.unread_by_tenant && <span className="portal-unread-dot" title={t('newReplyTitle')} />}
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <span className={`portal-badge portal-badge-${status.variant}`}>{status.label}</span>
+                <span className={`portal-badge portal-badge-${STATUS_VARIANT[r.status]}`}>
+                  {t(`statusMeta.${r.status}`)}
+                </span>
                 {!r.is_emergency && (
                   <button
                     className="portal-emergency-btn-sm"
                     onClick={() => handleFlagEmergency(r.id)}
                     disabled={flagging === r.id}
                   >
-                    {flagging === r.id ? 'Flagging…' : '🚨 Flag as emergency'}
+                    {flagging === r.id ? t('flagging') : t('flagAsEmergency')}
                   </button>
                 )}
               </div>
             </div>
-            {r.is_emergency && <div className="portal-emergency-tag">🚨 Emergency</div>}
+            {r.is_emergency && <div className="portal-emergency-tag">{t('emergency')}</div>}
             {r.description && <p style={{ marginTop: 6 }}>{r.description}</p>}
             {r.ai_classification_status === 'success' && (
               <div className="portal-ai-tag">
-                ⚡ {AI_URGENCY_LABELS[r.ai_urgency] || r.ai_urgency} · {AI_TRADE_LABELS[r.ai_trade] || r.ai_trade}
+                ⚡ {t(`aiUrgency.${r.ai_urgency}`, { defaultValue: r.ai_urgency })} ·{' '}
+                {t(`aiTrade.${r.ai_trade}`, { defaultValue: r.ai_trade })}
               </div>
             )}
-            <p style={{ marginTop: 8, fontSize: 11.5 }}>Submitted {formatDate(r.created_at)}</p>
+            <p style={{ marginTop: 8, fontSize: 11.5 }}>{t('submittedOn', { date: formatDate(r.created_at, i18n.language) })}</p>
 
             <button className="portal-ticket-toggle" onClick={() => toggleThread(r)}>
-              {isOpen ? 'Hide conversation ▲' : 'View conversation ▼'}
+              {isOpen ? t('hideConversation') : t('viewConversation')}
             </button>
 
             {isOpen && (
               <div className="portal-ticket-thread">
                 {!threadData ? (
-                  <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>Loading…</p>
+                  <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>{t('loading')}</p>
                 ) : (
                   <>
                     <div className="portal-ticket-messages" ref={threadBodyRef}>
                       {threadData.comments.length === 0 && (
                         <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>
-                          No messages yet — you can add details or a photo description here.
+                          {t('noMessagesYet')}
                         </p>
                       )}
                       {threadData.comments.map((c) => (
@@ -332,7 +323,7 @@ function Repairs() {
                           key={c.id}
                           className={`portal-bubble ${c.sender === 'tenant' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
                         >
-                          {c.sender === 'ai' && <div className="portal-bubble-sender">Assistant</div>}
+                          {c.sender === 'ai' && <div className="portal-bubble-sender">{t('assistant')}</div>}
                           {c.body}
                           {c.attachment_url && (
                             <AttachmentPreview
@@ -341,13 +332,13 @@ function Repairs() {
                               fileName={c.attachment_file_name}
                             />
                           )}
-                          <div className="portal-bubble-time">{formatTime(c.created_at)}</div>
+                          <div className="portal-bubble-time">{formatTime(c.created_at, i18n.language)}</div>
                         </div>
                       ))}
                     </div>
 
                     <form className="portal-ticket-composer" onSubmit={handleSendComment}>
-                      <label className="portal-attach-btn" title="Attach a photo, video, or document">
+                      <label className="portal-attach-btn" title={t('attachTitle')}>
                         📎
                         <input
                           type="file"
@@ -360,7 +351,7 @@ function Repairs() {
                       <input
                         value={commentDraft}
                         onChange={(e) => setCommentDraft(e.target.value)}
-                        placeholder={commentFile ? commentFile.name : 'Type a reply…'}
+                        placeholder={commentFile ? commentFile.name : t('replyPlaceholder')}
                         disabled={sendingComment}
                       />
                       <button
@@ -368,7 +359,7 @@ function Repairs() {
                         className="portal-btn portal-btn-primary"
                         disabled={sendingComment || (!commentDraft.trim() && !commentFile)}
                       >
-                        Send
+                        {t('send')}
                       </button>
                     </form>
                   </>

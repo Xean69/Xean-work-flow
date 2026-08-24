@@ -131,7 +131,7 @@
   border: none;
   padding: 0;
   margin: 0;
-  text-align: left;
+  text-align: start;
   color: var(--ink);
   font-family: var(--font-sans);
   cursor: pointer;

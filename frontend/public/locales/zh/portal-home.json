@@ -1,0 +1,16 @@
+{
+  "greeting": "你好，{{firstName}}",
+  "renewalNoticeWithDays": "您的租约将于 {{date}} 到期，还有 {{count}} 天。请联系物业经理办理续租。",
+  "renewalNoticeOverdue": "您的租约将于 {{date}} 到期。请联系物业经理办理续租。",
+  "yourHome": "您的住所",
+  "unit": "{{unitNumber}} 室",
+  "monthlyRent": "月租金",
+  "paymentStatus": {
+    "paid": "已付",
+    "partial": "部分支付",
+    "unpaid": "待付"
+  },
+  "paidInFull": "{{period}} 租金已全额付清。",
+  "partiallyPaid": "{{period}} 租金已部分支付，请联系物业经理了解剩余欠款。",
+  "notYetPaid": "{{period}} 租金尚未标记为已付。请联系物业经理获取付款方式。"
+}

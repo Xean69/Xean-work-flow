@@ -1,0 +1,50 @@
+{
+  "title": "Inquilinos e Contratos",
+  "subtitleLoading": "A carregar…",
+  "subtitle_one": "{{count}} inquilino ativo na sua carteira",
+  "subtitle_other": "{{count}} inquilinos ativos na sua carteira",
+  "viewAnalytics": "Ver análises",
+  "addTenant": "+ Adicionar inquilino",
+  "addTenantModalTitle": "Adicionar inquilino",
+  "editTenant": "Editar inquilino",
+  "searchPlaceholder": "Pesquisar por nome, e-mail ou telefone…",
+  "allProperties": "Todos os imóveis",
+  "emptyNoUnitsTitle": "Ainda sem frações",
+  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas frações e volte depois para atribuir inquilinos.",
+  "emptyNoMatchesTitle": "Sem resultados",
+  "emptyNoMatchesBody": "Nenhum inquilino corresponde à pesquisa e ao filtro atuais.",
+  "table": {
+    "tenant": "Inquilino",
+    "propertyUnit": "Imóvel / Fração",
+    "rent": "Renda",
+    "thisMonth": "Este mês",
+    "leaseEnds": "Fim do contrato",
+    "status": "Estado",
+    "portalLogin": "Acesso ao portal",
+    "moveInInspection": "Vistoria de entrada",
+    "edit": "Editar",
+    "delete": "Eliminar"
+  },
+  "status": {
+    "active": "Ativo",
+    "renewal_due": "Renovação prevista",
+    "urgent_renewal": "Renovação urgente",
+    "vacant": "Vago"
+  },
+  "paymentStatus": {
+    "paid": "Pago",
+    "partial": "Parcial",
+    "unpaid": "Por pagar"
+  },
+  "portalLoginStatus": {
+    "active": "Ativo",
+    "notSet": "Não definido"
+  },
+  "inspectionStatus": {
+    "none": "Sem vistoria",
+    "draft": "Rascunho",
+    "pending_signature": "Aguarda assinatura",
+    "signed": "Assinada"
+  },
+  "confirmRemove": "Remover {{name}} da fração {{unit}}?"
+}

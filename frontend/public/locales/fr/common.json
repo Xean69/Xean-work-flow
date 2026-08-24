@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "properties": "Biens",
+    "tenants": "Locataires et baux",
+    "stays": "Séjours voyageurs",
+    "maintenance": "Maintenance",
+    "documents": "Documents",
+    "inbox": "Boîte de réception",
+    "expenses": "Dépenses",
+    "compliance": "Conformité",
+    "voice": "Appels vocaux",
+    "licensing": "Licences location courte durée",
+    "statements": "Relevés propriétaires",
+    "insights": "Analyses",
+    "team": "Équipe",
+    "language": "Langue",
+    "aiTools": "Outils IA",
+    "workspace": "Espace de travail",
+    "settings": "Paramètres",
+    "tenantPortal": "Portail locataire",
+    "logout": "Déconnexion"
+  }
+}

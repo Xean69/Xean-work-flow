@@ -1,0 +1,50 @@
+{
+  "title": "Inquilinos y contratos",
+  "subtitleLoading": "Cargando…",
+  "subtitle_one": "{{count}} inquilino activo en tu cartera",
+  "subtitle_other": "{{count}} inquilinos activos en tu cartera",
+  "viewAnalytics": "Ver estadísticas",
+  "addTenant": "+ Añadir inquilino",
+  "addTenantModalTitle": "Añadir inquilino",
+  "editTenant": "Editar inquilino",
+  "searchPlaceholder": "Buscar por nombre, correo o teléfono…",
+  "allProperties": "Todas las propiedades",
+  "emptyNoUnitsTitle": "Aún no hay unidades",
+  "emptyNoUnitsBody": "Añade primero una propiedad y algunas unidades, y luego vuelve para asignar inquilinos.",
+  "emptyNoMatchesTitle": "Sin resultados",
+  "emptyNoMatchesBody": "Ningún inquilino coincide con la búsqueda y el filtro actuales.",
+  "table": {
+    "tenant": "Inquilino",
+    "propertyUnit": "Propiedad / Unidad",
+    "rent": "Alquiler",
+    "thisMonth": "Este mes",
+    "leaseEnds": "Fin del contrato",
+    "status": "Estado",
+    "portalLogin": "Acceso al portal",
+    "moveInInspection": "Inspección de entrada",
+    "edit": "Editar",
+    "delete": "Eliminar"
+  },
+  "status": {
+    "active": "Activo",
+    "renewal_due": "Renovación pendiente",
+    "urgent_renewal": "Renovación urgente",
+    "vacant": "Vacante"
+  },
+  "paymentStatus": {
+    "paid": "Pagado",
+    "partial": "Parcial",
+    "unpaid": "Sin pagar"
+  },
+  "portalLoginStatus": {
+    "active": "Activo",
+    "notSet": "Sin configurar"
+  },
+  "inspectionStatus": {
+    "none": "Sin inspección",
+    "draft": "Borrador",
+    "pending_signature": "Pendiente de firma",
+    "signed": "Firmada"
+  },
+  "confirmRemove": "¿Quitar a {{name}} de la unidad {{unit}}?"
+}

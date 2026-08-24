@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   getMaintenanceRequests,
   getTenants,
@@ -13,42 +14,25 @@ import Modal from '../components/Modal.jsx'
 import MaintenanceForm from '../components/MaintenanceForm.jsx'
 import './Maintenance.css'
 
-const COLUMNS = [
-  { status: 'new', title: 'New' },
-  { status: 'in_progress', title: 'In Progress' },
-  { status: 'resolved', title: 'Resolved' },
-]
+const COLUMN_STATUSES = ['new', 'in_progress', 'resolved']
 
 // Priority is stored as low/medium/high; the urgency-dot CSS classes are
 // named low/mid/high (from the original mockup), so this bridges the two.
 const PRIORITY_DOT_CLASS = { low: 'low', medium: 'mid', high: 'high' }
 
-// AI urgency/trade values are stored as their raw classifier tokens
-// (high/medium/low, plumbing/electrical/…); these map them to the
-// "⚡ Urgent · Plumbing" labels from the original mockup.
-const AI_URGENCY_LABELS = { high: 'Urgent', medium: 'Moderate', low: 'Routine' }
-const AI_TRADE_LABELS = {
-  plumbing: 'Plumbing',
-  electrical: 'Electrical',
-  hvac: 'HVAC',
-  appliance: 'Appliance',
-  structural: 'Structural',
-  pest_control: 'Pest control',
-  locksmith: 'Locksmith',
-  general: 'General',
-}
-
 function AiTag({ ticket }) {
+  const { t } = useTranslation('maintenance')
   if (ticket.ai_classification_status !== 'success') return null
   return (
     <div className="ai-tag" title={ticket.ai_reasoning || undefined}>
-      ⚡ {AI_URGENCY_LABELS[ticket.ai_urgency] || ticket.ai_urgency} · {AI_TRADE_LABELS[ticket.ai_trade] || ticket.ai_trade}
+      ⚡ {t(`aiUrgency.${ticket.ai_urgency}`, { defaultValue: ticket.ai_urgency })} ·{' '}
+      {t(`aiTrade.${ticket.ai_trade}`, { defaultValue: ticket.ai_trade })}
     </div>
   )
 }
 
-function formatTime(value) {
-  return new Date(value).toLocaleString(undefined, {
+function formatTime(value, locale) {
+  return new Date(value).toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -62,10 +46,11 @@ const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.pdf,.mp4,.mov,.webm'
 // for anything else — PDFs, docs) — that's already exactly the distinction
 // needed to pick a preview.
 function AttachmentPreview({ url, resourceType, fileName }) {
+  const { t } = useTranslation('maintenance')
   if (resourceType === 'image') {
     return (
       <a href={url} target="_blank" rel="noreferrer">
-        <img src={url} alt={fileName || 'Attachment'} className="bubble-attachment-img" />
+        <img src={url} alt={fileName || t('attachmentAlt')} className="bubble-attachment-img" />
       </a>
     )
   }
@@ -74,12 +59,13 @@ function AttachmentPreview({ url, resourceType, fileName }) {
   }
   return (
     <a href={url} target="_blank" rel="noreferrer" className="bubble-attachment-file">
-      📄 {fileName || 'Download attachment'}
+      📄 {fileName || t('downloadAttachment')}
     </a>
   )
 }
 
 function Maintenance() {
+  const { t: tr, i18n } = useTranslation('maintenance')
   const [tickets, setTickets] = useState([])
   const [unitRows, setUnitRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -145,7 +131,7 @@ function Maintenance() {
   }
 
   async function handleDelete(ticket) {
-    if (!window.confirm(`Delete "${ticket.title}"?`)) return
+    if (!window.confirm(tr('confirmDelete', { title: ticket.title }))) return
     await deleteMaintenanceRequest(ticket.id)
     await load()
   }
@@ -193,9 +179,9 @@ function Maintenance() {
 
   return (
     <div>
-      <PageHeader title="Maintenance" subtitle="Track and triage requests across your portfolio">
+      <PageHeader title={tr('title')} subtitle={tr('subtitle')}>
         <button className="btn btn-primary" onClick={() => setFormState({})} disabled={!loading && unitOptions.length === 0}>
-          + New ticket
+          {tr('newTicket')}
         </button>
       </PageHeader>
 
@@ -204,23 +190,23 @@ function Maintenance() {
 
         {!loading && !loadError && unitOptions.length === 0 && (
           <div className="empty-state card">
-            <h3>No units yet</h3>
-            <p>Add a property and some units first, then come back to log maintenance requests.</p>
+            <h3>{tr('emptyNoUnitsTitle')}</h3>
+            <p>{tr('emptyNoUnitsBody')}</p>
           </div>
         )}
 
         {unitOptions.length > 0 && (
           <div className="board">
-            {COLUMNS.map((col) => {
-              const columnTickets = tickets.filter((t) => t.status === col.status)
+            {COLUMN_STATUSES.map((status) => {
+              const columnTickets = tickets.filter((t) => t.status === status)
               return (
-                <div key={col.status}>
+                <div key={status}>
                   <div className="board-col-head">
-                    <h3>{col.title}</h3>
+                    <h3>{tr(`columns.${status}`)}</h3>
                     <span className="board-count mono">{columnTickets.length}</span>
                   </div>
 
-                  {columnTickets.length === 0 && <p className="board-empty">No tickets</p>}
+                  {columnTickets.length === 0 && <p className="board-empty">{tr('noTickets')}</p>}
 
                   {columnTickets.map((t) => (
                     <div className="ticket" key={t.id}>
@@ -228,44 +214,44 @@ function Maintenance() {
                         <div className={`urgency-dot ${PRIORITY_DOT_CLASS[t.priority]}`} />
                         <button className="ticket-title-link" onClick={() => openThread(t)}>
                           {t.title}
-                          {t.unread_by_manager && <span className="ticket-unread-dot" title="New comment" />}
+                          {t.unread_by_manager && <span className="ticket-unread-dot" title={tr('newCommentTitle')} />}
                         </button>
                       </div>
                       <div className="ticket-meta">
                         {t.property_name} · {t.unit_number}
                         {t.tenant_name ? ` · ${t.tenant_name}` : ''}
                       </div>
-                      {t.is_emergency && <div className="ticket-emergency-tag">🚨 Emergency</div>}
+                      {t.is_emergency && <div className="ticket-emergency-tag">{tr('emergency')}</div>}
                       <AiTag ticket={t} />
 
                       <div className="ticket-actions">
-                        {col.status === 'new' && (
+                        {status === 'new' && (
                           <button className="btn btn-ghost btn-sm" onClick={() => handleMove(t, 'in_progress')}>
-                            Start →
+                            {tr('actions.start')}
                           </button>
                         )}
-                        {col.status === 'in_progress' && (
+                        {status === 'in_progress' && (
                           <>
                             <button className="btn btn-ghost btn-sm" onClick={() => handleMove(t, 'new')}>
-                              ← New
+                              {tr('actions.backToNew')}
                             </button>
                             <button className="btn btn-ghost btn-sm" onClick={() => handleMove(t, 'resolved')}>
-                              Resolve ✓
+                              {tr('actions.resolve')}
                             </button>
                           </>
                         )}
-                        {col.status === 'resolved' && (
+                        {status === 'resolved' && (
                           <button className="btn btn-ghost btn-sm" onClick={() => handleMove(t, 'in_progress')}>
-                            ↺ Reopen
+                            {tr('actions.reopen')}
                           </button>
                         )}
                       </div>
                       <div className="ticket-actions">
                         <button className="btn btn-ghost btn-sm" onClick={() => setFormState({ ticket: t })}>
-                          Edit
+                          {tr('actions.edit')}
                         </button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(t)}>
-                          Delete
+                          {tr('actions.delete')}
                         </button>
                       </div>
                     </div>
@@ -278,7 +264,7 @@ function Maintenance() {
       </div>
 
       {formState && (
-        <Modal title={formState?.ticket ? 'Edit ticket' : 'New ticket'} onClose={() => setFormState(null)}>
+        <Modal title={formState?.ticket ? tr('editTicketModalTitle') : tr('newTicketModalTitle')} onClose={() => setFormState(null)}>
           <MaintenanceForm
             initialValues={initialValues}
             units={unitOptions}
@@ -289,9 +275,9 @@ function Maintenance() {
       )}
 
       {threadTicketId && (
-        <Modal title={threadData?.title || 'Ticket'} onClose={closeThread}>
+        <Modal title={threadData?.title || tr('ticketFallbackTitle')} onClose={closeThread}>
           {!threadData ? (
-            <p>Loading…</p>
+            <p>{tr('loading')}</p>
           ) : (
             <div>
               <p className="ticket-thread-meta">
@@ -299,23 +285,26 @@ function Maintenance() {
                 {threadData.tenant_name ? ` · ${threadData.tenant_name}` : ''}
               </p>
               {threadData.description && <p className="ticket-thread-description">{threadData.description}</p>}
-              {threadData.is_emergency && <p className="ticket-thread-emergency-note">🚨 Flagged as an emergency by the tenant</p>}
+              {threadData.is_emergency && <p className="ticket-thread-emergency-note">{tr('emergencyNote')}</p>}
               {threadData.ai_classification_status === 'success' && (
                 <p className="ticket-thread-ai-note">
-                  ⚡ AI read: {AI_URGENCY_LABELS[threadData.ai_urgency] || threadData.ai_urgency} ·{' '}
-                  {AI_TRADE_LABELS[threadData.ai_trade] || threadData.ai_trade} — {threadData.ai_reasoning}
+                  {tr('aiReadNote', {
+                    urgency: tr(`aiUrgency.${threadData.ai_urgency}`, { defaultValue: threadData.ai_urgency }),
+                    trade: tr(`aiTrade.${threadData.ai_trade}`, { defaultValue: threadData.ai_trade }),
+                    reasoning: threadData.ai_reasoning,
+                  })}
                 </p>
               )}
 
               <div className="ticket-thread-body" ref={threadBodyRef}>
                 {threadData.comments.length === 0 && (
                   <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>
-                    No comments yet — say hello, or ask for a photo.
+                    {tr('noCommentsYet')}
                   </p>
                 )}
                 {threadData.comments.map((c) => (
                   <div className={`bubble ${c.sender === 'manager' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`} key={c.id}>
-                    {c.sender === 'ai' && <div className="bubble-sender">Assistant</div>}
+                    {c.sender === 'ai' && <div className="bubble-sender">{tr('assistant')}</div>}
                     {c.body}
                     {c.attachment_url && (
                       <AttachmentPreview
@@ -324,13 +313,13 @@ function Maintenance() {
                         fileName={c.attachment_file_name}
                       />
                     )}
-                    <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(c.created_at)}</div>
+                    <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(c.created_at, i18n.language)}</div>
                   </div>
                 ))}
               </div>
 
               <form className="ticket-thread-composer" onSubmit={handleSendComment}>
-                <label className="attach-btn" title="Attach a photo, video, or document">
+                <label className="attach-btn" title={tr('attachTitle')}>
                   📎
                   <input
                     type="file"
@@ -343,11 +332,11 @@ function Maintenance() {
                 <input
                   value={commentDraft}
                   onChange={(e) => setCommentDraft(e.target.value)}
-                  placeholder={commentFile ? commentFile.name : 'Type a comment…'}
+                  placeholder={commentFile ? commentFile.name : tr('commentPlaceholder')}
                   disabled={sendingComment}
                 />
                 <button type="submit" className="btn btn-primary" disabled={sendingComment || (!commentDraft.trim() && !commentFile)}>
-                  Send
+                  {tr('send')}
                 </button>
               </form>
             </div>

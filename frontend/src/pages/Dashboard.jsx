@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getProperties, createProperty, getMaintenanceRequests, getTenants, getRecentActivity, getDocuments } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import StatCard from '../components/StatCard.jsx'
@@ -20,20 +21,21 @@ function daysUntil(dateStr) {
 // "2 hours ago", "Yesterday", etc. Computed client-side from a raw
 // timestamp (rather than a pre-formatted string from the API) so it stays
 // accurate without needing a fresh API call if the tab's left open a while.
-function formatRelativeTime(value) {
+function formatRelativeTime(value, t, locale) {
   const diffMs = Date.now() - new Date(value).getTime()
   const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1) return 'Just now'
-  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`
+  if (diffMin < 1) return t('relativeTime.justNow')
+  if (diffMin < 60) return t('relativeTime.minutesAgo', { count: diffMin })
   const diffHr = Math.floor(diffMin / 60)
-  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`
+  if (diffHr < 24) return t('relativeTime.hoursAgo', { count: diffHr })
   const diffDay = Math.floor(diffHr / 24)
-  if (diffDay === 1) return 'Yesterday'
-  if (diffDay < 7) return `${diffDay} days ago`
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  if (diffDay === 1) return t('relativeTime.yesterday')
+  if (diffDay < 7) return t('relativeTime.daysAgo', { count: diffDay })
+  return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
 
 function Dashboard() {
+  const { t, i18n } = useTranslation('dashboard')
   const [properties, setProperties] = useState([])
   const [maintenance, setMaintenance] = useState([])
   const [tenantRows, setTenantRows] = useState([])
@@ -93,35 +95,35 @@ function Dashboard() {
 
   return (
     <div>
-      <PageHeader title="Good morning" subtitle="Here's what's moving across your portfolio today">
+      <PageHeader title={t('greeting')} subtitle={t('subtitle')}>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-          + Add property
+          {t('addProperty')}
         </button>
       </PageHeader>
 
       <div className="content">
         <div className="stat-row">
           <StatCard
-            label="Properties"
+            label={t('stats.properties')}
             value={loading ? '—' : properties.length}
-            sub={cities.length ? `across ${cities.join(', ')}` : 'add your first property'}
+            sub={cities.length ? t('stats.propertiesSubCities', { cities: cities.join(', ') }) : t('stats.propertiesSubEmpty')}
           />
           <StatCard
-            label="Occupancy"
+            label={t('stats.occupancy')}
             value={loading ? '—' : `${occupancyPct}%`}
-            sub={totalUnits ? `${occupiedUnits}/${totalUnits} units occupied` : 'no units yet'}
+            sub={totalUnits ? t('stats.occupancySub', { occupied: occupiedUnits, total: totalUnits }) : t('stats.occupancySubEmpty')}
             subVariant={occupancyPct >= 90 ? 'up' : undefined}
           />
           <StatCard
-            label="Open maintenance"
+            label={t('stats.openMaintenance')}
             value={loading ? '—' : openMaintenance.length}
-            sub={urgentMaintenanceCount > 0 ? `${urgentMaintenanceCount} flagged urgent` : 'none flagged urgent'}
+            sub={urgentMaintenanceCount > 0 ? t('stats.openMaintenanceSub', { count: urgentMaintenanceCount }) : t('stats.openMaintenanceSubNone')}
             subVariant={urgentMaintenanceCount > 0 ? 'warn' : undefined}
           />
           <StatCard
-            label="Leases expiring"
+            label={t('stats.leasesExpiring')}
             value={loading ? '—' : expiringLeaseCount}
-            sub="within 60 days"
+            sub={t('stats.leasesExpiringSub')}
             subVariant={expiringLeaseCount > 0 ? 'warn' : undefined}
           />
         </div>
@@ -129,17 +131,17 @@ function Dashboard() {
         <div className="dash-grid">
           <div>
             <div className="section-head">
-              <h2>Recent activity</h2>
-              <span className="section-head-link">View all</span>
+              <h2>{t('recentActivity')}</h2>
+              <span className="section-head-link">{t('viewAll')}</span>
             </div>
             <div className="card feed">
-              {!loading && activity.length === 0 && <div className="board-empty">No recent activity yet.</div>}
+              {!loading && activity.length === 0 && <div className="board-empty">{t('noRecentActivity')}</div>}
               {activity.map((item, i) => (
                 <div className="feed-item" key={i}>
                   <div className={`feed-dot ${item.dot}`} />
                   <div>
                     <div className="feed-text">{item.text}</div>
-                    <div className="feed-time mono">{formatRelativeTime(item.timestamp)}</div>
+                    <div className="feed-time mono">{formatRelativeTime(item.timestamp, t, i18n.language)}</div>
                   </div>
                 </div>
               ))}
@@ -148,11 +150,11 @@ function Dashboard() {
 
           <div>
             <div className="section-head">
-              <h2>Upcoming renewals</h2>
-              <Link to="/tenants">View all</Link>
+              <h2>{t('upcomingRenewals')}</h2>
+              <Link to="/tenants">{t('viewAll')}</Link>
             </div>
             <div className="card">
-              {!loading && upcomingRenewals.length === 0 && <div className="board-empty">No active leases yet.</div>}
+              {!loading && upcomingRenewals.length === 0 && <div className="board-empty">{t('noActiveLeases')}</div>}
               {upcomingRenewals.map((r) => {
                 const days = daysUntil(r.lease_end)
                 return (
@@ -162,11 +164,11 @@ function Dashboard() {
                         {r.property_name} — {r.unit_number}
                       </div>
                       <div className="renewal-sub">
-                        {r.full_name} · ends {new Date(r.lease_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {r.full_name} · {t('endsOn', { date: new Date(r.lease_end).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' }) })}
                       </div>
                     </div>
                     <span className={`pill pill-${RENEWAL_PILL[r.status] ?? 'green'}`}>
-                      {days >= 0 ? `${days} DAYS` : 'OVERDUE'}
+                      {days >= 0 ? `${days} ${t('days')}` : t('overdue')}
                     </span>
                   </div>
                 )
@@ -174,19 +176,19 @@ function Dashboard() {
             </div>
 
             <div className="section-head">
-              <h2>Intake queue</h2>
-              <Link to="/documents">Open</Link>
+              <h2>{t('intakeQueue')}</h2>
+              <Link to="/documents">{t('open')}</Link>
             </div>
             <div className="card intake-card">
               <div className="intake-note">
                 {loading
-                  ? 'Loading…'
+                  ? t('loading')
                   : needsReviewCount > 0
-                    ? `${needsReviewCount} document${needsReviewCount === 1 ? '' : 's'} waiting for review`
-                    : 'All documents reviewed'}
+                    ? t('documentsWaiting', { count: needsReviewCount })
+                    : t('allDocumentsReviewed')}
               </div>
               <Link to="/documents" className="btn btn-ghost intake-btn">
-                {needsReviewCount > 0 ? 'Review documents' : 'View documents'}
+                {needsReviewCount > 0 ? t('reviewDocuments') : t('viewDocuments')}
               </Link>
             </div>
           </div>
@@ -194,7 +196,7 @@ function Dashboard() {
       </div>
 
       {showForm && (
-        <Modal title="Add property" onClose={() => setShowForm(false)}>
+        <Modal title={t('addPropertyModalTitle')} onClose={() => setShowForm(false)}>
           <PropertyForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
         </Modal>
       )}

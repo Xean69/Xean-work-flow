@@ -1,0 +1,35 @@
+{
+  "maintenanceReply": {
+    "subject": "Nova resposta em \"{{ticketTitle}}\"",
+    "heading": "O seu gestor de imóveis respondeu",
+    "body": "Olá {{tenantName}}, há uma nova resposta em \"{{ticketTitle}}\":",
+    "cta": "Ver em Reparações"
+  },
+  "newDocument": {
+    "subject": "Novo(a) {{docTypeLabel}} adicionado(a) à sua conta",
+    "heading": "Novo(a) {{docTypeLabel}}",
+    "body": "Olá {{tenantName}}, o seu gestor de imóveis adicionou um novo documento à sua conta:",
+    "cta": "Ver no Portal"
+  },
+  "newMessage": {
+    "subject": "Nova mensagem do seu gestor de imóveis",
+    "heading": "Nova mensagem",
+    "body": "Olá {{tenantName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
+    "cta": "Ver em Mensagens"
+  },
+  "passwordReset": {
+    "subject": "Redefinir a palavra-passe do portal do inquilino",
+    "heading": "Redefinir a sua palavra-passe",
+    "line1": "Recebemos um pedido para redefinir a palavra-passe do seu portal do inquilino.",
+    "line2": "Esta ligação expira em 1 hora e só pode ser utilizada uma vez. Se não fez este pedido, pode ignorar este e-mail em segurança.",
+    "cta": "Redefinir palavra-passe"
+  },
+  "defaultTenantName": "olá",
+  "docType": {
+    "lease": "Contrato de arrendamento",
+    "invoice": "Fatura",
+    "inspection": "Inspeção",
+    "application": "Candidatura",
+    "other": "Documento"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "greeting": "مرحبًا، {{firstName}}",
+  "renewalNoticeWithDays": "ينتهي عقد إيجارك في {{date}} — بعد {{count}} يومًا. تواصل مع مدير العقار بشأن التجديد.",
+  "renewalNoticeOverdue": "ينتهي عقد إيجارك في {{date}}. تواصل مع مدير العقار بشأن التجديد.",
+  "yourHome": "مسكنك",
+  "unit": "الوحدة {{unitNumber}}",
+  "monthlyRent": "الإيجار الشهري",
+  "paymentStatus": {
+    "paid": "مدفوع",
+    "partial": "جزئي",
+    "unpaid": "مستحق"
+  },
+  "paidInFull": "مدفوع بالكامل عن {{period}}.",
+  "partiallyPaid": "مدفوع جزئيًا عن {{period}} — تواصل مع مدير العقار بشأن الرصيد المتبقي.",
+  "notYetPaid": "لم يُسجَّل الدفع بعد عن {{period}}. تواصل مع مدير العقار للحصول على تعليمات الدفع."
+}

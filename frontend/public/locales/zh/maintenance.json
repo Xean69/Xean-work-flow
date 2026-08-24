@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "start": "开始 →",
+    "backToNew": "← 新建",
+    "resolve": "解决 ✓",
+    "reopen": "↺ 重新打开",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "aiReadNote": "⚡ AI 判断：{{urgency}} · {{trade}} — {{reasoning}}",
+  "aiTrade": {
+    "plumbing": "水管",
+    "electrical": "电气",
+    "hvac": "暖通空调",
+    "appliance": "家电",
+    "structural": "结构",
+    "pest_control": "除虫",
+    "locksmith": "锁具",
+    "general": "综合"
+  },
+  "aiUrgency": {
+    "high": "紧急",
+    "medium": "一般",
+    "low": "常规"
+  },
+  "assistant": "助手",
+  "attachTitle": "添加照片、视频或文档",
+  "attachmentAlt": "附件",
+  "columns": {
+    "new": "新建",
+    "in_progress": "处理中",
+    "resolved": "已解决"
+  },
+  "commentPlaceholder": "输入评论…",
+  "confirmDelete": "删除“{{title}}”？",
+  "downloadAttachment": "下载附件",
+  "editTicketModalTitle": "编辑工单",
+  "emergency": "🚨 紧急",
+  "emergencyNote": "🚨 租户标记为紧急情况",
+  "emptyNoUnitsBody": "请先添加房产和房源，再回来登记维修请求。",
+  "emptyNoUnitsTitle": "暂无房源",
+  "loading": "加载中…",
+  "newCommentTitle": "新评论",
+  "newTicket": "+ 新建工单",
+  "newTicketModalTitle": "新建工单",
+  "noCommentsYet": "暂无评论 — 打个招呼，或索取照片。",
+  "noTickets": "暂无工单",
+  "send": "发送",
+  "subtitle": "跟踪并分类处理全部房产的维修请求",
+  "ticketFallbackTitle": "工单",
+  "title": "维修"
+}

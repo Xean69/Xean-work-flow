@@ -176,7 +176,7 @@
 .stat-card::before {
   content: '';
   position: absolute;
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
   bottom: 0;
   width: 3px;
@@ -254,7 +254,7 @@ table {
   border-collapse: collapse;
 }
 th {
-  text-align: left;
+  text-align: start;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -320,8 +320,8 @@ tr:last-child td {
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   background: none;
-  border-left: none;
-  border-right: none;
+  border-inline-start: none;
+  border-inline-end: none;
   border-top: none;
   font-family: var(--font-sans);
 }
@@ -368,7 +368,7 @@ tr:last-child td {
   content: '';
   position: absolute;
   top: 2px;
-  right: 2px;
+  inset-inline-end: 2px;
   width: 15px;
   height: 15px;
   border-radius: 50%;
@@ -378,8 +378,8 @@ tr:last-child td {
   background: var(--line);
 }
 .toggle.off::after {
-  left: 2px;
-  right: auto;
+  inset-inline-start: 2px;
+  inset-inline-end: auto;
 }
 
 /* ---- Forms ---- */
@@ -388,7 +388,7 @@ tr:last-child td {
   flex-direction: column;
   gap: var(--space-1);
   margin-bottom: var(--space-4);
-  text-align: left;
+  text-align: start;
 }
 .form-field label {
   font-size: 13px;
@@ -430,7 +430,7 @@ tr:last-child td {
   color: var(--red);
   font-size: 13px;
   margin-bottom: var(--space-4);
-  text-align: left;
+  text-align: start;
 }
 .checkbox-label {
   display: flex;
@@ -501,7 +501,7 @@ tr:last-child td {
   max-height: 90vh;
   overflow-y: auto;
   padding: var(--space-6);
-  text-align: left;
+  text-align: start;
 }
 .modal-header {
   display: flex;
@@ -559,12 +559,12 @@ tr:last-child td {
 .extract-fields {
   display: flex;
   gap: 18px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .extract-field {
   font-size: 11px;
   color: var(--slate);
-  text-align: right;
+  text-align: end;
 }
 .extract-field b {
   display: block;
@@ -606,19 +606,19 @@ tr:last-child td {
   background: var(--parchment);
   border: 1px solid var(--line);
   align-self: flex-start;
-  border-bottom-left-radius: 3px;
+  border-end-start-radius: 3px;
 }
 .bubble.out {
   background: var(--ink);
   color: #f1eee7;
   align-self: flex-end;
-  border-bottom-right-radius: 3px;
+  border-end-end-radius: 3px;
 }
 .bubble.ai {
   background: var(--amber-bg);
   border: 1px solid var(--amber);
   align-self: flex-start;
-  border-bottom-left-radius: 3px;
+  border-end-start-radius: 3px;
 }
 .bubble-sender {
   font-size: 10px;

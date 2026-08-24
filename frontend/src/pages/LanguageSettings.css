@@ -1,0 +1,41 @@
+.language-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  max-width: 720px;
+}
+
+.language-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: start;
+  transition: border-color 0.15s ease;
+}
+.language-card:hover:not(:disabled) {
+  border-color: var(--brass);
+}
+.language-card:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.language-card-active {
+  border-color: var(--brass);
+  border-width: 2px;
+}
+
+.language-saving {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--slate);
+}

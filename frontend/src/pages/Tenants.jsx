@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getTenants, getAddons, getProperties, createTenant, updateTenant, deleteTenant } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Badge from '../components/Badge.jsx'
@@ -7,12 +8,6 @@ import Modal from '../components/Modal.jsx'
 import TenantForm from '../components/TenantForm.jsx'
 import './Tenants.css'
 
-const STATUS_LABEL = {
-  active: 'Active',
-  renewal_due: 'Renewal due',
-  urgent_renewal: 'Urgent renewal',
-  vacant: 'Vacant',
-}
 const STATUS_VARIANT = {
   active: 'green',
   renewal_due: 'amber',
@@ -20,15 +15,8 @@ const STATUS_VARIANT = {
   vacant: 'slate',
 }
 
-const PAYMENT_STATUS_LABEL = { paid: 'Paid', partial: 'Partial', unpaid: 'Unpaid' }
 const PAYMENT_STATUS_VARIANT = { paid: 'green', partial: 'amber', unpaid: 'red' }
 
-const INSPECTION_STATUS_LABEL = {
-  none: 'No inspection',
-  draft: 'Draft',
-  pending_signature: 'Pending signature',
-  signed: 'Signed',
-}
 const INSPECTION_STATUS_VARIANT = {
   none: 'slate',
   draft: 'slate',
@@ -36,9 +24,9 @@ const INSPECTION_STATUS_VARIANT = {
   signed: 'green',
 }
 
-function formatDate(value) {
+function formatDate(value, locale) {
   if (!value) return '—'
-  return new Date(value).toLocaleDateString(undefined, {
+  return new Date(value).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -46,6 +34,7 @@ function formatDate(value) {
 }
 
 function Tenants() {
+  const { t, i18n } = useTranslation('tenants')
   const [rows, setRows] = useState([])
   const [addons, setAddons] = useState([])
   const [properties, setProperties] = useState([])
@@ -86,7 +75,7 @@ function Tenants() {
   }
 
   async function handleDelete(row) {
-    if (!window.confirm(`Remove ${row.full_name} from unit ${row.unit_number}?`)) return
+    if (!window.confirm(t('confirmRemove', { name: row.full_name, unit: row.unit_number }))) return
     await deleteTenant(row.tenant_id)
     await load()
   }
@@ -149,14 +138,14 @@ function Tenants() {
   return (
     <div>
       <PageHeader
-        title="Tenants & Leases"
-        subtitle={loading ? 'Loading…' : `${occupiedCount} active ${occupiedCount === 1 ? 'tenant' : 'tenants'} across your portfolio`}
+        title={t('title')}
+        subtitle={loading ? t('subtitleLoading') : t('subtitle', { count: occupiedCount })}
       >
         <Link to="/tenants/analytics" className="btn btn-ghost">
-          View Analytics
+          {t('viewAnalytics')}
         </Link>
         <button className="btn btn-primary" onClick={() => setFormState({})} disabled={!loading && vacantOptions.length === 0}>
-          + Add tenant
+          {t('addTenant')}
         </button>
       </PageHeader>
 
@@ -165,8 +154,8 @@ function Tenants() {
 
         {!loading && !loadError && rows.length === 0 && (
           <div className="empty-state card">
-            <h3>No units yet</h3>
-            <p>Add a property and some units first, then come back to assign tenants.</p>
+            <h3>{t('emptyNoUnitsTitle')}</h3>
+            <p>{t('emptyNoUnitsBody')}</p>
           </div>
         )}
 
@@ -175,7 +164,7 @@ function Tenants() {
             <input
               type="text"
               className="tenants-search"
-              placeholder="Search by name, email, or phone…"
+              placeholder={t('searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -184,7 +173,7 @@ function Tenants() {
               value={propertyFilter}
               onChange={(e) => setPropertyFilter(e.target.value)}
             >
-              <option value="">All properties</option>
+              <option value="">{t('allProperties')}</option>
               {properties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -196,8 +185,8 @@ function Tenants() {
 
         {rows.length > 0 && visibleRows.length === 0 && (
           <div className="empty-state card">
-            <h3>No matches</h3>
-            <p>No tenant matches the current search and filter.</p>
+            <h3>{t('emptyNoMatchesTitle')}</h3>
+            <p>{t('emptyNoMatchesBody')}</p>
           </div>
         )}
 
@@ -206,14 +195,14 @@ function Tenants() {
             <table>
               <thead>
                 <tr>
-                  <th>Tenant</th>
-                  <th>Property / Unit</th>
-                  <th>Rent</th>
-                  <th>This month</th>
-                  <th>Lease ends</th>
-                  <th>Status</th>
-                  <th>Portal login</th>
-                  <th>Move-in inspection</th>
+                  <th>{t('table.tenant')}</th>
+                  <th>{t('table.propertyUnit')}</th>
+                  <th>{t('table.rent')}</th>
+                  <th>{t('table.thisMonth')}</th>
+                  <th>{t('table.leaseEnds')}</th>
+                  <th>{t('table.status')}</th>
+                  <th>{t('table.portalLogin')}</th>
+                  <th>{t('table.moveInInspection')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -239,20 +228,20 @@ function Tenants() {
                     <td>
                       {row.payment_status ? (
                         <Badge variant={PAYMENT_STATUS_VARIANT[row.payment_status]}>
-                          {PAYMENT_STATUS_LABEL[row.payment_status]}
+                          {t(`paymentStatus.${row.payment_status}`)}
                         </Badge>
                       ) : (
                         '—'
                       )}
                     </td>
-                    <td className="mono">{formatDate(row.lease_end)}</td>
+                    <td className="mono">{formatDate(row.lease_end, i18n.language)}</td>
                     <td>
-                      <Badge variant={STATUS_VARIANT[row.status]}>{STATUS_LABEL[row.status]}</Badge>
+                      <Badge variant={STATUS_VARIANT[row.status]}>{t(`status.${row.status}`)}</Badge>
                     </td>
                     <td>
                       {row.tenant_id ? (
                         <Badge variant={row.has_login ? 'green' : 'slate'}>
-                          {row.has_login ? 'Active' : 'Not set'}
+                          {row.has_login ? t('portalLoginStatus.active') : t('portalLoginStatus.notSet')}
                         </Badge>
                       ) : (
                         '—'
@@ -261,7 +250,7 @@ function Tenants() {
                     <td>
                       {row.tenant_id ? (
                         <Badge variant={INSPECTION_STATUS_VARIANT[row.inspection_status]}>
-                          {INSPECTION_STATUS_LABEL[row.inspection_status]}
+                          {t(`inspectionStatus.${row.inspection_status}`)}
                         </Badge>
                       ) : (
                         '—'
@@ -272,10 +261,10 @@ function Tenants() {
                         {row.tenant_id ? (
                           <>
                             <button className="btn btn-ghost btn-sm" onClick={() => setFormState({ row })}>
-                              Edit
+                              {t('table.edit')}
                             </button>
                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(row)}>
-                              Delete
+                              {t('table.delete')}
                             </button>
                           </>
                         ) : (
@@ -283,7 +272,7 @@ function Tenants() {
                             className="btn btn-ghost btn-sm"
                             onClick={() => setFormState({ presetUnitId: row.unit_id })}
                           >
-                            + Add tenant
+                            {t('addTenant')}
                           </button>
                         )}
                       </div>
@@ -297,7 +286,7 @@ function Tenants() {
       </div>
 
       {formState && (
-        <Modal title={formState?.row ? 'Edit tenant' : 'Add tenant'} onClose={() => setFormState(null)}>
+        <Modal title={formState?.row ? t('editTenant') : t('addTenantModalTitle')} onClose={() => setFormState(null)}>
           <TenantForm
             initialValues={initialValues}
             isEditing={!!formState?.row}

@@ -10,6 +10,7 @@ import PortalLease from './portal/pages/Lease.jsx'
 import PortalRepairs from './portal/pages/Repairs.jsx'
 import PortalMessages from './portal/pages/Messages.jsx'
 import PortalAddons from './portal/pages/Addons.jsx'
+import PortalLanguage from './portal/pages/Language.jsx'
 import Landing from './pages/Landing.jsx'
 import Terms from './pages/Terms.jsx'
 import Privacy from './pages/Privacy.jsx'
@@ -37,6 +38,7 @@ import Insights from './pages/Insights.jsx'
 import Team from './pages/Team.jsx'
 import Upgrade from './pages/Upgrade.jsx'
 import TenantInspection from './pages/TenantInspection.jsx'
+import LanguageSettings from './pages/LanguageSettings.jsx'
 
 // index.html's inline script picks the right manifest and apple-touch-icon
 // (app vs. portal) on the initial full-page load, but this is a single-page
@@ -82,6 +84,7 @@ function App() {
         <Route path="/portal/messages" element={<PortalMessages />} />
         <Route path="/portal/addons" element={<PortalAddons />} />
         <Route path="/portal/lease" element={<PortalLease />} />
+        <Route path="/portal/language" element={<PortalLanguage />} />
       </Route>
 
       {/* Public marketing site — its own design system entirely (dark
@@ -117,6 +120,7 @@ function App() {
         <Route path="/insights" element={<Insights />} />
         <Route path="/team" element={<Team />} />
         <Route path="/upgrade" element={<Upgrade />} />
+        <Route path="/language" element={<LanguageSettings />} />
       </Route>
       </Routes>
     </>

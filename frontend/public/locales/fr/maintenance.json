@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "start": "Démarrer →",
+    "backToNew": "← Nouveau",
+    "resolve": "Résoudre ✓",
+    "reopen": "↺ Rouvrir",
+    "edit": "Modifier",
+    "delete": "Supprimer"
+  },
+  "aiReadNote": "⚡ Analyse IA : {{urgency}} · {{trade}} — {{reasoning}}",
+  "aiTrade": {
+    "plumbing": "Plomberie",
+    "electrical": "Électricité",
+    "hvac": "CVC",
+    "appliance": "Électroménager",
+    "structural": "Structure",
+    "pest_control": "Nuisibles",
+    "locksmith": "Serrurerie",
+    "general": "Général"
+  },
+  "aiUrgency": {
+    "high": "Urgent",
+    "medium": "Modéré",
+    "low": "Courant"
+  },
+  "assistant": "Assistant",
+  "attachTitle": "Joindre une photo, une vidéo ou un document",
+  "attachmentAlt": "Pièce jointe",
+  "columns": {
+    "new": "Nouveau",
+    "in_progress": "En cours",
+    "resolved": "Résolu"
+  },
+  "commentPlaceholder": "Écrire un commentaire…",
+  "confirmDelete": "Supprimer « {{title}} » ?",
+  "downloadAttachment": "Télécharger la pièce jointe",
+  "editTicketModalTitle": "Modifier le ticket",
+  "emergency": "🚨 Urgence",
+  "emergencyNote": "🚨 Signalé comme une urgence par le locataire",
+  "emptyNoUnitsBody": "Ajoutez d'abord un bien et des lots, puis revenez pour enregistrer des demandes de maintenance.",
+  "emptyNoUnitsTitle": "Aucun lot pour l'instant",
+  "loading": "Chargement…",
+  "newCommentTitle": "Nouveau commentaire",
+  "newTicket": "+ Nouveau ticket",
+  "newTicketModalTitle": "Nouveau ticket",
+  "noCommentsYet": "Aucun commentaire — dites bonjour ou demandez une photo.",
+  "noTickets": "Aucun ticket",
+  "send": "Envoyer",
+  "subtitle": "Suivez et triez les demandes de tout votre portefeuille",
+  "ticketFallbackTitle": "Ticket",
+  "title": "Maintenance"
+}

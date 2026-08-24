@@ -1,22 +1,22 @@
 import { useOutletContext } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
-const PAYMENT_STATUS_LABEL = { paid: 'Paid', partial: 'Partial', unpaid: 'Due' }
 const PAYMENT_STATUS_VARIANT = { paid: 'green', partial: 'amber', unpaid: 'red' }
 
 function formatMoney(amount) {
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 }
 
-function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+function formatDate(value, locale) {
+  return new Date(value).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 // "2026-08" -> "August 2026" — parsed as separate year/month numbers rather
 // than new Date("2026-08"), which JS reads as UTC midnight and can display
 // as the previous month in a negative-UTC-offset timezone.
-function formatPeriod(period) {
+function formatPeriod(period, locale) {
   const [year, month] = period.split('-').map(Number)
-  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  return new Date(year, month - 1, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' })
 }
 
 // Days between today and a date — same "compare at midnight" approach used
@@ -32,45 +32,45 @@ function daysUntil(dateStr) {
 
 function Home() {
   const { tenant } = useOutletContext()
+  const { t, i18n } = useTranslation('portal-home')
   const firstName = tenant.full_name.split(' ')[0]
   const daysLeft = daysUntil(tenant.lease_end)
   const showRenewalNotice = daysLeft <= 60
 
   return (
     <div>
-      <p className="portal-greeting">Hi, {firstName}</p>
+      <p className="portal-greeting">{t('greeting', { firstName })}</p>
 
       {showRenewalNotice && (
         <div className="portal-notice">
-          Your lease ends {formatDate(tenant.lease_end)}
-          {daysLeft >= 0 ? ` — ${daysLeft} days away.` : '.'} Reach out to your property manager about renewing.
+          {daysLeft >= 0
+            ? t('renewalNoticeWithDays', { date: formatDate(tenant.lease_end, i18n.language), count: daysLeft })
+            : t('renewalNoticeOverdue', { date: formatDate(tenant.lease_end, i18n.language) })}
         </div>
       )}
 
       <div className="portal-grid-2">
         <div className="portal-card">
-          <h2>Your home</h2>
+          <h2>{t('yourHome')}</h2>
           <p>{tenant.property_name}</p>
           <p>
             {tenant.address}, {tenant.city}, {tenant.province} {tenant.postal_code}
           </p>
-          <p>Unit {tenant.unit_number}</p>
+          <p>{t('unit', { unitNumber: tenant.unit_number })}</p>
         </div>
 
         <div className="portal-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-            <h2>Monthly rent</h2>
+            <h2>{t('monthlyRent')}</h2>
             <span className={`portal-badge portal-badge-${PAYMENT_STATUS_VARIANT[tenant.payment_status]}`}>
-              {PAYMENT_STATUS_LABEL[tenant.payment_status]}
+              {t(`paymentStatus.${tenant.payment_status}`)}
             </span>
           </div>
           <div className="portal-rent-amount">{formatMoney(tenant.rent_amount)}</div>
           <p style={{ marginTop: 8 }}>
-            {tenant.payment_status === 'paid' && `Paid in full for ${formatPeriod(tenant.current_period)}.`}
-            {tenant.payment_status === 'partial' &&
-              `Partially paid for ${formatPeriod(tenant.current_period)} — contact your property manager about the remaining balance.`}
-            {tenant.payment_status === 'unpaid' &&
-              `Not yet marked paid for ${formatPeriod(tenant.current_period)}. Contact your property manager for payment instructions.`}
+            {tenant.payment_status === 'paid' && t('paidInFull', { period: formatPeriod(tenant.current_period, i18n.language) })}
+            {tenant.payment_status === 'partial' && t('partiallyPaid', { period: formatPeriod(tenant.current_period, i18n.language) })}
+            {tenant.payment_status === 'unpaid' && t('notYetPaid', { period: formatPeriod(tenant.current_period, i18n.language) })}
           </p>
         </div>
       </div>
