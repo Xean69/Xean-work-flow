@@ -888,3 +888,12 @@ BEGIN
       );
   END IF;
 END $$;
+
+-- Bulk announcements reuse the same per-tenant messages table and thread —
+-- an announcement is just the same body inserted into many tenants'
+-- existing threads at once, sender='manager' like any other manager
+-- message. subject is NULL for every ordinary reply (before and after this
+-- shipped); its presence alone is what marks a row as having come from the
+-- announcement composer rather than the regular 1:1 composer, so no
+-- separate boolean/type column is needed.
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS subject TEXT;

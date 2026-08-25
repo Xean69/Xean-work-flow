@@ -606,7 +606,7 @@ router.get(
   requireTenantAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "SELECT id, sender, body, created_at FROM messages WHERE tenant_id = $1 ORDER BY created_at ASC",
+      "SELECT id, sender, subject, body, created_at FROM messages WHERE tenant_id = $1 ORDER BY created_at ASC",
       [req.tenantId]
     );
     res.json(rows);

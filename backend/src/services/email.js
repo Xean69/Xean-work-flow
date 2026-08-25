@@ -258,3 +258,28 @@ export async function notifyTenantOfNewMessage({ tenantEmail, tenantName, messag
     console.error("notifyTenantOfNewMessage failed:", err);
   }
 }
+
+// Bulk announcements reuse this same tenant-facing "new message" channel —
+// the only difference is the manager wrote an actual subject line for this
+// one, which is used verbatim as both the email's subject and heading
+// (never translated, same as messageBody/announcementBody below — only the
+// surrounding chrome is localized, per each tenant's own language).
+export async function notifyTenantOfAnnouncement({ tenantEmail, tenantName, subject, announcementBody, language }) {
+  try {
+    if (!tenantEmail) return false;
+    const name = tenantName || tr(language, "defaultTenantName");
+    return await sendEmail({
+      to: tenantEmail,
+      subject,
+      html: renderEmail({
+        heading: subject,
+        lines: [tr(language, "announcement.body", { tenantName: name }), announcementBody],
+        ctaText: tr(language, "announcement.cta"),
+        ctaUrl: `${APP_BASE_URL}/portal/messages`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyTenantOfAnnouncement failed:", err);
+    return false;
+  }
+}

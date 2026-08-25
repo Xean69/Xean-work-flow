@@ -483,6 +483,25 @@ export function parseMessageBody(body, { requireBody = true } = {}) {
   return { body: requireString(body.body, "body") };
 }
 
+// Used only by the bulk-announcement composer — tenant_ids is the manager's
+// final, already-fine-tuned recipient list (property filter + individual
+// checkbox toggles resolved client-side); the route itself re-validates
+// every id actually belongs to this business before using any of them.
+export function parseAnnouncementBody(body) {
+  if (!Array.isArray(body.tenant_ids) || body.tenant_ids.length === 0) {
+    throw new ApiError(400, "tenant_ids must be a non-empty array");
+  }
+  const tenantIds = body.tenant_ids.map((id) => Number(id));
+  if (tenantIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+    throw new ApiError(400, "tenant_ids must all be positive integers");
+  }
+  return {
+    subject: requireString(body.subject, "subject"),
+    body: requireString(body.body, "body"),
+    tenantIds,
+  };
+}
+
 const UNIT_STATUSES = ["vacant", "occupied", "short_term", "turnover", "rent_ready", "notices"];
 
 export function parseUnitBody(body) {

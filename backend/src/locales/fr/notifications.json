@@ -1,35 +1,39 @@
 {
-  "maintenanceReply": {
-    "subject": "Nouvelle réponse concernant « {{ticketTitle}} »",
-    "heading": "Votre gestionnaire a répondu",
-    "body": "Bonjour {{tenantName}}, une nouvelle réponse a été publiée concernant « {{ticketTitle}} » :",
-    "cta": "Voir dans Réparations"
-  },
-  "newDocument": {
-    "subject": "Nouveau document ({{docTypeLabel}}) ajouté à votre compte",
-    "heading": "Nouveau : {{docTypeLabel}}",
-    "body": "Bonjour {{tenantName}}, votre gestionnaire a ajouté un nouveau document à votre compte :",
-    "cta": "Voir dans le portail"
-  },
-  "newMessage": {
-    "subject": "Nouveau message de votre gestionnaire",
-    "heading": "Nouveau message",
-    "body": "Bonjour {{tenantName}}, votre gestionnaire vous a envoyé un message :",
+  "announcement": {
+    "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier a publié une annonce :",
     "cta": "Voir dans Messages"
-  },
-  "passwordReset": {
-    "subject": "Réinitialisez le mot de passe de votre portail locataire",
-    "heading": "Réinitialiser votre mot de passe",
-    "line1": "Nous avons reçu une demande de réinitialisation du mot de passe de votre portail locataire.",
-    "line2": "Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois. Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.",
-    "cta": "Réinitialiser le mot de passe"
   },
   "defaultTenantName": "à vous",
   "docType": {
-    "lease": "Bail",
+    "application": "Dossier de candidature",
+    "inspection": "État des lieux",
     "invoice": "Facture",
-    "inspection": "Inspection",
-    "application": "Candidature",
+    "lease": "Bail",
     "other": "Document"
+  },
+  "maintenanceReply": {
+    "body": "Bonjour {{tenantName}}, une nouvelle réponse a été ajoutée à « {{ticketTitle}} » :",
+    "cta": "Voir dans Réparations",
+    "heading": "Votre gestionnaire immobilier a répondu",
+    "subject": "Nouvelle réponse sur « {{ticketTitle}} »"
+  },
+  "newDocument": {
+    "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier a ajouté un nouveau document à votre compte :",
+    "cta": "Voir dans le portail",
+    "heading": "Nouveau : {{docTypeLabel}}",
+    "subject": "Nouveau document ajouté à votre compte : {{docTypeLabel}}"
+  },
+  "newMessage": {
+    "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier vous a envoyé un message :",
+    "cta": "Voir dans Messages",
+    "heading": "Nouveau message",
+    "subject": "Nouveau message de votre gestionnaire immobilier"
+  },
+  "passwordReset": {
+    "cta": "Réinitialiser le mot de passe",
+    "heading": "Réinitialisez votre mot de passe",
+    "line1": "Nous avons reçu une demande de réinitialisation du mot de passe de votre portail locataire.",
+    "line2": "Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois. Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.",
+    "subject": "Réinitialisez le mot de passe de votre portail locataire"
   }
 }

@@ -17,6 +17,10 @@
     "body": "Hi {{tenantName}}, your property manager sent you a message:",
     "cta": "View in Messages"
   },
+  "announcement": {
+    "body": "Hi {{tenantName}}, your property manager sent an announcement:",
+    "cta": "View in Messages"
+  },
   "passwordReset": {
     "subject": "Reset your tenant portal password",
     "heading": "Reset your password",

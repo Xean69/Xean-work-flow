@@ -62,6 +62,7 @@ function Messages() {
           )}
           {messages.map((m) => (
             <div key={m.id} className={`portal-bubble ${m.sender === 'tenant' ? 'out' : 'in'}`}>
+              {m.subject && <div className="portal-bubble-announce-subject">📢 {m.subject}</div>}
               {m.body}
               <div className="portal-bubble-time">{formatTime(m.created_at)}</div>
             </div>

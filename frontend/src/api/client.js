@@ -306,6 +306,13 @@ export function sendManagerMessage(tenantId, body) {
   return request(`/messages/${tenantId}`, { method: "POST", body: JSON.stringify({ body }) });
 }
 
+export function sendBulkAnnouncement(subject, body, tenantIds) {
+  return request("/messages/announce", {
+    method: "POST",
+    body: JSON.stringify({ subject, body, tenant_ids: tenantIds }),
+  });
+}
+
 export function getAddons() {
   return request("/addons");
 }

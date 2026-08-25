@@ -404,6 +404,11 @@ body {
   color: var(--amber);
   margin-bottom: 3px;
 }
+.portal-bubble-announce-subject {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
 .portal-bubble-time {
   font-size: 10px;
   opacity: 0.65;

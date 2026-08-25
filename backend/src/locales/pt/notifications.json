@@ -1,35 +1,39 @@
 {
+  "announcement": {
+    "body": "Olá {{tenantName}}, o seu gestor de imóveis enviou um comunicado:",
+    "cta": "Ver nas Mensagens"
+  },
+  "defaultTenantName": "tudo bem",
+  "docType": {
+    "application": "Candidatura",
+    "inspection": "Vistoria",
+    "invoice": "Fatura",
+    "lease": "Contrato de arrendamento",
+    "other": "Documento"
+  },
   "maintenanceReply": {
-    "subject": "Nova resposta em \"{{ticketTitle}}\"",
-    "heading": "O seu gestor de imóveis respondeu",
     "body": "Olá {{tenantName}}, há uma nova resposta em \"{{ticketTitle}}\":",
-    "cta": "Ver em Reparações"
+    "cta": "Ver em Reparações",
+    "heading": "O seu gestor de imóveis respondeu",
+    "subject": "Nova resposta em \"{{ticketTitle}}\""
   },
   "newDocument": {
-    "subject": "Novo(a) {{docTypeLabel}} adicionado(a) à sua conta",
-    "heading": "Novo(a) {{docTypeLabel}}",
     "body": "Olá {{tenantName}}, o seu gestor de imóveis adicionou um novo documento à sua conta:",
-    "cta": "Ver no Portal"
+    "cta": "Ver no Portal",
+    "heading": "Novo(a) {{docTypeLabel}}",
+    "subject": "Novo(a) {{docTypeLabel}} adicionado(a) à sua conta"
   },
   "newMessage": {
-    "subject": "Nova mensagem do seu gestor de imóveis",
-    "heading": "Nova mensagem",
     "body": "Olá {{tenantName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
-    "cta": "Ver em Mensagens"
+    "cta": "Ver nas Mensagens",
+    "heading": "Nova mensagem",
+    "subject": "Nova mensagem do seu gestor de imóveis"
   },
   "passwordReset": {
-    "subject": "Redefinir a palavra-passe do portal do inquilino",
+    "cta": "Redefinir palavra-passe",
     "heading": "Redefinir a sua palavra-passe",
-    "line1": "Recebemos um pedido para redefinir a palavra-passe do seu portal do inquilino.",
-    "line2": "Esta ligação expira em 1 hora e só pode ser utilizada uma vez. Se não fez este pedido, pode ignorar este e-mail em segurança.",
-    "cta": "Redefinir palavra-passe"
-  },
-  "defaultTenantName": "olá",
-  "docType": {
-    "lease": "Contrato de arrendamento",
-    "invoice": "Fatura",
-    "inspection": "Inspeção",
-    "application": "Candidatura",
-    "other": "Documento"
+    "line1": "Recebemos um pedido para redefinir a palavra-passe do seu portal de inquilino.",
+    "line2": "Esta ligação expira dentro de 1 hora e só pode ser usada uma vez. Se não fez este pedido, pode ignorar este e-mail.",
+    "subject": "Redefinir a palavra-passe do portal de inquilino"
   }
 }

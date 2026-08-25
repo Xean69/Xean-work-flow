@@ -86,3 +86,58 @@
   margin-bottom: 8px;
   text-align: center;
 }
+
+.bubble-announce-subject {
+  font-weight: 700;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+
+.announce-recipients {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.announce-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.announce-all-header {
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.announce-property-group {
+  margin-bottom: 10px;
+}
+.announce-property-group:last-child {
+  margin-bottom: 0;
+}
+
+.announce-tenant-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 4px 0 4px 22px;
+  cursor: pointer;
+}
+.announce-tenant-disabled {
+  cursor: default;
+  color: var(--slate);
+}
+
+.announce-no-email {
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  color: var(--amber);
+  font-style: italic;
+}
