@@ -25,6 +25,11 @@ function initials(name) {
     .toUpperCase()
 }
 
+// Only one maintenance team type exists today, so this is a fixed label
+// rather than a per-staff role field — maintenance_staff has no role
+// column to pull from.
+const STAFF_ROLE_LABEL = 'Maintenance'
+
 function formatTime(value) {
   return new Date(value).toLocaleString(undefined, {
     month: 'short',
@@ -77,6 +82,7 @@ function buildCombinedThreads(tenantRows, staffRows) {
     type: 'staff',
     id: s.staff_id,
     name: `${s.first_name} ${s.last_name}`,
+    roleLabel: STAFF_ROLE_LABEL,
     meta: null,
     preview: s.last_message ? `${s.last_sender === 'manager' ? 'You: ' : ''}${s.last_message}` : 'No messages yet',
     last_message_at: s.last_message_at,
@@ -205,7 +211,10 @@ function Inbox() {
                 >
                   <div className="thread-avatar">{initials(item.name)}</div>
                   <div>
-                    <div className="thread-name">{item.name}</div>
+                    <div className="thread-name">
+                      {item.name}
+                      {item.roleLabel && <span className="thread-role"> ({item.roleLabel})</span>}
+                    </div>
                     <div className="thread-preview">{item.preview}</div>
                     {item.meta && <div className="thread-chan mono">{item.meta}</div>}
                   </div>
@@ -215,9 +224,12 @@ function Inbox() {
             <div className="chat-pane">
               {active && activeInfo && (
                 <>
-                  <div className="chat-head">
+                  <div className={'chat-head' + (active.type === 'staff' ? ' chat-head-staff' : '')}>
                     <b>
-                      {active.type === 'tenant' ? activeInfo.full_name : `${activeInfo.first_name} ${activeInfo.last_name}`}
+                      {active.type === 'tenant'
+                        ? activeInfo.full_name
+                        : `${activeInfo.first_name} ${activeInfo.last_name}`}
+                      {active.type === 'staff' && <span className="thread-role"> ({STAFF_ROLE_LABEL})</span>}
                     </b>
                     {active.type === 'tenant' && (
                       <span>
