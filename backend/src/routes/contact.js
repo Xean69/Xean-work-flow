@@ -2,6 +2,7 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { rateLimit } from "../utils/publicRateLimit.js";
+import { getClientIp } from "../utils/clientIp.js";
 import {
   parseContactInquiryBody,
   parseContactChatBody,
@@ -33,7 +34,7 @@ router.post(
     await pool.query(
       `INSERT INTO contact_submissions (type, name, email, phone, message, email_sent, ip)
        VALUES ('inquiry', $1, $2, $3, $4, $5, $6)`,
-      [data.name, data.email, data.phone, data.message, sent, req.ip]
+      [data.name, data.email, data.phone, data.message, sent, getClientIp(req)]
     );
     res.json({ ok: true });
   })
@@ -49,7 +50,7 @@ router.post(
     await pool.query(
       `INSERT INTO contact_submissions (type, name, email, message, email_sent, ip)
        VALUES ('chat', $1, $2, $3, $4, $5)`,
-      [data.name, data.email, data.message, sent, req.ip]
+      [data.name, data.email, data.message, sent, getClientIp(req)]
     );
     res.json({ ok: true });
   })
@@ -70,7 +71,7 @@ router.post(
     await pool.query(
       `INSERT INTO contact_submissions (type, name, email, phone, preferred_time, email_sent, ip)
        VALUES ('demo', $1, $2, $3, $4, $5, $6)`,
-      [data.name, data.email, data.phone, data.preferred_time, sent, req.ip]
+      [data.name, data.email, data.phone, data.preferred_time, sent, getClientIp(req)]
     );
     res.json({ ok: true });
   })

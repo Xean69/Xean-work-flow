@@ -1,4 +1,5 @@
 import { ApiError } from "./errors.js";
+import { getClientIp } from "./clientIp.js";
 
 // A tiny in-memory limiter for the one part of the app with no session and
 // no other throttle — every other route is either behind auth or is itself
@@ -9,9 +10,10 @@ import { ApiError } from "./errors.js";
 // "basic" spam protection, not a hardened defense (a bot that rotates IPs
 // still gets through; see routes/contact.js's own note on residual risk).
 //
-// Keyed by whatever the caller passes as the bucket key (req.ip), not by
-// route, so a bot can't dodge the limit by spreading requests across the
-// three contact endpoints instead of hammering one.
+// Keyed by client IP (see clientIp.js for why that's not just req.ip),
+// shared across all routes this middleware is mounted on rather than one
+// bucket per route, so a bot can't dodge the limit by spreading requests
+// across the three contact endpoints instead of hammering one.
 const buckets = new Map();
 
 // Without this, every unique IP that ever hits a rate-limited route stays
@@ -27,7 +29,7 @@ setInterval(() => {
 
 export function rateLimit({ windowMs, max }) {
   return (req, res, next) => {
-    const key = req.ip;
+    const key = getClientIp(req);
     const now = Date.now();
     const timestamps = (buckets.get(key) || []).filter((t) => now - t < windowMs);
 
