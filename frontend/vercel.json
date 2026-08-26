@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://xean-work-flow-production.up.railway.app/api/$1" },
+    { "source": "/blog", "destination": "/blog/index.html" },
+    { "source": "/blog/:slug", "destination": "/blog/:slug/index.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

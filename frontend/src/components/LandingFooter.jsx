@@ -27,6 +27,7 @@ function LandingFooter() {
               <h4>Company</h4>
               <a href="#">About</a>
               <Link to="/#contact">Contact</Link>
+              <Link to="/blog">Blog</Link>
             </div>
             <div className="lnd-foot-col">
               <h4>Legal</h4>

@@ -14,6 +14,8 @@ import PortalLanguage from './portal/pages/Language.jsx'
 import Landing from './pages/Landing.jsx'
 import Terms from './pages/Terms.jsx'
 import Privacy from './pages/Privacy.jsx'
+import Blog from './pages/Blog.jsx'
+import BlogPost from './pages/BlogPost.jsx'
 import Login from './pages/Login.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import ResetPassword from './pages/ResetPassword.jsx'
@@ -106,6 +108,8 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
 
       {/* Manager dashboard: its own login, separate from the tenant
           portal's — Layout itself guards every route nested under it. */}

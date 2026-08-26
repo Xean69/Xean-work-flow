@@ -1,0 +1,160 @@
+/* Blog list + post pages. Reuses Landing.css's `.landing` palette/tokens
+   and section classes (`.lnd-section`, `.lnd-section-tag`, `.lnd-wrap`,
+   etc.) directly — everything here is additive, scoped the same way
+   (`.landing .lnd-*`), nothing redefines a token. */
+
+.landing .lnd-blog-empty {
+  color: var(--lnd-text-dim);
+  font-size: 14px;
+  margin-top: 32px;
+}
+
+.landing .lnd-blog-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 48px;
+}
+.landing .lnd-blog-card {
+  display: block;
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 16px;
+  padding: 28px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+.landing .lnd-blog-card:hover {
+  border-color: var(--lnd-navy-accent);
+}
+.landing .lnd-blog-card-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--lnd-text-dimmer);
+}
+.landing .lnd-blog-card h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--lnd-text);
+  margin-top: 10px;
+}
+.landing .lnd-blog-card p {
+  font-size: 13.5px;
+  color: var(--lnd-text-dim);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+.landing .lnd-blog-card-cta {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lnd-navy-accent);
+}
+
+/* Post */
+.landing .lnd-blog-post-wrap {
+  max-width: 720px;
+}
+.landing .lnd-blog-back {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--lnd-text-dim);
+  text-decoration: none;
+  margin-bottom: 24px;
+}
+.landing .lnd-blog-back:hover {
+  color: var(--lnd-text);
+}
+.landing .lnd-blog-post-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 38px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--lnd-text);
+  margin-top: 10px;
+  line-height: 1.2;
+}
+.landing .lnd-blog-post-body {
+  margin-top: 36px;
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: var(--lnd-text-dim);
+}
+.landing .lnd-blog-post-body h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--lnd-text);
+  margin: 40px 0 14px 0;
+}
+.landing .lnd-blog-post-body h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--lnd-text);
+  margin: 32px 0 12px 0;
+}
+.landing .lnd-blog-post-body p {
+  margin: 0 0 18px 0;
+}
+.landing .lnd-blog-post-body a {
+  color: var(--lnd-navy-accent);
+}
+.landing .lnd-blog-post-body ul,
+.landing .lnd-blog-post-body ol {
+  margin: 0 0 18px 0;
+  padding-inline-start: 22px;
+}
+.landing .lnd-blog-post-body li {
+  margin-bottom: 8px;
+}
+.landing .lnd-blog-post-body strong {
+  color: var(--lnd-text);
+}
+.landing .lnd-blog-post-body blockquote {
+  border-inline-start: 3px solid var(--lnd-navy-accent);
+  margin: 24px 0;
+  padding: 4px 0 4px 18px;
+  color: var(--lnd-text-dim);
+  font-style: italic;
+}
+.landing .lnd-blog-post-body code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.landing .lnd-blog-post-body pre {
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 10px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 0 0 18px 0;
+}
+.landing .lnd-blog-post-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.landing .lnd-blog-post-body img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin: 20px 0;
+}
+
+@media (max-width: 680px) {
+  .landing .lnd-blog-list {
+    grid-template-columns: 1fr;
+  }
+  .landing .lnd-blog-post-title {
+    font-size: 28px;
+  }
+}
