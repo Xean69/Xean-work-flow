@@ -23,6 +23,7 @@
     "medium": "Modéré",
     "low": "Courant"
   },
+  "assignLabel": "Assigner à",
   "assistant": "Assistant",
   "attachTitle": "Joindre une photo, une vidéo ou un document",
   "attachmentAlt": "Pièce jointe",
@@ -31,17 +32,17 @@
     "in_progress": "En cours",
     "resolved": "Résolus"
   },
-  "commentPlaceholder": "Rédiger un commentaire…",
+  "commentPlaceholder": "Écrire un commentaire…",
   "confirmDelete": "Supprimer « {{title}} » ?",
   "downloadAttachment": "Télécharger la pièce jointe",
   "editTicketModalTitle": "Modifier le ticket",
   "emergency": "🚨 Urgence",
   "emergencyNote": "🚨 Signalé comme une urgence par le locataire",
-  "emptyNoUnitsBody": "Ajoutez d'abord un bien et des lots, puis revenez enregistrer des demandes de maintenance.",
-  "emptyNoUnitsTitle": "Aucun lot pour l'instant",
+  "emptyNoUnitsBody": "Ajoutez d'abord un bien et des lots, puis revenez pour enregistrer des demandes de maintenance.",
+  "emptyNoUnitsTitle": "Aucun lot pour le moment",
   "entryGranted": "🔑 Accès autorisé — {{date}}",
   "entryNotGranted": "🔒 Accès non autorisé",
-  "entryNotGrantedNote": "Accès non autorisé — organisez l'entrée directement avec le locataire.",
+  "entryNotGrantedNote": "Accès non autorisé — convenez de l'accès directement avec le locataire.",
   "entryPermittedNote": "Accès autorisé — disponible le {{date}}, à tout moment entre 9h et 17h.",
   "loading": "Chargement…",
   "newCommentTitle": "Nouveau commentaire",
@@ -52,5 +53,6 @@
   "send": "Envoyer",
   "subtitle": "Suivez et triez les demandes de tout votre portefeuille",
   "ticketFallbackTitle": "Ticket",
-  "title": "Maintenance"
+  "title": "Maintenance",
+  "unassigned": "Non assigné"
 }

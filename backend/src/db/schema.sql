@@ -897,3 +897,46 @@ END $$;
 -- announcement composer rather than the regular 1:1 composer, so no
 -- separate boolean/type column is needed.
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS subject TEXT;
+
+-- ============================================================================
+-- Maintenance team — a third, deliberately lightweight account type
+-- alongside admins and tenants. Not a role added to admins (an admin role
+-- implies full dashboard access, which a maintenance worker should never
+-- get) and not a column on an existing table — its own login, its own
+-- session flag (requireStaffAuth), scoped to only the tickets assigned to
+-- it. password_hash is nullable and set separately from creation, same
+-- convention as tenants: creating a maintenance team member never requires
+-- a password up front, a manager sets one afterward as a deliberate
+-- follow-up step. Deliberately flat (no team/category column) per the
+-- explicit "single flat Maintenance team for now" scope — if a second team
+-- type is ever needed, that's the point to decide whether it's a column
+-- here or its own table, not a decision to make speculatively now.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS maintenance_staff (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  password_hash TEXT,
+  language TEXT NOT NULL DEFAULT 'en',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenance_staff_email ON maintenance_staff(lower(email));
+CREATE INDEX IF NOT EXISTS idx_maintenance_staff_business_id ON maintenance_staff(business_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_staff_language_check') THEN
+    ALTER TABLE maintenance_staff ADD CONSTRAINT maintenance_staff_language_check
+      CHECK (language IN ('en', 'es', 'fr', 'pt', 'zh', 'ar'));
+  END IF;
+END $$;
+
+-- Nullable, unassigned by default — ON DELETE SET NULL so removing a
+-- maintenance team member never deletes the tickets they worked on, just
+-- unassigns them.
+ALTER TABLE maintenance_requests
+  ADD COLUMN IF NOT EXISTS assigned_staff_id INTEGER REFERENCES maintenance_staff(id) ON DELETE SET NULL;

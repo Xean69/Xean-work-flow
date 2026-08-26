@@ -2,10 +2,10 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseMaintenanceBody, parseMessageBody } from "../utils/validate.js";
+import { parseMaintenanceBody, parseMessageBody, parseAssignBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply } from "../services/maintenanceChat.js";
-import { notifyManagersOfMaintenanceRequest, notifyTenantOfMaintenanceReply } from "../services/email.js";
+import { notifyManagersOfMaintenanceRequest, notifyTenantOfMaintenanceReply, notifyStaffOfAssignment } from "../services/email.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
 
 const router = Router();
@@ -28,6 +28,15 @@ async function assertTenantInBusiness(tenantId, businessId) {
   if (!rows[0]) throw new ApiError(400, "tenant_id does not belong to your business");
 }
 
+async function assertStaffInBusiness(staffId, businessId) {
+  if (staffId == null) return;
+  const { rows } = await pool.query("SELECT id FROM maintenance_staff WHERE id = $1 AND business_id = $2", [
+    staffId,
+    businessId,
+  ]);
+  if (!rows[0]) throw new ApiError(400, "assigned_staff_id does not belong to your business");
+}
+
 // Excludes status = 'pending' — a tenant still chatting with the AI before
 // any ticket exists (see routes/portal.js) never appears here at all,
 // consistent with the kanban only ever rendering the three known columns.
@@ -41,6 +50,8 @@ router.get(
          p.id AS property_id,
          p.name AS property_name,
          t.full_name AS tenant_name,
+         s.first_name AS assigned_staff_first_name,
+         s.last_name AS assigned_staff_last_name,
          EXISTS (
            SELECT 1 FROM maintenance_comments c
            WHERE c.request_id = m.id
@@ -59,6 +70,7 @@ router.get(
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN tenants t ON t.id = m.tenant_id
+       LEFT JOIN maintenance_staff s ON s.id = m.assigned_staff_id
        WHERE m.business_id = $1 AND m.status != 'pending'
        ORDER BY m.created_at DESC`,
       [req.businessId]
@@ -153,11 +165,14 @@ router.get(
          p.id AS property_id,
          p.name AS property_name,
          t.full_name AS tenant_name,
+         s.first_name AS assigned_staff_first_name,
+         s.last_name AS assigned_staff_last_name,
          m.entry_date::text AS entry_date
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id
        LEFT JOIN tenants t ON t.id = m.tenant_id
+       LEFT JOIN maintenance_staff s ON s.id = m.assigned_staff_id
        WHERE m.id = $1 AND m.business_id = $2 AND m.status != 'pending'`,
       [req.params.id, req.businessId]
     );
@@ -266,6 +281,47 @@ router.put(
     );
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
     res.json(rows[0]);
+  })
+);
+
+// Narrow and separate from the full PUT /:id edit above — assigning
+// shouldn't require resending title/description/status/priority just to
+// attach (or clear) a name. null unassigns.
+router.patch(
+  "/:id/assign",
+  asyncHandler(async (req, res) => {
+    const data = parseAssignBody(req.body);
+    await assertStaffInBusiness(data.assignedStaffId, req.businessId);
+
+    const { rows } = await pool.query(
+      `UPDATE maintenance_requests SET assigned_staff_id = $1 WHERE id = $2 AND business_id = $3
+       RETURNING id, title, unit_id`,
+      [data.assignedStaffId, req.params.id, req.businessId]
+    );
+    if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
+
+    if (data.assignedStaffId != null) {
+      const { rows: staffRows } = await pool.query(
+        "SELECT first_name, last_name, email, language FROM maintenance_staff WHERE id = $1",
+        [data.assignedStaffId]
+      );
+      const { rows: contextRows } = await pool.query(
+        `SELECT p.name AS property_name, u.unit_number
+         FROM units u JOIN properties p ON p.id = u.property_id WHERE u.id = $1`,
+        [rows[0].unit_id]
+      );
+      const staff = staffRows[0];
+      await notifyStaffOfAssignment({
+        staffEmail: staff.email,
+        staffName: `${staff.first_name} ${staff.last_name}`,
+        ticketTitle: rows[0].title,
+        propertyName: contextRows[0]?.property_name,
+        unitNumber: contextRows[0]?.unit_number,
+        language: staff.language,
+      });
+    }
+
+    res.status(204).end();
   })
 );
 

@@ -73,3 +73,28 @@ export function requireRole(...allowedRoles) {
     next();
   };
 }
+
+// Guards the maintenance staff portal — a third account type alongside
+// admins and tenants, entirely separate from both (own session flag, own
+// table). Mirrors requireAdminAuth's re-query-every-request shape (so
+// removing a staff member revokes access on their very next request, not
+// just at next login) rather than requireTenantAuth's trust-the-session-id
+// shape, since staff — like admins, unlike tenants — carry their own
+// business_id directly rather than deriving it through a join each time.
+export const requireStaffAuth = asyncHandler(async (req, res, next) => {
+  if (!req.session?.staffId || !req.session?.businessId) {
+    throw new ApiError(401, "Not logged in");
+  }
+
+  const { rows } = await pool.query("SELECT id FROM maintenance_staff WHERE id = $1 AND business_id = $2", [
+    req.session.staffId,
+    req.session.businessId,
+  ]);
+  if (!rows[0]) {
+    throw new ApiError(401, "Not logged in");
+  }
+
+  req.staffId = req.session.staffId;
+  req.businessId = req.session.businessId;
+  next();
+});

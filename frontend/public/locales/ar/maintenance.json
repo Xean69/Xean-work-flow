@@ -14,8 +14,8 @@
     "hvac": "تكييف وتدفئة",
     "appliance": "أجهزة منزلية",
     "structural": "إنشائي",
-    "pest_control": "مكافحة الآفات",
-    "locksmith": "أقفال",
+    "pest_control": "مكافحة آفات",
+    "locksmith": "أقفال ومفاتيح",
     "general": "عام"
   },
   "aiUrgency": {
@@ -23,6 +23,7 @@
     "medium": "متوسط",
     "low": "روتيني"
   },
+  "assignLabel": "إسناد إلى",
   "assistant": "المساعد",
   "attachTitle": "إرفاق صورة أو فيديو أو مستند",
   "attachmentAlt": "مرفق",
@@ -40,9 +41,9 @@
   "emptyNoUnitsBody": "أضف عقارًا وبعض الوحدات أولًا، ثم عد لتسجيل طلبات الصيانة.",
   "emptyNoUnitsTitle": "لا توجد وحدات بعد",
   "entryGranted": "🔑 الدخول مسموح — {{date}}",
-  "entryNotGranted": "🔒 لا إذن بالدخول",
-  "entryNotGrantedNote": "لم يُمنح إذن الدخول — نسّق الوصول مع المستأجر بشكل منفصل.",
-  "entryPermittedNote": "الدخول مسموح — متاح {{date}}، في أي وقت بين 9 صباحًا و5 مساءً.",
+  "entryNotGranted": "🔒 لا يوجد إذن بالدخول",
+  "entryNotGrantedNote": "لم يُمنح إذن الدخول — نسّق الدخول مع المستأجر بشكل منفصل.",
+  "entryPermittedNote": "الدخول مسموح — متاح في {{date}}، في أي وقت بين 9 صباحًا و5 مساءً.",
   "loading": "جارٍ التحميل…",
   "newCommentTitle": "تعليق جديد",
   "newTicket": "+ طلب جديد",
@@ -50,7 +51,8 @@
   "noCommentsYet": "لا توجد تعليقات بعد — ألقِ التحية أو اطلب صورة.",
   "noTickets": "لا توجد طلبات",
   "send": "إرسال",
-  "subtitle": "تتبّع الطلبات وفرزها عبر محفظتك العقارية",
+  "subtitle": "تابع طلبات الصيانة وصنّفها عبر محفظتك العقارية",
   "ticketFallbackTitle": "طلب",
-  "title": "الصيانة"
+  "title": "الصيانة",
+  "unassigned": "غير مسند"
 }

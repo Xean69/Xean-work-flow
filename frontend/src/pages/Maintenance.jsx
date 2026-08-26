@@ -8,6 +8,8 @@ import {
   deleteMaintenanceRequest,
   getMaintenanceRequest,
   addMaintenanceComment,
+  getMaintenanceStaff,
+  assignMaintenanceTicket,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
@@ -77,6 +79,7 @@ function Maintenance() {
   const { t: tr, i18n } = useTranslation('maintenance')
   const [tickets, setTickets] = useState([])
   const [unitRows, setUnitRows] = useState([])
+  const [staffList, setStaffList] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   // null = closed, {} = new ticket, { ticket } = editing
@@ -101,9 +104,14 @@ function Maintenance() {
     setLoading(true)
     setLoadError('')
     try {
-      const [maintenanceRows, tenantRows] = await Promise.all([getMaintenanceRequests(), getTenants()])
+      const [maintenanceRows, tenantRows, staffRows] = await Promise.all([
+        getMaintenanceRequests(),
+        getTenants(),
+        getMaintenanceStaff(),
+      ])
       setTickets(maintenanceRows)
       setUnitRows(tenantRows)
+      setStaffList(staffRows)
     } catch (err) {
       setLoadError(err.message)
     } finally {
@@ -142,6 +150,15 @@ function Maintenance() {
   async function handleDelete(ticket) {
     if (!window.confirm(tr('confirmDelete', { title: ticket.title }))) return
     await deleteMaintenanceRequest(ticket.id)
+    await load()
+  }
+
+  async function handleAssign(ticket, staffId) {
+    // Optimistic — the dropdown itself is the only feedback a manager gets,
+    // so it should reflect the change immediately rather than waiting on a
+    // full board reload (which still happens, to pick up the real state).
+    setTickets((rows) => (rows.map((r) => (r.id === ticket.id ? { ...r, assigned_staff_id: staffId } : r))))
+    await assignMaintenanceTicket(ticket.id, staffId)
     await load()
   }
 
@@ -240,6 +257,19 @@ function Maintenance() {
                       )}
                       <AiTag ticket={t} />
 
+                      <select
+                        className="ticket-assign-select"
+                        value={t.assigned_staff_id || ''}
+                        onChange={(e) => handleAssign(t, e.target.value ? Number(e.target.value) : null)}
+                      >
+                        <option value="">{tr('unassigned')}</option>
+                        {staffList.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.first_name} {s.last_name}
+                          </option>
+                        ))}
+                      </select>
+
                       <div className="ticket-actions">
                         {status === 'new' && (
                           <button className="btn btn-ghost btn-sm" onClick={() => handleMove(t, 'in_progress')}>
@@ -300,6 +330,26 @@ function Maintenance() {
                 {threadData.property_name} · {threadData.unit_number}
                 {threadData.tenant_name ? ` · ${threadData.tenant_name}` : ''}
               </p>
+              <div className="form-field" style={{ maxWidth: 260 }}>
+                <label htmlFor="threadAssign">{tr('assignLabel')}</label>
+                <select
+                  id="threadAssign"
+                  className="ticket-assign-select"
+                  value={threadData.assigned_staff_id || ''}
+                  onChange={(e) => {
+                    const staffId = e.target.value ? Number(e.target.value) : null
+                    setThreadData((prev) => ({ ...prev, assigned_staff_id: staffId }))
+                    handleAssign({ id: threadTicketId }, staffId)
+                  }}
+                >
+                  <option value="">{tr('unassigned')}</option>
+                  {staffList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.first_name} {s.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {threadData.description && <p className="ticket-thread-description">{threadData.description}</p>}
               {threadData.is_emergency && <p className="ticket-thread-emergency-note">{tr('emergencyNote')}</p>}
               {threadData.entry_permission != null && (

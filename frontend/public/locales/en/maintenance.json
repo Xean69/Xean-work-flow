@@ -16,6 +16,8 @@
   "entryNotGranted": "🔒 No entry permission",
   "entryPermittedNote": "Entry permitted — available {{date}}, anytime between 9am–5pm.",
   "entryNotGrantedNote": "Entry permission not granted — coordinate access with the tenant separately.",
+  "assignLabel": "Assign to",
+  "unassigned": "Unassigned",
   "aiUrgency": {
     "high": "Urgent",
     "medium": "Moderate",

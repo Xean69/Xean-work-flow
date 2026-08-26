@@ -23,6 +23,7 @@
     "medium": "Moderada",
     "low": "Rotina"
   },
+  "assignLabel": "Atribuir a",
   "assistant": "Assistente",
   "attachTitle": "Anexar foto, vídeo ou documento",
   "attachmentAlt": "Anexo",
@@ -37,12 +38,12 @@
   "editTicketModalTitle": "Editar pedido",
   "emergency": "🚨 Emergência",
   "emergencyNote": "🚨 Assinalado como emergência pelo inquilino",
-  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas frações e volte para registar pedidos de manutenção.",
+  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas frações e depois volte para registar pedidos de manutenção.",
   "emptyNoUnitsTitle": "Ainda não há frações",
   "entryGranted": "🔑 Entrada autorizada — {{date}}",
   "entryNotGranted": "🔒 Sem autorização de entrada",
-  "entryNotGrantedNote": "Entrada não autorizada — combine o acesso separadamente com o inquilino.",
-  "entryPermittedNote": "Entrada autorizada — disponível {{date}}, a qualquer hora entre as 9h e as 17h.",
+  "entryNotGrantedNote": "Entrada não autorizada — combine o acesso com o inquilino em separado.",
+  "entryPermittedNote": "Entrada autorizada — disponível em {{date}}, a qualquer hora entre as 9h e as 17h.",
   "loading": "A carregar…",
   "newCommentTitle": "Novo comentário",
   "newTicket": "+ Novo pedido",
@@ -52,5 +53,6 @@
   "send": "Enviar",
   "subtitle": "Acompanhe e triagem os pedidos de todo o seu portefólio",
   "ticketFallbackTitle": "Pedido",
-  "title": "Manutenção"
+  "title": "Manutenção",
+  "unassigned": "Sem responsável"
 }

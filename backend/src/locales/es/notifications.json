@@ -1,39 +1,45 @@
 {
-  "maintenanceReply": {
-    "subject": "Nueva respuesta en «{{ticketTitle}}»",
-    "heading": "Tu administrador respondió",
-    "body": "Hola {{tenantName}}: hay una nueva respuesta en «{{ticketTitle}}»:",
-    "cta": "Ver en Reparaciones"
-  },
-  "newDocument": {
-    "subject": "Nuevo {{docTypeLabel}} añadido a tu cuenta",
-    "heading": "Nuevo {{docTypeLabel}}",
-    "body": "Hola {{tenantName}}: tu administrador añadió un nuevo documento a tu cuenta:",
-    "cta": "Ver en el portal"
-  },
-  "newMessage": {
-    "subject": "Nuevo mensaje de tu administrador",
-    "heading": "Nuevo mensaje",
-    "body": "Hola {{tenantName}}: tu administrador te envió un mensaje:",
-    "cta": "Ver en Mensajes"
-  },
   "announcement": {
-    "body": "Hola {{tenantName}}: tu administrador envió un aviso:",
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad envió un aviso:",
     "cta": "Ver en Mensajes"
-  },
-  "passwordReset": {
-    "subject": "Restablece la contraseña de tu portal de inquilinos",
-    "heading": "Restablece tu contraseña",
-    "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal de inquilinos.",
-    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo.",
-    "cta": "Restablecer contraseña"
   },
   "defaultTenantName": "hola",
   "docType": {
-    "lease": "Contrato de arrendamiento",
-    "invoice": "Factura",
-    "inspection": "Inspección",
     "application": "Solicitud",
+    "inspection": "Inspección",
+    "invoice": "Factura",
+    "lease": "Contrato de arrendamiento",
     "other": "Documento"
+  },
+  "maintenanceReply": {
+    "body": "Hola {{tenantName}}: hay una nueva respuesta en \"{{ticketTitle}}\":",
+    "cta": "Ver en Reparaciones",
+    "heading": "Tu administrador de la propiedad respondió",
+    "subject": "Nueva respuesta en \"{{ticketTitle}}\""
+  },
+  "newDocument": {
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad agregó un nuevo documento a tu cuenta:",
+    "cta": "Ver en el portal",
+    "heading": "Nuevo: {{docTypeLabel}}",
+    "subject": "Se agregó un nuevo documento a tu cuenta: {{docTypeLabel}}"
+  },
+  "newMessage": {
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad te envió un mensaje:",
+    "cta": "Ver en Mensajes",
+    "heading": "Nuevo mensaje",
+    "subject": "Nuevo mensaje de tu administrador de la propiedad"
+  },
+  "passwordReset": {
+    "cta": "Restablecer contraseña",
+    "heading": "Restablece tu contraseña",
+    "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal de inquilinos.",
+    "line2": "Este enlace vence en 1 hora y solo se puede usar una vez. Si no lo solicitaste, puedes ignorar este correo.",
+    "subject": "Restablece la contraseña de tu portal de inquilinos"
+  },
+  "staffAssignment": {
+    "body": "Hola {{staffName}}: se te asignó \"{{ticketTitle}}\" en {{propertyName}} · {{unitNumber}}:",
+    "cta": "Ver ticket",
+    "heading": "Se te asignó un ticket de mantenimiento",
+    "subject": "Nuevo ticket asignado: {{ticketTitle}}"
   }
 }

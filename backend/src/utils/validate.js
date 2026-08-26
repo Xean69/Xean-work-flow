@@ -304,6 +304,39 @@ export function parseMaintenanceBody(body) {
   };
 }
 
+// Used only by the manager's assign-to-staff dropdown — a narrow, single-
+// purpose update, not the full parseMaintenanceBody a title/description
+// edit requires. null explicitly means "unassign," distinct from the field
+// being omitted (which would be a client bug, not a real request).
+export function parseAssignBody(body) {
+  return { assignedStaffId: optionalNumber(body.assigned_staff_id, "assigned_staff_id") };
+}
+
+// Used only by the maintenance staff portal's own status control — the
+// same status enum the manager's full ticket editor uses, but this is the
+// one field a staff member is allowed to change on a ticket assigned to
+// them; everything else (title, description, priority, reassignment) stays
+// manager-only.
+export function parseStaffStatusBody(body) {
+  if (!MAINTENANCE_STATUSES.includes(body.status)) {
+    throw new ApiError(400, `status must be one of: ${MAINTENANCE_STATUSES.join(", ")}`);
+  }
+  return { status: body.status };
+}
+
+// Used by the Team page's "+ Add maintenance team member" form — first
+// name, last name, email, phone, nothing else required at creation. No
+// password here: like tenants, a maintenance team member's portal login is
+// set separately and deliberately, never auto-generated at creation time.
+export function parseStaffBody(body) {
+  return {
+    firstName: requireString(body.first_name, "first_name"),
+    lastName: requireString(body.last_name, "last_name"),
+    email: requireString(body.email, "email"),
+    phone: optionalString(body.phone),
+  };
+}
+
 const DOC_TYPES = ["lease", "invoice", "inspection", "application", "other", "id"];
 
 export function parseDocumentBody(body) {

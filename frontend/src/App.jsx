@@ -40,6 +40,9 @@ import Team from './pages/Team.jsx'
 import Upgrade from './pages/Upgrade.jsx'
 import TenantInspection from './pages/TenantInspection.jsx'
 import LanguageSettings from './pages/LanguageSettings.jsx'
+import StaffLayout from './staff/StaffLayout.jsx'
+import StaffLogin from './staff/pages/Login.jsx'
+import StaffTickets from './staff/pages/Tickets.jsx'
 
 // index.html's inline script picks the right manifest and apple-touch-icon
 // (app vs. portal) on the initial full-page load, but this is a single-page
@@ -86,6 +89,14 @@ function App() {
         <Route path="/portal/addons" element={<PortalAddons />} />
         <Route path="/portal/lease" element={<PortalLease />} />
         <Route path="/portal/language" element={<PortalLanguage />} />
+      </Route>
+
+      {/* Maintenance staff portal: a third, separate account type — its own
+          login, its own scoped view (only tickets assigned to them), no
+          shared navigation with the manager dashboard or tenant portal. */}
+      <Route path="/staff/login" element={<StaffLogin />} />
+      <Route element={<StaffLayout />}>
+        <Route path="/staff/tickets" element={<StaffTickets />} />
       </Route>
 
       {/* Public marketing site — its own design system entirely (dark

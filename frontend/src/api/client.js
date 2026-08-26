@@ -361,6 +361,29 @@ export function removeTeamMember(id) {
   return request(`/team/${id}`, { method: "DELETE" });
 }
 
+export function getMaintenanceStaff() {
+  return request("/team/staff");
+}
+
+export function addMaintenanceStaff(data) {
+  return request("/team/staff", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function setMaintenanceStaffPassword(id, password) {
+  return request(`/team/staff/${id}/password`, { method: "PUT", body: JSON.stringify({ password }) });
+}
+
+export function removeMaintenanceStaff(id) {
+  return request(`/team/staff/${id}`, { method: "DELETE" });
+}
+
+export function assignMaintenanceTicket(ticketId, assignedStaffId) {
+  return request(`/maintenance/${ticketId}/assign`, {
+    method: "PATCH",
+    body: JSON.stringify({ assigned_staff_id: assignedStaffId }),
+  });
+}
+
 export function getOwnerStatements(month) {
   return request(`/owner-statements?month=${encodeURIComponent(month)}`);
 }

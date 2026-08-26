@@ -21,6 +21,7 @@ import tenantOccupantsRouter from "./routes/tenantOccupants.js";
 import evictionEventsRouter from "./routes/evictionEvents.js";
 import importsRouter from "./routes/imports.js";
 import teamRouter from "./routes/team.js";
+import maintenanceStaffRouter from "./routes/staff.js";
 import ownerStatementsRouter from "./routes/ownerStatements.js";
 import strLicensesRouter from "./routes/strLicenses.js";
 import activityRouter from "./routes/activity.js";
@@ -93,6 +94,10 @@ app.get("/health", (req, res) => {
 // auth check at all.
 app.use("/api/admin", adminRouter);
 app.use("/api/portal", portalRouter);
+// A third, separate login surface alongside admin/portal — same pattern:
+// its own sub-routes handle their own auth internally (requireStaffAuth,
+// applied per-route inside staff.js), never gated by requireAdminAuth.
+app.use("/api/staff", maintenanceStaffRouter);
 
 // Accountants are read-only on documents/expenses and have no access at
 // all to anything else here — the mount-level check below only covers the

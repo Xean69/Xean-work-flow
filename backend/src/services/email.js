@@ -283,3 +283,30 @@ export async function notifyTenantOfAnnouncement({ tenantEmail, tenantName, subj
     return false;
   }
 }
+
+// Fires whenever a manager assigns (or reassigns) a ticket to a maintenance
+// team member. Links to the staff portal's login rather than a specific
+// ticket URL — the email can't carry a session, and the portal only ever
+// shows a staff member their own assigned tickets anyway, so landing on the
+// list is equivalent to landing on the one ticket if they've only got one.
+export async function notifyStaffOfAssignment({ staffEmail, staffName, ticketTitle, propertyName, unitNumber, language }) {
+  try {
+    if (!staffEmail) return false;
+    const name = staffName || tr(language, "defaultTenantName");
+    return await sendEmail({
+      to: staffEmail,
+      subject: tr(language, "staffAssignment.subject", { ticketTitle }),
+      html: renderEmail({
+        heading: tr(language, "staffAssignment.heading"),
+        lines: [
+          tr(language, "staffAssignment.body", { staffName: name, ticketTitle, propertyName, unitNumber }),
+        ],
+        ctaText: tr(language, "staffAssignment.cta"),
+        ctaUrl: `${APP_BASE_URL}/staff/login`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyStaffOfAssignment failed:", err);
+    return false;
+  }
+}
