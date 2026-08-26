@@ -759,6 +759,148 @@
   margin-top: 28px;
 }
 
+/* CONTACT */
+.landing .lnd-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 48px;
+  align-items: start;
+}
+.landing .lnd-contact-card {
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 16px;
+  padding: 28px;
+}
+.landing .lnd-contact-card h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--lnd-text);
+}
+.landing .lnd-contact-card-desc {
+  font-size: 13px;
+  color: var(--lnd-text-dim);
+  margin: 8px 0 20px 0;
+  line-height: 1.55;
+}
+
+.landing .lnd-contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing .lnd-input-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--lnd-text-dim);
+}
+.landing .lnd-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-family: 'Inter', sans-serif;
+  color: var(--lnd-text);
+}
+.landing .lnd-input::placeholder {
+  color: var(--lnd-text-dimmer);
+}
+.landing .lnd-input:focus {
+  outline: none;
+  border-color: var(--lnd-navy-accent);
+}
+.landing .lnd-textarea {
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.5;
+}
+.landing .lnd-textarea-sm {
+  min-height: 56px;
+}
+.landing .lnd-contact-form .lnd-btn {
+  margin-top: 4px;
+  justify-content: center;
+}
+.landing .lnd-contact-error {
+  font-size: 12px;
+  color: #e08a8a;
+}
+.landing .lnd-contact-success {
+  font-size: 13.5px;
+  color: var(--lnd-text);
+  background: rgba(74, 111, 160, 0.14);
+  border: 1px solid rgba(74, 111, 160, 0.3);
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin: 0;
+}
+
+/* Off-screen, not display:none — some bots skip fields hidden that way.
+   Never shown to a sighted or screen-reader user either way. */
+.landing .lnd-hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* "Chat with us" reuses the AI-messaging block's bubble language above so
+   it reads as a chat widget, not a third copy of the same form. */
+.landing .lnd-contact-card-chat {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+}
+.landing .lnd-chat-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing .lnd-chat-bubble {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 11px 14px;
+  border-radius: 14px;
+  max-width: 92%;
+}
+.landing .lnd-chat-bubble-them {
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  color: var(--lnd-text-dim);
+  border-bottom-left-radius: 4px;
+}
+.landing .lnd-chat-bubble-me {
+  background: rgba(74, 111, 160, 0.14);
+  border: 1px solid rgba(74, 111, 160, 0.3);
+  color: var(--lnd-text);
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+  padding: 4px;
+}
+.landing .lnd-chat-bubble-me .lnd-contact-success {
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+}
+.landing .lnd-chat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing .lnd-chat-row {
+  display: flex;
+  gap: 8px;
+}
+.landing .lnd-chat-row .lnd-input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* FOOTER */
 .landing .lnd-footer {
   padding: 56px 0 34px 0;
@@ -954,7 +1096,8 @@
   }
   .landing .lnd-feat-grid,
   .landing .lnd-steps,
-  .landing .lnd-price-grid {
+  .landing .lnd-price-grid,
+  .landing .lnd-contact-grid {
     grid-template-columns: 1fr 1fr;
   }
   .landing .lnd-hero-h1 {
@@ -1003,8 +1146,12 @@
   }
   .landing .lnd-feat-grid,
   .landing .lnd-steps,
-  .landing .lnd-price-grid {
+  .landing .lnd-price-grid,
+  .landing .lnd-contact-grid {
     grid-template-columns: 1fr;
+  }
+  .landing .lnd-chat-row {
+    flex-direction: column;
   }
   .landing .lnd-strip-inner {
     justify-content: flex-start;

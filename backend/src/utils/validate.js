@@ -607,3 +607,63 @@ export function parseComplianceStatusBody(body) {
   }
   return { status: body.status };
 }
+
+// No other form in the app needs this — every existing email field is
+// either behind a login (trusted enough to just require non-empty) or
+// backed by a DB unique constraint. The public contact forms are the first
+// place an unvalidated format actually matters, since there's no session
+// and no follow-up account to catch a typo'd address later.
+const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function requireEmailFormat(value, field) {
+  const trimmed = requireString(value, field);
+  if (!EMAIL_FORMAT.test(trimmed)) {
+    throw new ApiError(400, `${field} must be a valid email address`);
+  }
+  return trimmed;
+}
+
+const CONTACT_MESSAGE_MAX_LENGTH = 2000;
+
+function requireBoundedString(value, field, maxLength) {
+  const trimmed = requireString(value, field);
+  if (trimmed.length > maxLength) {
+    throw new ApiError(400, `${field} must be ${maxLength} characters or fewer`);
+  }
+  return trimmed;
+}
+
+// Shared by all three public contact forms — a non-empty, non-whitespace
+// string in the honeypot field means a bot filled in every input it found,
+// which real visitors never do (it's hidden off-screen, see ContactSection
+// in the frontend). Routes check this and silently no-op instead of
+// throwing, so a bot never learns it was caught.
+export function isHoneypotTripped(body) {
+  return typeof body.website === "string" && body.website.trim() !== "";
+}
+
+export function parseContactInquiryBody(body) {
+  return {
+    name: requireBoundedString(body.name, "name", 200),
+    email: requireEmailFormat(body.email, "email"),
+    phone: optionalString(body.phone),
+    message: requireBoundedString(body.message, "message", CONTACT_MESSAGE_MAX_LENGTH),
+  };
+}
+
+export function parseContactChatBody(body) {
+  return {
+    name: requireBoundedString(body.name, "name", 200),
+    email: requireEmailFormat(body.email, "email"),
+    message: requireBoundedString(body.message, "message", CONTACT_MESSAGE_MAX_LENGTH),
+  };
+}
+
+export function parseContactDemoBody(body) {
+  return {
+    name: requireBoundedString(body.name, "name", 200),
+    email: requireEmailFormat(body.email, "email"),
+    phone: optionalString(body.phone),
+    preferred_time: requireBoundedString(body.preferred_time, "preferred_time", 200),
+  };
+}

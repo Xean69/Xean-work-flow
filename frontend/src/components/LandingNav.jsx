@@ -19,6 +19,7 @@ function LandingNav({ withSectionLinks = false }) {
             <a href="#features">Features</a>
             <a href="#how">How it works</a>
             <a href="#pricing">Pricing</a>
+            <a href="#contact">Contact</a>
           </div>
         )}
         <div className="lnd-nav-cta">

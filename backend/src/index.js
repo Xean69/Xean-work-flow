@@ -30,6 +30,7 @@ import insightsRouter from "./routes/insights.js";
 import moveInInspectionsRouter from "./routes/moveInInspections.js";
 import chargesRouter from "./routes/charges.js";
 import recurringChargesRouter from "./routes/recurringCharges.js";
+import contactRouter from "./routes/contact.js";
 import { startLedgerScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
@@ -98,6 +99,15 @@ app.use("/api/portal", portalRouter);
 // its own sub-routes handle their own auth internally (requireStaffAuth,
 // applied per-route inside staff.js), never gated by requireAdminAuth.
 app.use("/api/staff", maintenanceStaffRouter);
+// The landing page's three "Contact Us" forms — genuinely unauthenticated,
+// unlike everything else mounted here (admin/portal/staff each require
+// *some* login, just via different session fields). No requireAdminAuth,
+// no business scope: this is the only public write path in the app, open
+// to anyone on the internet. Its own rate limiter (see
+// utils/publicRateLimit.js) and honeypot check are the only things
+// standing between this and unbounded abuse — see routes/contact.js and
+// schema.sql's contact_submissions note for the full reasoning.
+app.use("/api/contact", contactRouter);
 
 // Accountants are read-only on documents/expenses and have no access at
 // all to anything else here — the mount-level check below only covers the

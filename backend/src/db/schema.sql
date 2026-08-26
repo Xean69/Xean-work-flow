@@ -1000,3 +1000,34 @@ ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS away_note TEXT;
 ALTER TABLE maintenance_comments DROP CONSTRAINT IF EXISTS maintenance_comments_sender_check;
 ALTER TABLE maintenance_comments ADD CONSTRAINT maintenance_comments_sender_check
   CHECK (sender IN ('tenant', 'manager', 'ai', 'staff'));
+
+-- ============================================================================
+-- Public contact forms (landing page)
+--
+-- The only unauthenticated write path in the app — anyone can POST to
+-- routes/contact.js, no session required. Not scoped to a business_id like
+-- almost every other table here, since these come from anonymous visitors
+-- before any business exists. `type` distinguishes which of the three
+-- landing-page forms it came from; fields a given form doesn't collect
+-- (e.g. phone on the chat form, preferred_time outside the demo form) are
+-- simply null. email_sent records whether the Resend call actually
+-- succeeded — sendEmail() never throws (see email.js), so without this
+-- column a silent delivery failure would leave no trace that a real
+-- inquiry needed manual follow-up. Honeypot-triggered submissions are
+-- never inserted here at all (see routes/contact.js) — this table is a
+-- record of real inquiries, not bot noise.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS contact_submissions (
+  id SERIAL PRIMARY KEY,
+  type TEXT NOT NULL CHECK (type IN ('inquiry', 'chat', 'demo')),
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  message TEXT,
+  preferred_time TEXT,
+  email_sent BOOLEAN NOT NULL DEFAULT false,
+  ip TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_submissions_created_at ON contact_submissions(created_at DESC);

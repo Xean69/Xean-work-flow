@@ -351,3 +351,97 @@ export async function notifyStaffOfNewMessage({ staffEmail, staffName, messageBo
     console.error("notifyStaffOfNewMessage failed:", err);
   }
 }
+
+// ============================================================================
+// Public landing-page contact forms — see routes/contact.js. The only
+// unauthenticated write path in the app, so unlike every function above
+// (which only ever interpolates app-controlled strings — tenant names,
+// ticket titles, etc. — into renderEmail's `lines`), these three build
+// their lines from fully visitor-supplied free text. renderEmail doesn't
+// escape HTML (never needed to before now), so every submitted field is
+// escaped here first — otherwise a submission could inject raw markup or
+// script into the email actually opened in hrsupport@xean.ca's mail
+// client.
+// ============================================================================
+const HR_EMAIL = "hrsupport@xean.ca";
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Unlike every notify* function above (fire-and-forget, nothing checks the
+// result), these three return sendEmail's success boolean — routes/contact.js
+// records it in contact_submissions.email_sent so a silent Resend failure
+// still leaves a trace that a real inquiry needs manual follow-up.
+export async function notifyHrOfContactInquiry({ name, email, phone, message }) {
+  try {
+    return await sendEmail({
+      to: HR_EMAIL,
+      subject: `New contact form inquiry from ${name}`,
+      html: renderEmail({
+        heading: "New contact form submission",
+        lines: [
+          `<strong>Name:</strong> ${escapeHtml(name)}`,
+          `<strong>Email:</strong> ${escapeHtml(email)}`,
+          `<strong>Phone:</strong> ${escapeHtml(phone || "—")}`,
+          `<strong>Message:</strong><br>${escapeHtml(message)}`,
+        ],
+        ctaText: `Reply to ${name}`,
+        ctaUrl: `mailto:${email}`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyHrOfContactInquiry failed:", err);
+    return false;
+  }
+}
+
+export async function notifyHrOfChatMessage({ name, email, message }) {
+  try {
+    return await sendEmail({
+      to: HR_EMAIL,
+      subject: `New "Chat with us" message from ${name}`,
+      html: renderEmail({
+        heading: "New chat message from the landing page",
+        lines: [
+          `<strong>Name:</strong> ${escapeHtml(name)}`,
+          `<strong>Email:</strong> ${escapeHtml(email)}`,
+          `<strong>Message:</strong><br>${escapeHtml(message)}`,
+        ],
+        ctaText: `Reply to ${name}`,
+        ctaUrl: `mailto:${email}`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyHrOfChatMessage failed:", err);
+    return false;
+  }
+}
+
+export async function notifyHrOfDemoRequest({ name, email, phone, preferredTime }) {
+  try {
+    return await sendEmail({
+      to: HR_EMAIL,
+      subject: `New demo request from ${name}`,
+      html: renderEmail({
+        heading: "New demo request",
+        lines: [
+          `<strong>Name:</strong> ${escapeHtml(name)}`,
+          `<strong>Email:</strong> ${escapeHtml(email)}`,
+          `<strong>Phone:</strong> ${escapeHtml(phone || "—")}`,
+          `<strong>Preferred time:</strong> ${escapeHtml(preferredTime)}`,
+        ],
+        ctaText: `Reply to ${name}`,
+        ctaUrl: `mailto:${email}`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyHrOfDemoRequest failed:", err);
+    return false;
+  }
+}
