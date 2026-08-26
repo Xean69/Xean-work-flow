@@ -43,6 +43,7 @@ import LanguageSettings from './pages/LanguageSettings.jsx'
 import StaffLayout from './staff/StaffLayout.jsx'
 import StaffLogin from './staff/pages/Login.jsx'
 import StaffTickets from './staff/pages/Tickets.jsx'
+import StaffMessages from './staff/pages/Messages.jsx'
 
 // index.html's inline script picks the right manifest and apple-touch-icon
 // (app vs. portal) on the initial full-page load, but this is a single-page
@@ -97,6 +98,7 @@ function App() {
       <Route path="/staff/login" element={<StaffLogin />} />
       <Route element={<StaffLayout />}>
         <Route path="/staff/tickets" element={<StaffTickets />} />
+        <Route path="/staff/messages" element={<StaffMessages />} />
       </Route>
 
       {/* Public marketing site — its own design system entirely (dark

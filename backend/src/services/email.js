@@ -310,3 +310,44 @@ export async function notifyStaffOfAssignment({ staffEmail, staffName, ticketTit
     return false;
   }
 }
+
+// Manager-facing, like notifyManagersOfTenantMessage above — plain English,
+// never run through tr(), since managers don't carry a language preference
+// in this app. Only the staff-facing notifyStaffOfNewMessage below is
+// localized.
+export async function notifyManagersOfStaffMessage({ businessId, staffName, messageBody }) {
+  try {
+    const to = await getManagerRecipients(businessId);
+    await sendEmail({
+      to,
+      subject: `New message from ${staffName}`,
+      html: renderEmail({
+        heading: "New message from your maintenance team",
+        lines: [`<strong>${staffName}</strong> sent you a message:`, messageBody],
+        ctaText: "Reply in Inbox",
+        ctaUrl: `${APP_BASE_URL}/inbox`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyManagersOfStaffMessage failed:", err);
+  }
+}
+
+export async function notifyStaffOfNewMessage({ staffEmail, staffName, messageBody, language }) {
+  try {
+    if (!staffEmail) return;
+    const name = staffName || tr(language, "defaultTenantName");
+    await sendEmail({
+      to: staffEmail,
+      subject: tr(language, "staffMessage.subject"),
+      html: renderEmail({
+        heading: tr(language, "staffMessage.heading"),
+        lines: [tr(language, "staffMessage.body", { staffName: name }), messageBody],
+        ctaText: tr(language, "staffMessage.cta"),
+        ctaUrl: `${APP_BASE_URL}/staff/messages`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyStaffOfNewMessage failed:", err);
+  }
+}

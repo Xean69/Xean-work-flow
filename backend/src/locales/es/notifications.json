@@ -12,16 +12,16 @@
     "other": "Documento"
   },
   "maintenanceReply": {
-    "body": "Hola {{tenantName}}: hay una nueva respuesta en \"{{ticketTitle}}\":",
+    "body": "Hola {{tenantName}}: hay una nueva respuesta en «{{ticketTitle}}»:",
     "cta": "Ver en Reparaciones",
     "heading": "Tu administrador de la propiedad respondió",
-    "subject": "Nueva respuesta en \"{{ticketTitle}}\""
+    "subject": "Nueva respuesta en «{{ticketTitle}}»"
   },
   "newDocument": {
     "body": "Hola {{tenantName}}: tu administrador de la propiedad agregó un nuevo documento a tu cuenta:",
     "cta": "Ver en el portal",
     "heading": "Nuevo: {{docTypeLabel}}",
-    "subject": "Se agregó un nuevo documento a tu cuenta: {{docTypeLabel}}"
+    "subject": "Nuevo documento agregado a tu cuenta: {{docTypeLabel}}"
   },
   "newMessage": {
     "body": "Hola {{tenantName}}: tu administrador de la propiedad te envió un mensaje:",
@@ -33,13 +33,19 @@
     "cta": "Restablecer contraseña",
     "heading": "Restablece tu contraseña",
     "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal de inquilinos.",
-    "line2": "Este enlace vence en 1 hora y solo se puede usar una vez. Si no lo solicitaste, puedes ignorar este correo.",
+    "line2": "Este enlace vence en 1 hora y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo.",
     "subject": "Restablece la contraseña de tu portal de inquilinos"
   },
   "staffAssignment": {
-    "body": "Hola {{staffName}}: se te asignó \"{{ticketTitle}}\" en {{propertyName}} · {{unitNumber}}:",
+    "body": "Hola {{staffName}}: se te asignó «{{ticketTitle}}» en {{propertyName}} · {{unitNumber}}:",
     "cta": "Ver ticket",
     "heading": "Se te asignó un ticket de mantenimiento",
     "subject": "Nuevo ticket asignado: {{ticketTitle}}"
+  },
+  "staffMessage": {
+    "body": "Hola {{staffName}}: tu administrador de la propiedad te envió un mensaje:",
+    "cta": "Ver en Mensajes",
+    "heading": "Nuevo mensaje",
+    "subject": "Nuevo mensaje de tu administrador de la propiedad"
   }
 }

@@ -14,6 +14,7 @@ import {
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
 import MaintenanceForm from '../components/MaintenanceForm.jsx'
+import { linkify } from '../utils/linkify.jsx'
 import './Maintenance.css'
 
 const COLUMN_STATUSES = ['new', 'in_progress', 'resolved']
@@ -21,6 +22,11 @@ const COLUMN_STATUSES = ['new', 'in_progress', 'resolved']
 // Priority is stored as low/medium/high; the urgency-dot CSS classes are
 // named low/mid/high (from the original mockup), so this bridges the two.
 const PRIORITY_DOT_CLASS = { low: 'low', medium: 'mid', high: 'high' }
+
+// A native <select><option> can't render a styled span the way Team.jsx's
+// presence-dot does — plain text is all an option's content can ever be —
+// so this dropdown gets an emoji instead, same three-way status.
+const PRESENCE_EMOJI = { online: '🟢', away: '🟡', offline: '⚪' }
 
 function AiTag({ ticket }) {
   const { t } = useTranslation('maintenance')
@@ -265,7 +271,7 @@ function Maintenance() {
                         <option value="">{tr('unassigned')}</option>
                         {staffList.map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.first_name} {s.last_name}
+                            {PRESENCE_EMOJI[s.presence]} {s.first_name} {s.last_name}
                           </option>
                         ))}
                       </select>
@@ -376,9 +382,15 @@ function Maintenance() {
                   </p>
                 )}
                 {threadData.comments.map((c) => (
-                  <div className={`bubble ${c.sender === 'manager' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`} key={c.id}>
+                  <div
+                    className={`bubble ${c.sender === 'manager' ? 'out' : c.sender === 'staff' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
+                    key={c.id}
+                  >
                     {c.sender === 'ai' && <div className="bubble-sender">{tr('assistant')}</div>}
-                    {c.body}
+                    {/* Every sender='staff' comment is a completion note — the resolve
+                        flow in routes/staff.js is the only way one is ever created. */}
+                    {c.sender === 'staff' && <div className="bubble-sender">{tr('completionNote')}</div>}
+                    {linkify(c.body)}
                     {c.attachment_url && (
                       <AttachmentPreview
                         url={c.attachment_url}

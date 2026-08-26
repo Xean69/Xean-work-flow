@@ -18,6 +18,7 @@ import './Team.css'
 
 const ROLE_BADGE_VARIANT = { owner: 'amber', manager: 'slate', accountant: 'green' }
 const INVITABLE_ROLES = ['manager', 'accountant']
+const PRESENCE_LABEL = { online: 'Online', away: 'Away', offline: 'Offline' }
 
 function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -271,6 +272,7 @@ function Team() {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>Status</th>
                   <th>Email</th>
                   <th>Phone</th>
                   <th>Portal Login</th>
@@ -283,6 +285,13 @@ function Team() {
                   <tr key={member.id}>
                     <td style={{ fontWeight: 600 }}>
                       {member.first_name} {member.last_name}
+                    </td>
+                    <td>
+                      <span className={`presence-dot presence-${member.presence}`} />
+                      {PRESENCE_LABEL[member.presence]}
+                      {member.presence === 'away' && member.away_note && (
+                        <span style={{ color: 'var(--slate)', fontSize: 12 }}> — {member.away_note}</span>
+                      )}
                     </td>
                     <td>{member.email}</td>
                     <td>{member.phone || '—'}</td>

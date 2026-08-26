@@ -50,6 +50,7 @@
   "aiReadNote": "⚡ AI read: {{urgency}} · {{trade}} — {{reasoning}}",
   "noCommentsYet": "No comments yet — say hello, or ask for a photo.",
   "assistant": "Assistant",
+  "completionNote": "✅ Completion note",
   "attachTitle": "Attach a photo, video, or document",
   "commentPlaceholder": "Type a comment…",
   "send": "Send",

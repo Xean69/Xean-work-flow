@@ -81,15 +81,22 @@ export function requireRole(...allowedRoles) {
 // just at next login) rather than requireTenantAuth's trust-the-session-id
 // shape, since staff — like admins, unlike tenants — carry their own
 // business_id directly rather than deriving it through a join each time.
+//
+// Also stamps last_active_at on every authenticated request — the whole
+// presence mechanism (see schema.sql's note) is just this timestamp read
+// against a staleness threshold, so there's no separate heartbeat endpoint
+// to maintain; any request the staff portal already makes keeps it fresh.
 export const requireStaffAuth = asyncHandler(async (req, res, next) => {
   if (!req.session?.staffId || !req.session?.businessId) {
     throw new ApiError(401, "Not logged in");
   }
 
-  const { rows } = await pool.query("SELECT id FROM maintenance_staff WHERE id = $1 AND business_id = $2", [
-    req.session.staffId,
-    req.session.businessId,
-  ]);
+  const { rows } = await pool.query(
+    `UPDATE maintenance_staff SET last_active_at = now()
+     WHERE id = $1 AND business_id = $2
+     RETURNING id`,
+    [req.session.staffId, req.session.businessId]
+  );
   if (!rows[0]) {
     throw new ApiError(401, "Not logged in");
   }

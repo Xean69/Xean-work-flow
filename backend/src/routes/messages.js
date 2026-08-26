@@ -3,9 +3,91 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseMessageBody, parseAnnouncementBody } from "../utils/validate.js";
-import { notifyTenantOfNewMessage, notifyTenantOfAnnouncement } from "../services/email.js";
+import { notifyTenantOfNewMessage, notifyTenantOfAnnouncement, notifyStaffOfNewMessage } from "../services/email.js";
 
 const router = Router();
+
+// ============================================================================
+// Staff-manager inbox — the manager-facing side of staff_messages (see
+// schema.sql's note). Mirrors the tenant thread routes below in shape, but
+// against maintenance_staff instead of tenants. /staff-threads and
+// /staff/:staffId are both declared here, ahead of the tenant routes'
+// GET /:tenantId, so Express never matches "staff-threads" or "staff" as a
+// literal tenantId value.
+// ============================================================================
+
+router.get(
+  "/staff-threads",
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT
+         s.id AS staff_id,
+         s.first_name,
+         s.last_name,
+         m.body AS last_message,
+         m.sender AS last_sender,
+         m.created_at AS last_message_at
+       FROM maintenance_staff s
+       LEFT JOIN LATERAL (
+         SELECT body, sender, created_at
+         FROM staff_messages
+         WHERE staff_id = s.id
+         ORDER BY created_at DESC
+         LIMIT 1
+       ) m ON true
+       WHERE s.business_id = $1
+       ORDER BY COALESCE(m.created_at, s.created_at) DESC`,
+      [req.businessId]
+    );
+    res.json(rows);
+  })
+);
+
+router.get(
+  "/staff/:staffId",
+  asyncHandler(async (req, res) => {
+    const { rows: staffRows } = await pool.query(
+      "SELECT id FROM maintenance_staff WHERE id = $1 AND business_id = $2",
+      [req.params.staffId, req.businessId]
+    );
+    if (!staffRows[0]) throw new ApiError(404, "Maintenance team member not found");
+
+    const { rows } = await pool.query(
+      `SELECT id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at
+       FROM staff_messages WHERE staff_id = $1 ORDER BY created_at ASC`,
+      [req.params.staffId]
+    );
+    res.json(rows);
+  })
+);
+
+router.post(
+  "/staff/:staffId",
+  asyncHandler(async (req, res) => {
+    const data = parseMessageBody(req.body);
+    const { rows: staffRows } = await pool.query(
+      "SELECT id, first_name, last_name, email, language FROM maintenance_staff WHERE id = $1 AND business_id = $2",
+      [req.params.staffId, req.businessId]
+    );
+    if (!staffRows[0]) throw new ApiError(404, "Maintenance team member not found");
+
+    const { rows } = await pool.query(
+      `INSERT INTO staff_messages (business_id, staff_id, sender, body)
+       VALUES ($1, $2, 'manager', $3)
+       RETURNING id, sender, body, created_at`,
+      [req.businessId, req.params.staffId, data.body]
+    );
+
+    await notifyStaffOfNewMessage({
+      staffEmail: staffRows[0].email,
+      staffName: `${staffRows[0].first_name} ${staffRows[0].last_name}`,
+      messageBody: data.body,
+      language: staffRows[0].language,
+    });
+
+    res.status(201).json(rows[0]);
+  })
+);
 
 // One row per tenant who has a portal login (only they can message), with
 // their most recent message as a preview — including tenants who haven't

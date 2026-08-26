@@ -14,14 +14,14 @@
     "hvac": "تكييف وتدفئة",
     "appliance": "أجهزة منزلية",
     "structural": "إنشائي",
-    "pest_control": "مكافحة آفات",
-    "locksmith": "أقفال ومفاتيح",
+    "pest_control": "مكافحة الآفات",
+    "locksmith": "أقفال",
     "general": "عام"
   },
   "aiUrgency": {
     "high": "عاجل",
     "medium": "متوسط",
-    "low": "روتيني"
+    "low": "اعتيادي"
   },
   "assignLabel": "إسناد إلى",
   "assistant": "المساعد",
@@ -30,9 +30,10 @@
   "columns": {
     "new": "جديدة",
     "in_progress": "قيد التنفيذ",
-    "resolved": "تم الحل"
+    "resolved": "منتهية"
   },
   "commentPlaceholder": "اكتب تعليقًا…",
+  "completionNote": "✅ ملاحظة الإنجاز",
   "confirmDelete": "حذف \"{{title}}\"؟",
   "downloadAttachment": "تنزيل المرفق",
   "editTicketModalTitle": "تعديل الطلب",
@@ -54,5 +55,5 @@
   "subtitle": "تابع طلبات الصيانة وصنّفها عبر محفظتك العقارية",
   "ticketFallbackTitle": "طلب",
   "title": "الصيانة",
-  "unassigned": "غير مسند"
+  "unassigned": "غير مُسند"
 }

@@ -940,3 +940,63 @@ END $$;
 -- unassigns them.
 ALTER TABLE maintenance_requests
   ADD COLUMN IF NOT EXISTS assigned_staff_id INTEGER REFERENCES maintenance_staff(id) ON DELETE SET NULL;
+
+-- ============================================================================
+-- Staff-manager inbox
+--
+-- A separate table from both `messages` (tenant<->manager: tenant_id is
+-- NOT NULL and its sender CHECK has no room for a third party — widening
+-- it would touch tenant messaging and bulk announcements, which already
+-- depend on its current shape) and `maintenance_comments` (ticket-scoped,
+-- not a general inbox). Mirrors the *pattern* of both instead: one thread
+-- per party like `messages`, plus the attachment columns
+-- `maintenance_comments` already has — reusing the exact same Cloudinary
+-- upload pipeline (utils/upload.js) the ticket chat already uses.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS staff_messages (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  staff_id INTEGER NOT NULL REFERENCES maintenance_staff(id) ON DELETE CASCADE,
+  sender TEXT NOT NULL CHECK (sender IN ('staff', 'manager')),
+  body TEXT NOT NULL,
+  attachment_url TEXT,
+  attachment_cloudinary_public_id TEXT,
+  attachment_cloudinary_resource_type TEXT,
+  attachment_file_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_messages_staff_id ON staff_messages(staff_id);
+
+-- ============================================================================
+-- Presence
+--
+-- Deliberately not a stored "online" flag — that class of field gets stuck
+-- true the moment someone closes their laptop without a clean logout, since
+-- there's no reliable disconnect event to clear it. last_active_at is
+-- touched on every authenticated staff request (see requireStaffAuth) and
+-- the online/offline line is computed at read time against a staleness
+-- threshold, so a reader always sees a value consistent with how recently
+-- the row was actually touched — nothing to go stale on its own.
+--
+-- away/away_note are the one manually-set exception: explicit, staff-
+-- toggled, no auto-expiry — an "away" note like "Back Sept 5" would stop
+-- being trustworthy if a stray click cleared it.
+-- ============================================================================
+ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ;
+ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS away BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS away_note TEXT;
+
+-- ============================================================================
+-- Required completion note
+--
+-- Relaxes maintenance_comments.sender further to allow 'staff' — the only
+-- way a 'staff' comment can ever be created is the resolve flow in
+-- routes/staff.js, which requires a non-empty note and inserts it in the
+-- same transaction as the status change. That's what lets the UI safely
+-- label every 'staff' comment as a completion note with no extra flag:
+-- there's no other path that produces one.
+-- ============================================================================
+ALTER TABLE maintenance_comments DROP CONSTRAINT IF EXISTS maintenance_comments_sender_check;
+ALTER TABLE maintenance_comments ADD CONSTRAINT maintenance_comments_sender_check
+  CHECK (sender IN ('tenant', 'manager', 'ai', 'staff'));

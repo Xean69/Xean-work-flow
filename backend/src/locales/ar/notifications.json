@@ -3,7 +3,7 @@
     "body": "مرحبًا {{tenantName}}، أرسل مدير العقار إعلانًا:",
     "cta": "عرض في الرسائل"
   },
-  "defaultTenantName": "عزيزنا المستأجر",
+  "defaultTenantName": "عزيزنا",
   "docType": {
     "application": "طلب",
     "inspection": "معاينة",
@@ -13,7 +13,7 @@
   },
   "maintenanceReply": {
     "body": "مرحبًا {{tenantName}}، هناك رد جديد على \"{{ticketTitle}}\":",
-    "cta": "عرض في الصيانة",
+    "cta": "عرض في الإصلاحات",
     "heading": "رد مدير العقار",
     "subject": "رد جديد على \"{{ticketTitle}}\""
   },
@@ -40,6 +40,12 @@
     "body": "مرحبًا {{staffName}}، تم إسنادك إلى \"{{ticketTitle}}\" في {{propertyName}} · {{unitNumber}}:",
     "cta": "عرض التذكرة",
     "heading": "تم إسناد تذكرة صيانة إليك",
-    "subject": "تذكرة جديدة مُسندة إليك: {{ticketTitle}}"
+    "subject": "تذكرة جديدة مُسندة: {{ticketTitle}}"
+  },
+  "staffMessage": {
+    "body": "مرحبًا {{staffName}}، أرسل إليك مدير العقار رسالة:",
+    "cta": "عرض في الرسائل",
+    "heading": "رسالة جديدة",
+    "subject": "رسالة جديدة من مدير العقار"
   }
 }

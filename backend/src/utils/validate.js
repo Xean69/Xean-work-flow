@@ -317,11 +317,27 @@ export function parseAssignBody(body) {
 // one field a staff member is allowed to change on a ticket assigned to
 // them; everything else (title, description, priority, reassignment) stays
 // manager-only.
+// completion_note is required only when resolving — a staff member can
+// freely move a ticket to in_progress (or back) with no note, but can never
+// mark it resolved without describing what was done. Enforced here (not
+// just in the UI) since the client-side gate is only a courtesy.
 export function parseStaffStatusBody(body) {
   if (!MAINTENANCE_STATUSES.includes(body.status)) {
     throw new ApiError(400, `status must be one of: ${MAINTENANCE_STATUSES.join(", ")}`);
   }
-  return { status: body.status };
+  if (body.status === "resolved") {
+    return { status: body.status, completionNote: requireString(body.completion_note, "completion_note") };
+  }
+  return { status: body.status, completionNote: null };
+}
+
+// Used by the staff portal's own "Away" toggle — manual, both to set and to
+// clear, with no auto-expiry (see schema.sql's presence note).
+export function parseAwayStatusBody(body) {
+  if (typeof body.away !== "boolean") {
+    throw new ApiError(400, "away must be a boolean");
+  }
+  return { away: body.away, awayNote: body.away ? optionalString(body.away_note) : null };
 }
 
 // Used by the Team page's "+ Add maintenance team member" form — first

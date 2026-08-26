@@ -90,11 +90,22 @@ router.delete(
 // have owner/manager/accountant.
 // ============================================================================
 
+// presence is computed here, not stored — away wins outright (an explicit
+// manual signal), otherwise it's just "was last_active_at touched
+// recently," same threshold requireStaffAuth's every-request timestamp
+// update is meant to be read against. See schema.sql's presence note for
+// why this is deliberately not a stored flag.
 router.get(
   "/staff",
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT id, first_name, last_name, email, phone, created_at, (password_hash IS NOT NULL) AS has_login
+      `SELECT id, first_name, last_name, email, phone, created_at, away, away_note,
+              (password_hash IS NOT NULL) AS has_login,
+              CASE
+                WHEN away THEN 'away'
+                WHEN last_active_at > now() - interval '5 minutes' THEN 'online'
+                ELSE 'offline'
+              END AS presence
        FROM maintenance_staff WHERE business_id = $1 ORDER BY created_at ASC`,
       [req.businessId]
     );

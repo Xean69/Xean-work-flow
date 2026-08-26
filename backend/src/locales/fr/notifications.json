@@ -12,7 +12,7 @@
     "other": "Document"
   },
   "maintenanceReply": {
-    "body": "Bonjour {{tenantName}}, une nouvelle réponse a été ajoutée à « {{ticketTitle}} » :",
+    "body": "Bonjour {{tenantName}}, il y a une nouvelle réponse sur « {{ticketTitle}} » :",
     "cta": "Voir dans Réparations",
     "heading": "Votre gestionnaire immobilier a répondu",
     "subject": "Nouvelle réponse sur « {{ticketTitle}} »"
@@ -20,7 +20,7 @@
   "newDocument": {
     "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier a ajouté un nouveau document à votre compte :",
     "cta": "Voir dans le portail",
-    "heading": "Nouveau : {{docTypeLabel}}",
+    "heading": "Nouveau document : {{docTypeLabel}}",
     "subject": "Nouveau document ajouté à votre compte : {{docTypeLabel}}"
   },
   "newMessage": {
@@ -37,9 +37,15 @@
     "subject": "Réinitialisez le mot de passe de votre portail locataire"
   },
   "staffAssignment": {
-    "body": "Bonjour {{staffName}}, le ticket « {{ticketTitle}} » vous a été attribué pour {{propertyName}} · {{unitNumber}} :",
-    "cta": "Voir le ticket",
-    "heading": "Un ticket de maintenance vous a été attribué",
-    "subject": "Nouveau ticket attribué : {{ticketTitle}}"
+    "body": "Bonjour {{staffName}}, la demande « {{ticketTitle}} » vous a été assignée à {{propertyName}} · {{unitNumber}} :",
+    "cta": "Voir la demande",
+    "heading": "Une demande de maintenance vous a été assignée",
+    "subject": "Nouvelle demande assignée : {{ticketTitle}}"
+  },
+  "staffMessage": {
+    "body": "Bonjour {{staffName}}, votre gestionnaire immobilier vous a envoyé un message :",
+    "cta": "Voir dans Messages",
+    "heading": "Nouveau message",
+    "subject": "Nouveau message de votre gestionnaire immobilier"
   }
 }

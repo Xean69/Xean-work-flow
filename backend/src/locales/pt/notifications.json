@@ -12,34 +12,40 @@
     "other": "Documento"
   },
   "maintenanceReply": {
-    "subject": "Nova resposta em \"{{ticketTitle}}\"",
-    "heading": "O seu gestor de imóveis respondeu",
     "body": "Olá {{tenantName}}, há uma nova resposta em \"{{ticketTitle}}\":",
-    "cta": "Ver em Reparações"
+    "cta": "Ver em Reparações",
+    "heading": "O seu gestor de imóveis respondeu",
+    "subject": "Nova resposta em \"{{ticketTitle}}\""
   },
   "newDocument": {
-    "subject": "Novo(a) {{docTypeLabel}} adicionado(a) à sua conta",
-    "heading": "Novo(a) {{docTypeLabel}}",
     "body": "Olá {{tenantName}}, o seu gestor de imóveis adicionou um novo documento à sua conta:",
-    "cta": "Ver no Portal"
+    "cta": "Ver no Portal",
+    "heading": "Novo {{docTypeLabel}}",
+    "subject": "Novo {{docTypeLabel}} adicionado à sua conta"
   },
   "newMessage": {
-    "subject": "Nova mensagem do seu gestor de imóveis",
-    "heading": "Nova mensagem",
     "body": "Olá {{tenantName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
-    "cta": "Ver nas Mensagens"
+    "cta": "Ver nas Mensagens",
+    "heading": "Nova mensagem",
+    "subject": "Nova mensagem do seu gestor de imóveis"
   },
   "passwordReset": {
-    "subject": "Redefinir a palavra-passe do portal do inquilino",
-    "heading": "Redefinir a palavra-passe",
+    "cta": "Redefinir palavra-passe",
+    "heading": "Redefinir a sua palavra-passe",
     "line1": "Recebemos um pedido para redefinir a palavra-passe do seu portal do inquilino.",
-    "line2": "Esta ligação expira dentro de 1 hora e só pode ser usada uma vez. Se não fez este pedido, pode ignorar este e-mail.",
-    "cta": "Redefinir palavra-passe"
+    "line2": "Este link expira em 1 hora e só pode ser usado uma vez. Se não fez este pedido, pode ignorar este e-mail com segurança.",
+    "subject": "Redefinir a palavra-passe do portal do inquilino"
   },
   "staffAssignment": {
-    "subject": "Novo ticket atribuído: {{ticketTitle}}",
-    "heading": "Foi-lhe atribuído um ticket de manutenção",
-    "body": "Olá {{staffName}}, foi-lhe atribuído o ticket \"{{ticketTitle}}\" em {{propertyName}} · {{unitNumber}}:",
-    "cta": "Ver ticket"
+    "body": "Olá {{staffName}}, foi-lhe atribuído o pedido \"{{ticketTitle}}\" em {{propertyName}} · {{unitNumber}}:",
+    "cta": "Ver pedido",
+    "heading": "Foi-lhe atribuído um pedido de manutenção",
+    "subject": "Novo pedido atribuído: {{ticketTitle}}"
+  },
+  "staffMessage": {
+    "body": "Olá {{staffName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
+    "cta": "Ver nas Mensagens",
+    "heading": "Nova mensagem",
+    "subject": "Nova mensagem do seu gestor de imóveis"
   }
 }

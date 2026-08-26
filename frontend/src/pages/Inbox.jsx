@@ -6,10 +6,14 @@ import {
   getTenants,
   getProperties,
   sendBulkAnnouncement,
+  getStaffThreads,
+  getStaffThread,
+  sendManagerMessageToStaff,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
 import AnnouncementForm from '../components/AnnouncementForm.jsx'
+import { linkify } from '../utils/linkify.jsx'
 import './Inbox.css'
 
 function initials(name) {
@@ -30,6 +34,26 @@ function formatTime(value) {
   })
 }
 
+// Same resource_type-driven preview the maintenance ticket chat already
+// uses — staff messages reuse the exact same Cloudinary upload pipeline.
+function AttachmentPreview({ url, resourceType, fileName }) {
+  if (resourceType === 'image') {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        <img src={url} alt={fileName || 'Attachment'} className="bubble-attachment-img" />
+      </a>
+    )
+  }
+  if (resourceType === 'video') {
+    return <video src={url} controls className="bubble-attachment-video" />
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="bubble-attachment-file">
+      📄 {fileName || 'Download attachment'}
+    </a>
+  )
+}
+
 function Inbox() {
   const [threads, setThreads] = useState([])
   const [loading, setLoading] = useState(true)
@@ -47,11 +71,56 @@ function Inbox() {
   const [showAnnounce, setShowAnnounce] = useState(false)
   const [announceResult, setAnnounceResult] = useState(null)
 
+  // A second, independent inbox — the staff-manager thread (see
+  // schema.sql's staff_messages note) is a completely separate concept
+  // from tenant messaging above, just given the same thread-list/chat-pane
+  // treatment on the same page, mirroring how Team.jsx already stacks two
+  // separate sections (admin team, maintenance team) on one page.
+  const [staffThreads, setStaffThreads] = useState([])
+  const [staffLoading, setStaffLoading] = useState(true)
+  const [activeStaffId, setActiveStaffId] = useState(null)
+  const [activeStaffMessages, setActiveStaffMessages] = useState([])
+  const [staffDraft, setStaffDraft] = useState('')
+  const [staffSending, setStaffSending] = useState(false)
+
   useEffect(() => {
     loadThreads()
+    loadStaffThreads()
     getProperties().then(setProperties)
     getTenants().then((rows) => setTenants(rows.filter((r) => r.tenant_id)))
   }, [])
+
+  async function loadStaffThreads() {
+    setStaffLoading(true)
+    try {
+      const rows = await getStaffThreads()
+      setStaffThreads(rows)
+      if (rows.length > 0) selectStaffThread(rows[0].staff_id)
+    } finally {
+      setStaffLoading(false)
+    }
+  }
+
+  async function selectStaffThread(staffId) {
+    setActiveStaffId(staffId)
+    setActiveStaffMessages(await getStaffThread(staffId))
+  }
+
+  async function handleSendToStaff(e) {
+    e.preventDefault()
+    if (!staffDraft.trim() || !activeStaffId) return
+    setStaffSending(true)
+    try {
+      await sendManagerMessageToStaff(activeStaffId, staffDraft.trim())
+      setStaffDraft('')
+      await selectStaffThread(activeStaffId)
+      await loadStaffThreads()
+    } finally {
+      setStaffSending(false)
+    }
+  }
+
+  const activeStaff = staffThreads.find((s) => s.staff_id === activeStaffId)
 
   async function loadThreads() {
     setLoading(true)
@@ -146,7 +215,7 @@ function Inbox() {
                     {activeMessages.map((m) => (
                       <div className={`bubble ${m.sender === 'manager' ? 'out' : 'in'}`} key={m.id}>
                         {m.subject && <div className="bubble-announce-subject">📢 {m.subject}</div>}
-                        {m.body}
+                        {linkify(m.body)}
                         <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(m.created_at)}</div>
                       </div>
                     ))}
@@ -174,6 +243,85 @@ function Inbox() {
                 Set up a portal login for a tenant on the Tenants &amp; Leases page to start a 1:1 conversation, or
                 use Send Announcement above to reach tenants by email even before they've logged in.
               </p>
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="content" style={{ paddingTop: 0 }}>
+        <div className="section-head">
+          <h2>Maintenance Team</h2>
+        </div>
+
+        {staffThreads.length > 0 ? (
+          <div className="inbox-shell">
+            <div className="thread-list">
+              {staffThreads.map((s) => (
+                <div
+                  key={s.staff_id}
+                  className={'thread' + (s.staff_id === activeStaffId ? ' active' : '')}
+                  onClick={() => selectStaffThread(s.staff_id)}
+                >
+                  <div className="thread-avatar">{initials(`${s.first_name} ${s.last_name}`)}</div>
+                  <div>
+                    <div className="thread-name">
+                      {s.first_name} {s.last_name}
+                    </div>
+                    <div className="thread-preview">
+                      {s.last_message
+                        ? `${s.last_sender === 'manager' ? 'You: ' : ''}${s.last_message}`
+                        : 'No messages yet'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="chat-pane">
+              {activeStaff && (
+                <>
+                  <div className="chat-head">
+                    <b>
+                      {activeStaff.first_name} {activeStaff.last_name}
+                    </b>
+                  </div>
+                  <div className="chat-body">
+                    {activeStaffMessages.length === 0 && (
+                      <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>No messages yet</p>
+                    )}
+                    {activeStaffMessages.map((m) => (
+                      <div className={`bubble ${m.sender === 'manager' ? 'out' : 'in'}`} key={m.id}>
+                        {linkify(m.body)}
+                        {m.attachment_url && (
+                          <AttachmentPreview
+                            url={m.attachment_url}
+                            resourceType={m.attachment_cloudinary_resource_type}
+                            fileName={m.attachment_file_name}
+                          />
+                        )}
+                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(m.created_at)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <form className="chat-composer" onSubmit={handleSendToStaff}>
+                    <input
+                      value={staffDraft}
+                      onChange={(e) => setStaffDraft(e.target.value)}
+                      placeholder="Type a reply…"
+                      disabled={staffSending}
+                    />
+                    <button type="submit" className="btn btn-primary" disabled={staffSending || !staffDraft.trim()}>
+                      Send
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          !staffLoading && (
+            <div className="empty-state card">
+              <h3>No maintenance team members yet</h3>
+              <p>Add one on the Team page to start messaging them.</p>
             </div>
           )
         )}

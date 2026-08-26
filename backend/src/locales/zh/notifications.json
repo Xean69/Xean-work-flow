@@ -1,45 +1,51 @@
 {
   "announcement": {
-    "body": "{{tenantName}}您好，物业经理发布了一条公告：",
+    "body": "{{tenantName}}您好，您的物业管理员发布了一则公告：",
     "cta": "前往消息查看"
   },
   "defaultTenantName": "您好",
   "docType": {
     "application": "申请表",
-    "inspection": "验房报告",
+    "inspection": "检查报告",
     "invoice": "账单",
     "lease": "租约",
-    "other": "文档"
+    "other": "文件"
   },
   "maintenanceReply": {
     "body": "{{tenantName}}您好，“{{ticketTitle}}”有新回复：",
     "cta": "前往维修查看",
-    "heading": "物业经理已回复",
+    "heading": "物业管理员已回复",
     "subject": "“{{ticketTitle}}”有新回复"
   },
   "newDocument": {
-    "body": "{{tenantName}}您好，物业经理向您的账户添加了一份新文档：",
+    "body": "{{tenantName}}您好，您的物业管理员向您的账户添加了一份新文件：",
     "cta": "前往门户查看",
     "heading": "新{{docTypeLabel}}",
     "subject": "您的账户新增了{{docTypeLabel}}"
   },
   "newMessage": {
-    "body": "{{tenantName}}您好，物业经理给您发来一条消息：",
+    "body": "{{tenantName}}您好，您的物业管理员给您发来一条消息：",
     "cta": "前往消息查看",
     "heading": "新消息",
-    "subject": "来自物业经理的新消息"
+    "subject": "来自物业管理员的新消息"
   },
   "passwordReset": {
     "cta": "重置密码",
     "heading": "重置您的密码",
     "line1": "我们收到了重置您租户门户密码的请求。",
-    "line2": "该链接将在 1 小时后失效，且仅可使用一次。若非您本人操作，请忽略此邮件。",
+    "line2": "此链接将在 1 小时后失效，且仅可使用一次。若非本人操作，请忽略此邮件。",
     "subject": "重置您的租户门户密码"
   },
   "staffAssignment": {
-    "body": "{{staffName}}您好，您已被指派处理 {{propertyName}} · {{unitNumber}} 的“{{ticketTitle}}”：",
+    "body": "{{staffName}}您好，您被指派处理 {{propertyName}} · {{unitNumber}} 的“{{ticketTitle}}”：",
     "cta": "查看工单",
-    "heading": "您有新的维修工单",
+    "heading": "您已被指派一个维修工单",
     "subject": "新工单指派：{{ticketTitle}}"
+  },
+  "staffMessage": {
+    "body": "{{staffName}}您好，您的物业管理员给您发来一条消息：",
+    "cta": "前往消息查看",
+    "heading": "新消息",
+    "subject": "来自物业管理员的新消息"
   }
 }

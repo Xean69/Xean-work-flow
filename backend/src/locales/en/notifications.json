@@ -27,6 +27,12 @@
     "body": "Hi {{staffName}}, you've been assigned to \"{{ticketTitle}}\" at {{propertyName}} · {{unitNumber}}:",
     "cta": "View ticket"
   },
+  "staffMessage": {
+    "subject": "New message from your property manager",
+    "heading": "New message",
+    "body": "Hi {{staffName}}, your property manager sent you a message:",
+    "cta": "View in Messages"
+  },
   "passwordReset": {
     "subject": "Reset your tenant portal password",
     "heading": "Reset your password",

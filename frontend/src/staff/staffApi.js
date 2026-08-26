@@ -19,6 +19,17 @@ async function request(path, options = {}) {
   return data;
 }
 
+// No Content-Type header here — the browser sets the multipart boundary
+// itself for FormData, same reasoning as portalApi.js's own uploadRequest.
+async function uploadRequest(path, formData) {
+  const res = await fetch(`${BASE_URL}${path}`, { method: "POST", body: formData, credentials: "same-origin" });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error || `Request failed with status ${res.status}`);
+  }
+  return data;
+}
+
 export function login(email, password) {
   return request("/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
@@ -31,6 +42,10 @@ export function getMe() {
   return request("/me");
 }
 
+export function setMyStatus(away, awayNote) {
+  return request("/me/status", { method: "PATCH", body: JSON.stringify({ away, away_note: awayNote }) });
+}
+
 export function getMyTickets() {
   return request("/maintenance");
 }
@@ -39,6 +54,20 @@ export function getTicketDetail(id) {
   return request(`/maintenance/${id}`);
 }
 
-export function updateTicketStatus(id, status) {
-  return request(`/maintenance/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+// completionNote is only sent along when resolving — the server rejects a
+// resolve without one, but leaves every other transition (e.g. back to
+// in_progress) alone.
+export function updateTicketStatus(id, status, completionNote) {
+  return request(`/maintenance/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, completion_note: completionNote }),
+  });
+}
+
+export function getMyMessages() {
+  return request("/messages");
+}
+
+export function sendStaffMessage(formData) {
+  return uploadRequest("/messages", formData);
 }

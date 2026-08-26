@@ -384,6 +384,18 @@ export function assignMaintenanceTicket(ticketId, assignedStaffId) {
   });
 }
 
+export function getStaffThreads() {
+  return request("/messages/staff-threads");
+}
+
+export function getStaffThread(staffId) {
+  return request(`/messages/staff/${staffId}`);
+}
+
+export function sendManagerMessageToStaff(staffId, body) {
+  return request(`/messages/staff/${staffId}`, { method: "POST", body: JSON.stringify({ body }) });
+}
+
 export function getOwnerStatements(month) {
   return request(`/owner-statements?month=${encodeURIComponent(month)}`);
 }
