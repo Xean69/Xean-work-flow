@@ -686,17 +686,18 @@
   color: var(--lnd-text-dim);
   margin-top: 5px;
 }
-.landing .lnd-price-amount {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 40px;
-  font-weight: 600;
+.landing .lnd-price-trial {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
   margin-top: 20px;
-  color: var(--lnd-text);
-}
-.landing .lnd-price-amount span {
-  font-size: 14px;
-  color: var(--lnd-text-dim);
-  font-weight: 400;
+  padding: 6px 13px;
+  border-radius: 20px;
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lnd-champagne);
 }
 .landing .lnd-price-list {
   margin-top: 22px;

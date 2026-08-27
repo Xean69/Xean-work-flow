@@ -314,9 +314,7 @@ function Landing() {
             <div className="lnd-price-card">
               <div className="lnd-price-name">Starter</div>
               <div className="lnd-price-desc">For getting off spreadsheets</div>
-              <div className="lnd-price-amount">
-                $0<span> /mo</span>
-              </div>
+              <div className="lnd-price-trial">14-day free trial</div>
               <div className="lnd-price-list">
                 <div>
                   <Check />
@@ -331,8 +329,8 @@ function Landing() {
                   Manual document storage
                 </div>
               </div>
-              <Link to="/signup" className="lnd-price-btn lnd-btn-ghost">
-                Start free
+              <Link to="/#contact" className="lnd-price-btn lnd-btn-ghost">
+                Talk to Us
               </Link>
             </div>
 
@@ -340,9 +338,7 @@ function Landing() {
               <div className="lnd-price-badge">MOST POPULAR</div>
               <div className="lnd-price-name">Growth</div>
               <div className="lnd-price-desc">For active independent operators</div>
-              <div className="lnd-price-amount">
-                $110<span> /mo</span>
-              </div>
+              <div className="lnd-price-trial">14-day free trial</div>
               <div className="lnd-price-list">
                 <div>
                   <Check />
@@ -361,17 +357,15 @@ function Landing() {
                   Unified inbox
                 </div>
               </div>
-              <Link to="/signup" className="lnd-price-btn lnd-btn-primary">
-                Start free trial
+              <Link to="/#contact" className="lnd-price-btn lnd-btn-primary">
+                Talk to Us
               </Link>
             </div>
 
             <div className="lnd-price-card">
               <div className="lnd-price-name">Professional</div>
               <div className="lnd-price-desc">For growing management companies</div>
-              <div className="lnd-price-amount">
-                $280<span> /mo</span>
-              </div>
+              <div className="lnd-price-trial">14-day free trial</div>
               <div className="lnd-price-list">
                 <div>
                   <Check />
@@ -390,17 +384,15 @@ function Landing() {
                   Automated bookkeeping
                 </div>
               </div>
-              <Link to="/signup" className="lnd-price-btn lnd-btn-ghost">
-                Start free trial
+              <Link to="/#contact" className="lnd-price-btn lnd-btn-ghost">
+                Talk to Us
               </Link>
             </div>
 
             <div className="lnd-price-card">
               <div className="lnd-price-name">Portfolio</div>
               <div className="lnd-price-desc">For larger management companies</div>
-              <div className="lnd-price-amount">
-                $440<span> /mo</span>
-              </div>
+              <div className="lnd-price-trial">14-day free trial</div>
               <div className="lnd-price-list">
                 <div>
                   <Check />
@@ -419,8 +411,8 @@ function Landing() {
                   Everything included
                 </div>
               </div>
-              <Link to="/signup" className="lnd-price-btn lnd-btn-ghost">
-                Talk to us
+              <Link to="/#contact" className="lnd-price-btn lnd-btn-ghost">
+                Talk to Us
               </Link>
             </div>
           </div>
