@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import LandingNav from '../components/LandingNav.jsx'
 import LandingFooter from '../components/LandingFooter.jsx'
@@ -17,6 +17,58 @@ function Check() {
   )
 }
 
+function Chevron() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
+}
+
+// Answers are deliberately conservative — see the FAQ section's own note
+// below on why (trial/cancellation/billing claims are scoped to what the
+// app actually does today, not the pricing page's sales-forward tone).
+const FAQ_ITEMS = [
+  {
+    q: 'Is my data secure?',
+    a: "Yes. Passwords are hashed and never stored in plain text, and your data lives in a private, access-controlled database — we never sell customer or tenant data to third parties. No system is 100% secure, but it's treated as a first-class concern here, not an afterthought.",
+  },
+  {
+    q: 'What languages does Xean support?',
+    a: 'The dashboard, tenant portal, and AI maintenance assistant all work in six languages — English, Spanish, French, Portuguese, Mandarin, and Arabic — including full right-to-left layout for Arabic. Whatever language a tenant messages in, that’s the language they get answered in.',
+  },
+  {
+    q: 'Can I cancel anytime? Is there a contract?',
+    a: "There's no long-term contract. Since we're onboarding accounts by hand at this stage, cancelling or changing your plan means reaching out to our team rather than clicking a button in-app — we'll take care of it right away, no retention runaround.",
+  },
+  {
+    q: 'Does the AI replace my property manager, or assist them?',
+    a: 'Assist, not replace. The AI handles the repetitive first layer — reading leases, triaging maintenance, answering routine tenant questions at 2am — but it’s built to hand off to a human for anything requiring judgment, approval, or that’s safety-related. You stay the decision-maker.',
+  },
+  {
+    q: 'What happens after the 14-day trial?',
+    a: 'Nothing is locked or deleted when the trial period ends — your account and data stay exactly as they are. Our team will reach out to talk through the right plan for your portfolio before anything changes.',
+  },
+  {
+    q: 'Can tenants use Xean without downloading anything?',
+    a: 'Yes — the tenant portal works right in a mobile browser, no app-store download required. Tenants can optionally add it to their home screen for an app-like icon and experience, but it’s never required.',
+  },
+]
+
+function FaqItem({ item, isOpen, onToggle }) {
+  return (
+    <div className={'lnd-faq-item' + (isOpen ? ' open' : '')}>
+      <button type="button" className="lnd-faq-question" onClick={onToggle} aria-expanded={isOpen}>
+        {item.q}
+        <span className="lnd-faq-chevron">
+          <Chevron />
+        </span>
+      </button>
+      {isOpen && <p className="lnd-faq-answer">{item.a}</p>}
+    </div>
+  )
+}
+
 // Public marketing homepage — the page visitors see before they sign up.
 // Deliberately self-contained: every class here is prefixed `lnd-` and the
 // whole tree sits under a single .landing wrapper (see Landing.css) so its
@@ -24,6 +76,18 @@ function Check() {
 // portal, and vice versa.
 function Landing() {
   const location = useLocation()
+  // Which FAQ answers are expanded — independent per item (not a classic
+  // one-at-a-time accordion), keyed by index since FAQ_ITEMS is static.
+  const [openFaq, setOpenFaq] = useState(() => new Set())
+
+  function toggleFaq(index) {
+    setOpenFaq((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
 
   // Footer/nav links to other pages sometimes point here with a #section
   // hash (e.g. from the Terms/Privacy pages' "Pricing" link) — the browser
@@ -280,25 +344,35 @@ function Landing() {
 
       <section className="lnd-section lnd-section-tight" id="how">
         <div className="lnd-wrap">
-          <div className="lnd-section-tag">Deployment</div>
+          <div className="lnd-section-tag">How it works</div>
           <div className="lnd-section-head">
             <h2>Live in an afternoon</h2>
           </div>
           <div className="lnd-steps">
             <div className="lnd-step">
               <div className="lnd-step-num">01</div>
-              <h3>Import your portfolio</h3>
-              <p>Bring in units and existing leases — enter manually, or let the system read your documents directly.</p>
+              <h3>Sign up</h3>
+              <p>Create your account in minutes. No credit card required, no sales call needed to get started.</p>
             </div>
             <div className="lnd-step">
               <div className="lnd-step-num">02</div>
-              <h3>Provision tenant access</h3>
-              <p>Every tenant receives their own secured login to their unit — nothing shared, nothing exposed.</p>
+              <h3>Add your properties and units</h3>
+              <p>Bring in your portfolio manually, or let Xean read your existing lease documents and fill in the details for you.</p>
             </div>
             <div className="lnd-step">
               <div className="lnd-step-num">03</div>
-              <h3>Let the system run</h3>
-              <p>Triage, extraction, and messaging operate continuously in the background from day one.</p>
+              <h3>Invite your tenants</h3>
+              <p>Each tenant gets their own secure portal instantly — lease, payments, and a direct line to you, installable right on their phone.</p>
+            </div>
+            <div className="lnd-step">
+              <div className="lnd-step-num">04</div>
+              <h3>Let the AI handle the busywork</h3>
+              <p>Lease extraction, maintenance triage, and routine tenant messages are handled automatically, in whatever language your tenant speaks.</p>
+            </div>
+            <div className="lnd-step">
+              <div className="lnd-step-num">05</div>
+              <h3>Review, approve, and manage</h3>
+              <p>Everything still runs through you — approve repairs, message tenants directly, and see your whole portfolio from one dashboard.</p>
             </div>
           </div>
         </div>
@@ -416,6 +490,20 @@ function Landing() {
                 Talk to Us
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="lnd-section lnd-section-tight" id="faq">
+        <div className="lnd-wrap">
+          <div className="lnd-section-tag">FAQ</div>
+          <div className="lnd-section-head">
+            <h2>Questions worth asking before you sign up</h2>
+          </div>
+          <div className="lnd-faq-list">
+            {FAQ_ITEMS.map((item, i) => (
+              <FaqItem key={item.q} item={item} isOpen={openFaq.has(i)} onToggle={() => toggleFaq(i)} />
+            ))}
           </div>
         </div>
       </section>
