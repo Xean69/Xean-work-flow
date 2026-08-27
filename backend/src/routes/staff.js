@@ -105,7 +105,9 @@ router.get(
     const { rows } = await pool.query(
       `SELECT
          m.id, m.title, m.description, m.status, m.priority, m.created_at, m.resolved_at,
-         u.unit_number, p.name AS property_name, t.full_name AS tenant_name
+         m.entry_permission, m.entry_date::text AS entry_date, m.is_emergency,
+         m.ai_urgency, m.ai_trade, m.ai_classification_status,
+         u.unit_number, p.name AS property_name, t.full_name AS tenant_name, t.phone AS tenant_phone
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id
        JOIN properties p ON p.id = u.property_id

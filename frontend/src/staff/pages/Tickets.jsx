@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getMyTickets, getTicketDetail, updateTicketStatus } from '../staffApi.js'
 import { linkify } from '../../utils/linkify.jsx'
+import PrintableTicket from '../../components/PrintableTicket.jsx'
 
 const STATUS_LABEL = { new: 'New', in_progress: 'In progress', resolved: 'Resolved' }
 const STATUS_VARIANT = { new: 'slate', in_progress: 'amber', resolved: 'green' }
@@ -204,36 +205,48 @@ function Tickets() {
                 {!threadData ? (
                   <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>Loading…</p>
                 ) : (
-                  <div className="portal-ticket-messages" ref={threadBodyRef}>
-                    {threadData.comments.length === 0 && (
-                      <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>
-                        No messages on this ticket yet.
-                      </p>
-                    )}
-                    {threadData.comments.map((c, i) => (
-                      <div
-                        key={i}
-                        className={`portal-bubble ${c.sender === 'manager' ? 'out' : c.sender === 'staff' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
-                      >
-                        {c.sender === 'ai' && <div className="portal-bubble-sender">Assistant</div>}
-                        {c.sender === 'manager' && <div className="portal-bubble-sender">Manager</div>}
-                        {c.sender === 'tenant' && <div className="portal-bubble-sender">Tenant</div>}
-                        {/* Every sender='staff' comment is a completion note — the resolve
-                            flow in staffApi.js/routes/staff.js is the only way one is ever
-                            created, so there's no ambiguity to label around. */}
-                        {c.sender === 'staff' && <div className="portal-bubble-sender">✅ Completion note</div>}
-                        {linkify(c.body)}
-                        {c.attachment_url && (
-                          <AttachmentPreview
-                            url={c.attachment_url}
-                            resourceType={c.attachment_cloudinary_resource_type}
-                            fileName={c.attachment_file_name}
-                          />
-                        )}
-                        <div className="portal-bubble-time">{formatTime(c.created_at)}</div>
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    <button
+                      type="button"
+                      className="portal-btn"
+                      style={{ padding: '6px 12px', fontSize: 12.5, marginBottom: 10 }}
+                      onClick={() => window.print()}
+                    >
+                      Print
+                    </button>
+                    <PrintableTicket ticket={threadData} />
+
+                    <div className="portal-ticket-messages" ref={threadBodyRef}>
+                      {threadData.comments.length === 0 && (
+                        <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>
+                          No messages on this ticket yet.
+                        </p>
+                      )}
+                      {threadData.comments.map((c, i) => (
+                        <div
+                          key={i}
+                          className={`portal-bubble ${c.sender === 'manager' ? 'out' : c.sender === 'staff' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
+                        >
+                          {c.sender === 'ai' && <div className="portal-bubble-sender">Assistant</div>}
+                          {c.sender === 'manager' && <div className="portal-bubble-sender">Manager</div>}
+                          {c.sender === 'tenant' && <div className="portal-bubble-sender">Tenant</div>}
+                          {/* Every sender='staff' comment is a completion note — the resolve
+                              flow in staffApi.js/routes/staff.js is the only way one is ever
+                              created, so there's no ambiguity to label around. */}
+                          {c.sender === 'staff' && <div className="portal-bubble-sender">✅ Completion note</div>}
+                          {linkify(c.body)}
+                          {c.attachment_url && (
+                            <AttachmentPreview
+                              url={c.attachment_url}
+                              resourceType={c.attachment_cloudinary_resource_type}
+                              fileName={c.attachment_file_name}
+                            />
+                          )}
+                          <div className="portal-bubble-time">{formatTime(c.created_at)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             )}

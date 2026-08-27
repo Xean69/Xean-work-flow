@@ -165,6 +165,7 @@ router.get(
          p.id AS property_id,
          p.name AS property_name,
          t.full_name AS tenant_name,
+         t.phone AS tenant_phone,
          s.first_name AS assigned_staff_first_name,
          s.last_name AS assigned_staff_last_name,
          m.entry_date::text AS entry_date

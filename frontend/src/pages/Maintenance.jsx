@@ -14,6 +14,7 @@ import {
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
 import MaintenanceForm from '../components/MaintenanceForm.jsx'
+import PrintableTicket from '../components/PrintableTicket.jsx'
 import { linkify } from '../utils/linkify.jsx'
 import './Maintenance.css'
 
@@ -209,6 +210,9 @@ function Maintenance() {
       }
     : undefined
 
+  const assignedStaff = threadData ? staffList.find((s) => s.id === threadData.assigned_staff_id) : null
+  const assignedStaffName = assignedStaff ? `${assignedStaff.first_name} ${assignedStaff.last_name}` : null
+
   return (
     <div>
       <PageHeader title={tr('title')} subtitle={tr('subtitle')}>
@@ -336,6 +340,9 @@ function Maintenance() {
                 {threadData.property_name} · {threadData.unit_number}
                 {threadData.tenant_name ? ` · ${threadData.tenant_name}` : ''}
               </p>
+              <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
+                {tr('print')}
+              </button>
               <div className="form-field" style={{ maxWidth: 260 }}>
                 <label htmlFor="threadAssign">{tr('assignLabel')}</label>
                 <select
@@ -424,6 +431,8 @@ function Maintenance() {
                   {tr('send')}
                 </button>
               </form>
+
+              <PrintableTicket ticket={threadData} assignedStaffName={assignedStaffName} />
             </div>
           )}
         </Modal>

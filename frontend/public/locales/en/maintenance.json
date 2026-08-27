@@ -18,6 +18,7 @@
   "entryNotGrantedNote": "Entry permission not granted — coordinate access with the tenant separately.",
   "assignLabel": "Assign to",
   "unassigned": "Unassigned",
+  "print": "Print",
   "aiUrgency": {
     "high": "Urgent",
     "medium": "Moderate",
