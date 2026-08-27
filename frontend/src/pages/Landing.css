@@ -763,7 +763,7 @@
 /* CONTACT */
 .landing .lnd-contact-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 18px;
   margin-top: 48px;
   align-items: start;
@@ -853,10 +853,8 @@
 }
 
 /* "Chat with us" reuses the AI-messaging block's bubble language above so
-   it reads as a chat widget, not a third copy of the same form. */
-.landing .lnd-contact-card-chat {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-}
+   it reads as a chat widget, not a copy of the other forms — now rendered
+   inside the floating widget panel below rather than an inline card. */
 .landing .lnd-chat-widget {
   display: flex;
   flex-direction: column;
@@ -900,6 +898,88 @@
 .landing .lnd-chat-row .lnd-input {
   flex: 1;
   min-width: 0;
+}
+
+/* Floating chat bubble — fixed to the viewport (not the page), so it
+   stays put regardless of scroll position. See ChatWidget.jsx: mounted
+   directly in Landing.jsx only, never in a shared layout, so it can't
+   leak onto any other page. */
+.landing .lnd-chat-fab-wrap {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+.landing .lnd-chat-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--lnd-navy-accent), var(--lnd-navy-deep));
+  color: #fff;
+  font-size: 22px;
+  box-shadow: 0 10px 30px rgba(44, 68, 112, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.landing .lnd-chat-fab-panel {
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  background: var(--lnd-bg-alt);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  padding: 18px;
+  animation: lnd-chat-fab-pop 0.15s ease;
+}
+@keyframes lnd-chat-fab-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.landing .lnd-chat-fab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--lnd-text);
+}
+.landing .lnd-chat-fab-close {
+  background: none;
+  border: none;
+  color: var(--lnd-text-dim);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.landing .lnd-chat-fab-close:hover {
+  color: var(--lnd-text);
+}
+
+@media (max-width: 420px) {
+  .landing .lnd-chat-fab-wrap {
+    bottom: 16px;
+    right: 16px;
+  }
+  .landing .lnd-chat-fab-panel {
+    width: calc(100vw - 32px);
+  }
 }
 
 /* FOOTER */

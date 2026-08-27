@@ -4,6 +4,7 @@ import LandingNav from '../components/LandingNav.jsx'
 import LandingFooter from '../components/LandingFooter.jsx'
 import CountUp from '../components/CountUp.jsx'
 import ContactSection from '../components/ContactSection.jsx'
+import ChatWidget from '../components/ChatWidget.jsx'
 import './Landing.css'
 
 // One checkmark icon, reused by every pricing tier's feature list instead
@@ -432,6 +433,8 @@ function Landing() {
       <ContactSection />
 
       <LandingFooter />
+
+      <ChatWidget />
     </div>
   )
 }

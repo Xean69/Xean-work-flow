@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { submitContactInquiry, submitContactChat, submitDemoRequest } from '../api/publicContact.js'
+import { submitContactInquiry, submitDemoRequest } from '../api/publicContact.js'
 
 // Loose client-side check only — the backend is the real gate (see
 // requireEmailFormat in validate.js). This just avoids a round trip for an
@@ -103,79 +103,6 @@ function ContactInquiryForm() {
   )
 }
 
-function ChatForm() {
-  const [values, setValues] = useState({ name: '', email: '', message: '', website: '' })
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [done, setDone] = useState(false)
-
-  function update(field) {
-    return (e) => setValues((v) => ({ ...v, [field]: e.target.value }))
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!values.name.trim() || !values.message.trim()) return setError('Please fill in your name and message.')
-    if (!EMAIL_RE.test(values.email.trim())) return setError('Please enter a valid email address.')
-    setError('')
-    setSubmitting(true)
-    try {
-      await submitContactChat(values)
-      setDone(true)
-    } catch {
-      setError('Something went wrong sending your message — please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <div className="lnd-chat-widget">
-      <div className="lnd-chat-bubble lnd-chat-bubble-them">
-        Hey! 👋 Leave your details and a quick message — a real person replies by email.
-      </div>
-
-      {done ? (
-        <div className="lnd-chat-bubble lnd-chat-bubble-me">
-          <SuccessNote>Sent — we'll reply to your email soon.</SuccessNote>
-        </div>
-      ) : (
-        <form className="lnd-chat-form" onSubmit={handleSubmit}>
-          <Honeypot value={values.website} onChange={update('website')} />
-          <div className="lnd-chat-row">
-            <input
-              className="lnd-input"
-              placeholder="Name"
-              value={values.name}
-              onChange={update('name')}
-              disabled={submitting}
-            />
-            <input
-              className="lnd-input"
-              type="email"
-              placeholder="Email"
-              value={values.email}
-              onChange={update('email')}
-              disabled={submitting}
-            />
-          </div>
-          <textarea
-            className="lnd-input lnd-textarea lnd-textarea-sm"
-            placeholder="Type a message…"
-            value={values.message}
-            onChange={update('message')}
-            disabled={submitting}
-          />
-          {error && <p className="lnd-contact-error">{error}</p>}
-          <button type="submit" className="lnd-btn lnd-btn-primary" disabled={submitting}>
-            {submitting ? 'Sending…' : 'Send →'}
-          </button>
-        </form>
-      )}
-    </div>
-  )
-}
-
 function DemoForm() {
   const [values, setValues] = useState({ name: '', email: '', phone: '', preferred_time: '', website: '' })
   const [error, setError] = useState('')
@@ -249,9 +176,11 @@ function DemoForm() {
   )
 }
 
-// Three visually distinct ways to reach the same inbox (hrsupport@xean.ca)
-// — see backend/src/routes/contact.js. Kept as one file since all three
-// are small, closely related, and only ever rendered together.
+// Two of the three ways to reach the same inbox (hrsupport@xean.ca) — see
+// backend/src/routes/contact.js. The third, "Chat with us", is now the
+// floating bubble widget (see ChatWidget.jsx) instead of an inline card
+// here, so it stays reachable from anywhere on the page, not just this
+// section.
 function ContactSection() {
   return (
     <section className="lnd-section" id="contact">
@@ -259,7 +188,10 @@ function ContactSection() {
         <div className="lnd-section-tag">Get in touch</div>
         <div className="lnd-section-head">
           <h2>Talk to a real person</h2>
-          <p>Send a message, start a quick chat, or book time to see Xean live — we reply by email either way.</p>
+          <p>
+            Send a message or book time to see Xean live — we reply by email either way. Or use the chat bubble in
+            the corner for a quick question.
+          </p>
         </div>
 
         <div className="lnd-contact-grid">
@@ -267,12 +199,6 @@ function ContactSection() {
             <h3>Contact us</h3>
             <p className="lnd-contact-card-desc">The straightforward way — tell us what's on your mind.</p>
             <ContactInquiryForm />
-          </div>
-
-          <div className="lnd-contact-card lnd-contact-card-chat">
-            <h3>Chat with us</h3>
-            <p className="lnd-contact-card-desc">Quick question? Send it like a message.</p>
-            <ChatForm />
           </div>
 
           <div className="lnd-contact-card">
