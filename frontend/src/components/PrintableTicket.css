@@ -91,6 +91,19 @@
     white-space: pre-wrap;
   }
 
+  /* Blank handwriting space for the physical printout only — no data
+     behind these lines, nothing to keep in sync with. */
+  .print-ticket-notes {
+    margin-top: 24px;
+    border-top: 1px solid #e6e0d3;
+    padding-top: 14px;
+    break-inside: avoid;
+  }
+  .print-ticket-notes-line {
+    border-bottom: 1px solid #c7c0ac;
+    height: 28px;
+  }
+
   .print-ticket-footer {
     margin-top: 32px;
     font-size: 10.5px;

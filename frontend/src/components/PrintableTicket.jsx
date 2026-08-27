@@ -96,6 +96,17 @@ function PrintableTicket({ ticket, assignedStaffName }) {
         <p>{ticket.description || '—'}</p>
       </div>
 
+      {/* Purely for the physical page — blank writing space for whoever
+          does the work, not backed by any stored data or digital input. */}
+      <div className="print-ticket-notes">
+        <div className="print-ticket-label">Notes</div>
+        <div className="print-ticket-notes-line" />
+        <div className="print-ticket-notes-line" />
+        <div className="print-ticket-notes-line" />
+        <div className="print-ticket-notes-line" />
+        <div className="print-ticket-notes-line" />
+      </div>
+
       <div className="print-ticket-footer">Printed {formatDate(new Date())}</div>
     </div>
   )
