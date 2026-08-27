@@ -101,22 +101,50 @@ function ChatForm() {
   )
 }
 
-// Fixed bottom-right on the landing page only — Landing.jsx mounts this
-// directly rather than it living in a shared layout, so it never appears
-// on any other page (login, dashboard, tenant portal, blog).
-function ChatWidget() {
-  const [open, setOpen] = useState(false)
-
+function ChevronDown() {
   return (
-    <div className="lnd-chat-fab-wrap">
-      {open && (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
+}
+
+// Three states: 'preview' (the rich avatar/greeting card, the default),
+// 'collapsed' (just the small round avatar bubble, for a visitor who
+// wants it out of the way without fully dismissing it — the chevron
+// toggles this), and 'chat' (the actual form). Fixed bottom-right on the
+// landing page only — Landing.jsx mounts this directly rather than it
+// living in a shared layout, so it never appears on any other page
+// (login, dashboard, tenant portal, blog).
+function ChatWidget() {
+  const [mode, setMode] = useState('preview')
+
+  if (mode === 'collapsed') {
+    return (
+      <div className="lnd-chat-fab-wrap">
+        <button
+          type="button"
+          className="lnd-chat-avatar-fab"
+          onClick={() => setMode('preview')}
+          aria-label="Open chat preview"
+        >
+          <img src="/avatar.jpg" alt="" className="lnd-chat-avatar-fab-img" />
+          <span className="lnd-chat-status-dot" />
+        </button>
+      </div>
+    )
+  }
+
+  if (mode === 'chat') {
+    return (
+      <div className="lnd-chat-fab-wrap">
         <div className="lnd-chat-fab-panel">
           <div className="lnd-chat-fab-header">
             <span>Chat with us</span>
             <button
               type="button"
               className="lnd-chat-fab-close"
-              onClick={() => setOpen(false)}
+              onClick={() => setMode('collapsed')}
               aria-label="Close chat"
             >
               ✕
@@ -124,15 +152,30 @@ function ChatWidget() {
           </div>
           <ChatForm />
         </div>
-      )}
-      <button
-        type="button"
-        className="lnd-chat-fab"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={open ? 'Close chat' : 'Open chat'}
-      >
-        {open ? '✕' : '💬'}
-      </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="lnd-chat-fab-wrap">
+      <div className="lnd-chat-preview-card">
+        <button
+          type="button"
+          className="lnd-chat-preview-collapse"
+          onClick={() => setMode('collapsed')}
+          aria-label="Minimize"
+        >
+          <ChevronDown />
+        </button>
+        <div className="lnd-chat-preview-avatar-wrap">
+          <img src="/avatar.jpg" alt="" className="lnd-chat-preview-avatar" />
+          <span className="lnd-chat-status-dot lnd-chat-status-dot-lg" />
+        </div>
+        <p className="lnd-chat-preview-greeting">Have a question? I'm happy to help!</p>
+        <button type="button" className="lnd-btn lnd-btn-primary lnd-chat-preview-btn" onClick={() => setMode('chat')}>
+          Chat
+        </button>
+      </div>
     </div>
   )
 }
