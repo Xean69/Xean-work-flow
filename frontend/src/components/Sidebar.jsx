@@ -29,7 +29,6 @@ const mainNav = [
     ),
   },
   {
-    to: '/tenants',
     labelKey: 'nav.tenants',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -39,6 +38,10 @@ const mainNav = [
         <path d="M15.5 14.2c2.9.4 4.9 2.4 4.9 5.8" />
       </svg>
     ),
+    children: [
+      { to: '/tenants', labelKey: 'nav.tenants' },
+      { to: '/leases', labelKey: 'nav.leases' },
+    ],
   },
   {
     to: '/stays',
@@ -250,11 +253,12 @@ function Sidebar({ admin, onLogout, open }) {
   const [openGroups, setOpenGroups] = useState(() => new Set())
 
   // Auto-expand a group the first time one of its children becomes the
-  // active route — covers a direct link/bookmark to e.g. /intercom landing
-  // with the group already open. Only adds to the set, never removes, so
-  // it doesn't fight a manual collapse on an unrelated navigation.
+  // active route — covers a direct link/bookmark to e.g. /intercom or
+  // /leases landing with the group already open. Only adds to the set,
+  // never removes, so it doesn't fight a manual collapse on an unrelated
+  // navigation.
   useEffect(() => {
-    const activeGroup = aiToolsNav.find((item) =>
+    const activeGroup = [...mainNav, ...aiToolsNav].find((item) =>
       item.children?.some((child) => location.pathname.startsWith(child.to))
     )
     if (activeGroup) setOpenGroups((prev) => new Set(prev).add(activeGroup.labelKey))

@@ -9,6 +9,7 @@ export const ROUTE_ROLES = {
   '/properties': ['owner', 'manager'],
   '/import': ['owner', 'manager'],
   '/tenants': ['owner', 'manager'],
+  '/leases': ['owner', 'manager'],
   '/stays': ['owner', 'manager'],
   '/maintenance': ['owner', 'manager'],
   '/documents': ['owner', 'manager', 'accountant'],
