@@ -324,7 +324,7 @@ function TenantProfile() {
 
       <div className="content">
         <Link to="/tenants" className="back-link">
-          ← Tenants &amp; Leases
+          ← Tenants
         </Link>
 
         {/* --- Header: name, property/unit, key badges --- */}

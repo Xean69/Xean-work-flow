@@ -1,5 +1,5 @@
 {
-  "title": "المستأجرون وعقود الإيجار",
+  "title": "المستأجرون",
   "subtitleLoading": "جارٍ التحميل…",
   "subtitle_zero": "لا يوجد مستأجرون نشطون في محفظتك",
   "subtitle_one": "مستأجر نشط واحد في محفظتك",
@@ -22,9 +22,9 @@
     "propertyUnit": "العقار / الوحدة",
     "rent": "الإيجار",
     "thisMonth": "هذا الشهر",
-    "leaseEnds": "نهاية العقد",
+    "leaseEnds": "انتهاء العقد",
     "status": "الحالة",
-    "portalLogin": "الدخول للبوابة",
+    "portalLogin": "الدخول إلى البوابة",
     "moveInInspection": "معاينة الاستلام",
     "edit": "تعديل",
     "delete": "حذف"
@@ -37,12 +37,12 @@
   },
   "paymentStatus": {
     "paid": "مدفوع",
-    "partial": "جزئي",
+    "partial": "مدفوع جزئيًا",
     "unpaid": "غير مدفوع"
   },
   "portalLoginStatus": {
-    "active": "مفعّل",
-    "notSet": "غير محدد"
+    "active": "نشط",
+    "notSet": "غير مُفعّل"
   },
   "inspectionStatus": {
     "none": "لا توجد معاينة",
@@ -50,5 +50,5 @@
     "pending_signature": "بانتظار التوقيع",
     "signed": "موقّعة"
   },
-  "confirmRemove": "إزالة {{name}} من الوحدة {{unit}}؟"
+  "confirmRemove": "هل تريد إزالة {{name}} من الوحدة {{unit}}؟"
 }

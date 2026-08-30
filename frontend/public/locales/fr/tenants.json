@@ -1,5 +1,5 @@
 {
-  "title": "Locataires et baux",
+  "title": "Locataires",
   "subtitleLoading": "Chargement…",
   "subtitle_one": "{{count}} locataire actif dans votre portefeuille",
   "subtitle_other": "{{count}} locataires actifs dans votre portefeuille",
@@ -9,13 +9,13 @@
   "editTenant": "Modifier le locataire",
   "searchPlaceholder": "Rechercher par nom, e-mail ou téléphone…",
   "allProperties": "Tous les biens",
-  "emptyNoUnitsTitle": "Aucun logement",
-  "emptyNoUnitsBody": "Ajoutez d'abord un bien et des logements, puis revenez pour affecter des locataires.",
+  "emptyNoUnitsTitle": "Aucun lot pour l'instant",
+  "emptyNoUnitsBody": "Ajoutez d'abord un bien et des lots, puis revenez pour affecter des locataires.",
   "emptyNoMatchesTitle": "Aucun résultat",
   "emptyNoMatchesBody": "Aucun locataire ne correspond à la recherche et au filtre actuels.",
   "table": {
     "tenant": "Locataire",
-    "propertyUnit": "Bien / Logement",
+    "propertyUnit": "Bien / Lot",
     "rent": "Loyer",
     "thisMonth": "Ce mois-ci",
     "leaseEnds": "Fin du bail",
@@ -38,7 +38,7 @@
   },
   "portalLoginStatus": {
     "active": "Actif",
-    "notSet": "Non défini"
+    "notSet": "Non configuré"
   },
   "inspectionStatus": {
     "none": "Aucun état des lieux",
@@ -46,5 +46,5 @@
     "pending_signature": "En attente de signature",
     "signed": "Signé"
   },
-  "confirmRemove": "Retirer {{name}} du logement {{unit}} ?"
+  "confirmRemove": "Retirer {{name}} du lot {{unit}} ?"
 }

@@ -279,7 +279,7 @@ function Inbox() {
             <div className="empty-state card">
               <h3>No conversations yet</h3>
               <p>
-                Set up a portal login for a tenant on the Tenants &amp; Leases page, add a maintenance team member on
+                Set up a portal login for a tenant on the Tenants page, add a maintenance team member on
                 the Team page, or use Send Announcement above to reach tenants by email even before they've logged
                 in.
               </p>

@@ -2,7 +2,7 @@
   "nav": {
     "dashboard": "Panel",
     "properties": "Propiedades",
-    "tenants": "Inquilinos y contratos",
+    "tenants": "Inquilinos",
     "stays": "Estancias",
     "maintenance": "Mantenimiento",
     "documents": "Documentos",
@@ -12,7 +12,7 @@
     "telecom": "Telecomunicaciones",
     "voice": "Voz",
     "intercom": "Portero automático",
-    "licensing": "Licencias de alquiler turístico",
+    "licensing": "Licencias de alquiler vacacional",
     "statements": "Estados del propietario",
     "insights": "Análisis",
     "team": "Equipo",

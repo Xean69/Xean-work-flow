@@ -65,7 +65,7 @@ function TenantAnalytics() {
 
       <div className="content">
         <Link to="/tenants" className="back-link">
-          ← Tenants &amp; Leases
+          ← Tenants
         </Link>
 
         <div className="analytics-filters">

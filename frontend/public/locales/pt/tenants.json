@@ -1,5 +1,5 @@
 {
-  "title": "Inquilinos e Contratos",
+  "title": "Inquilinos",
   "subtitleLoading": "A carregar…",
   "subtitle_one": "{{count}} inquilino ativo na sua carteira",
   "subtitle_other": "{{count}} inquilinos ativos na sua carteira",
@@ -10,7 +10,7 @@
   "searchPlaceholder": "Pesquisar por nome, e-mail ou telefone…",
   "allProperties": "Todos os imóveis",
   "emptyNoUnitsTitle": "Ainda sem frações",
-  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas frações e volte depois para atribuir inquilinos.",
+  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas frações e depois volte para atribuir inquilinos.",
   "emptyNoMatchesTitle": "Sem resultados",
   "emptyNoMatchesBody": "Nenhum inquilino corresponde à pesquisa e ao filtro atuais.",
   "table": {
@@ -29,7 +29,7 @@
     "active": "Ativo",
     "renewal_due": "Renovação prevista",
     "urgent_renewal": "Renovação urgente",
-    "vacant": "Vago"
+    "vacant": "Devoluto"
   },
   "paymentStatus": {
     "paid": "Pago",
@@ -38,7 +38,7 @@
   },
   "portalLoginStatus": {
     "active": "Ativo",
-    "notSet": "Não definido"
+    "notSet": "Por definir"
   },
   "inspectionStatus": {
     "none": "Sem vistoria",

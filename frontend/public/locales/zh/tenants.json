@@ -1,18 +1,35 @@
 {
+  "title": "租户",
+  "subtitleLoading": "加载中…",
+  "subtitle_one": "您的资产组合中有 {{count}} 位在租租户",
+  "subtitle_other": "您的资产组合中有 {{count}} 位在租租户",
+  "viewAnalytics": "查看分析",
   "addTenant": "+ 添加租户",
   "addTenantModalTitle": "添加租户",
-  "allProperties": "全部房产",
-  "confirmRemove": "确定将 {{name}} 从 {{unit}} 单元移除吗？",
   "editTenant": "编辑租户",
-  "emptyNoMatchesBody": "没有符合当前搜索和筛选条件的租户。",
-  "emptyNoMatchesTitle": "无匹配结果",
+  "searchPlaceholder": "按姓名、邮箱或电话搜索…",
+  "allProperties": "全部房产",
+  "emptyNoUnitsTitle": "暂无房源单元",
   "emptyNoUnitsBody": "请先添加房产和单元，然后再回来分配租户。",
-  "emptyNoUnitsTitle": "暂无单元",
-  "inspectionStatus": {
-    "draft": "草稿",
-    "none": "未验房",
-    "pending_signature": "待签字",
-    "signed": "已签字"
+  "emptyNoMatchesTitle": "无匹配结果",
+  "emptyNoMatchesBody": "没有符合当前搜索和筛选条件的租户。",
+  "table": {
+    "tenant": "租户",
+    "propertyUnit": "房产 / 单元",
+    "rent": "租金",
+    "thisMonth": "本月",
+    "leaseEnds": "租约到期",
+    "status": "状态",
+    "portalLogin": "门户登录",
+    "moveInInspection": "入住验房",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "status": {
+    "active": "在租",
+    "renewal_due": "待续约",
+    "urgent_renewal": "急需续约",
+    "vacant": "空置"
   },
   "paymentStatus": {
     "paid": "已付",
@@ -23,28 +40,11 @@
     "active": "已启用",
     "notSet": "未设置"
   },
-  "searchPlaceholder": "按姓名、邮箱或电话搜索…",
-  "status": {
-    "active": "生效中",
-    "renewal_due": "待续约",
-    "urgent_renewal": "急需续约",
-    "vacant": "空置"
+  "inspectionStatus": {
+    "none": "无验房",
+    "draft": "草稿",
+    "pending_signature": "待签字",
+    "signed": "已签字"
   },
-  "subtitleLoading": "加载中…",
-  "subtitle_one": "您的资产组合中有 {{count}} 位在租租户",
-  "subtitle_other": "您的资产组合中有 {{count}} 位在租租户",
-  "table": {
-    "delete": "删除",
-    "edit": "编辑",
-    "leaseEnds": "租约到期",
-    "moveInInspection": "入住验房",
-    "portalLogin": "门户登录",
-    "propertyUnit": "房产 / 单元",
-    "rent": "租金",
-    "status": "状态",
-    "tenant": "租户",
-    "thisMonth": "本月"
-  },
-  "title": "租户与租约",
-  "viewAnalytics": "查看分析"
+  "confirmRemove": "确定将 {{name}} 从单元 {{unit}} 中移除吗？"
 }
