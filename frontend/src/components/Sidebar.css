@@ -58,7 +58,7 @@
   text-decoration: none;
 }
 .nav-item.active {
-  background: rgba(173, 138, 85, 0.18);
+  background: rgba(61, 109, 156, 0.18);
   color: #fff;
 }
 .nav-item svg {
@@ -156,7 +156,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--brass-light);
-  background: rgba(217, 195, 154, 0.14);
+  background: rgba(61, 109, 156, 0.14);
   padding: 2px 7px;
   border-radius: 999px;
 }
@@ -203,7 +203,7 @@
   }
   .sidebar.sidebar-open {
     transform: translateX(0);
-    box-shadow: 8px 0 28px rgba(27, 36, 48, 0.3);
+    box-shadow: 8px 0 28px rgba(44, 62, 80, 0.3);
   }
   /* transform is physical, not logical — it doesn't flip on its own the
      way inset-inline-start/end just did above, so the off-canvas slide

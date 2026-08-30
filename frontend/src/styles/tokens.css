@@ -1,14 +1,21 @@
 :root {
-  /* Color palette — matches xean-intake-mockup exactly */
-  --ink: #1b2430;
+  /* Color palette — white/slate-charcoal/slate-blue theme (see Landing.css
+     for the public-site equivalent, which uses the exact same accent
+     values for --brass/--brass-deep so the whole app's blue reads as one
+     consistent color, not two similar-but-different blues).
+     --green/--amber/--red/--blue (+ their -bg tints) are semantic, not
+     theme colors — status badges, presence dots, priority indicators, and
+     chat-bubble treatments all depend on them staying distinct from the
+     accent and from each other, so they're deliberately untouched here. */
+  --ink: #2c3e50;
   --slate: #5b6b7a;
   --slate-soft: #8996a3;
-  --brass: #ad8a55;
-  --brass-deep: #8c6d3e;
-  --brass-light: #e8d9bc;
-  --parchment: #f7f4ee;
+  --brass: #3d6d9c;
+  --brass-deep: #2c5175;
+  --brass-light: #dce8f2;
+  --parchment: #ffffff;
   --card: #ffffff;
-  --line: #e6e0d3;
+  --line: #e2e8f0;
   --green: #3a7d5c;
   --green-bg: #e7f1eb;
   --amber: #b9761e;

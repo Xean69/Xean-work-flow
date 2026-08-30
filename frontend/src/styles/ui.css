@@ -282,7 +282,7 @@ tr:last-child td {
 .avatar {
   border-radius: 50%;
   background: var(--brass);
-  color: var(--ink);
+  color: #fff;
   font-weight: 700;
   font-family: var(--font-mono);
   display: flex;
@@ -485,7 +485,7 @@ tr:last-child td {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(27, 36, 48, 0.5);
+  background: rgba(44, 62, 80, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -495,7 +495,7 @@ tr:last-child td {
 .modal {
   background: var(--card);
   border-radius: var(--radius);
-  box-shadow: 0 12px 32px rgba(27, 36, 48, 0.25);
+  box-shadow: 0 12px 32px rgba(44, 62, 80, 0.25);
   width: 100%;
   max-width: 460px;
   max-height: 90vh;
