@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import LandingLoginModal from './LandingLoginModal.jsx'
 
 // Shared header for every public-site page (homepage, terms, privacy,
 // blog). The in-page section links (#features etc.) only make sense on
@@ -6,6 +8,8 @@ import { Link } from 'react-router-dom'
 // than showing dead links — Blog is a real separate page, though, so it
 // always shows regardless of withSectionLinks.
 function LandingNav({ withSectionLinks = false }) {
+  const [showLoginModal, setShowLoginModal] = useState(false)
+
   return (
     <div className="lnd-wrap">
       <nav className="lnd-nav">
@@ -28,14 +32,15 @@ function LandingNav({ withSectionLinks = false }) {
           <Link to="/blog">Blog</Link>
         </div>
         <div className="lnd-nav-cta">
-          <Link to="/login" className="lnd-btn lnd-btn-ghost">
+          <button type="button" className="lnd-btn lnd-btn-ghost" onClick={() => setShowLoginModal(true)}>
             Log in
-          </Link>
+          </button>
           <Link to="/signup" className="lnd-btn lnd-btn-primary">
             Request access
           </Link>
         </div>
       </nav>
+      {showLoginModal && <LandingLoginModal onClose={() => setShowLoginModal(false)} />}
     </div>
   )
 }

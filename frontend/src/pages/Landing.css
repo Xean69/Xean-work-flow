@@ -178,6 +178,134 @@
   border-radius: 11px;
 }
 
+/* LOGIN MODAL — "Log in" no longer goes straight to /login; it opens this
+   role picker instead. Its own dark-surface component rather than reusing
+   the dashboard's Modal.jsx/ui.css (a different, light theme). Rendered
+   by LandingNav.jsx via a portal into document.body (see
+   LandingLoginModal.jsx for why), which also means it renders outside
+   `.landing`'s own DOM subtree — so none of these rules can rely on
+   `.landing` ancestor scoping, and the --lnd-* custom properties (defined
+   on `.landing` itself) have to be redeclared here too, or every var()
+   below would resolve to nothing. */
+.lnd-login-modal-backdrop {
+  --lnd-bg: #06070b;
+  --lnd-bg-alt: #0c0e14;
+  --lnd-card: rgba(255, 255, 255, 0.045);
+  --lnd-card-border: rgba(255, 255, 255, 0.09);
+  --lnd-text: #f3f4f7;
+  --lnd-text-dim: #8d93a3;
+  --lnd-text-dimmer: #5d6373;
+  --lnd-navy-accent: #4a6fa0;
+  --lnd-navy-deep: #2c4470;
+  --lnd-champagne: #d9c39a;
+  --lnd-line: rgba(255, 255, 255, 0.08);
+
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(6, 7, 11, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+}
+.lnd-login-modal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--lnd-bg-alt);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  padding: 24px;
+}
+.lnd-login-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.lnd-login-modal-header h3 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--lnd-text);
+}
+.lnd-login-modal-close {
+  background: none;
+  border: none;
+  color: var(--lnd-text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+.lnd-login-modal-close:hover {
+  color: var(--lnd-text);
+}
+.lnd-login-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.lnd-login-modal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 14px;
+  padding: 18px 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+.lnd-login-modal-card:hover {
+  border-color: var(--lnd-navy-accent);
+  animation: lnd-login-card-shake 0.4s ease;
+}
+@keyframes lnd-login-card-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+.lnd-login-modal-card-icon {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.lnd-login-modal-card-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lnd-text);
+}
+.lnd-login-modal-card-desc {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: var(--lnd-text-dim);
+  line-height: 1.5;
+}
+
+@media (max-width: 560px) {
+  .lnd-login-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* HERO */
 .landing .lnd-hero {
   padding: 90px 0 60px 0;
