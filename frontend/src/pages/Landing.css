@@ -599,6 +599,30 @@
   position: relative;
   overflow: hidden;
 }
+
+/* Scroll-triggered entrance (see FeatureCard in Landing.jsx) — fades and
+   slides up once in view, each card a beat after the last via its own
+   inline transition-delay. Hover's own transform below shares this same
+   `transform` transition, which is exactly why FeatureCard resets the
+   delay to 0ms shortly after the entrance finishes: without that, every
+   hover lift would replay carrying a stale stagger delay. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing .lnd-feat-card {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1), transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+  .landing .lnd-feat-card.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .landing .lnd-feat-card.in-view:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 18px 34px rgba(44, 62, 80, 0.14);
+    border-color: rgba(61, 109, 156, 0.35);
+  }
+}
 .landing .lnd-feat-card::before {
   content: '';
   position: absolute;
@@ -619,6 +643,35 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 18px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease, border-color 0.25s ease,
+    color 0.25s ease;
+}
+/* Color pulse alone (no movement) — kept outside the reduced-motion guard
+   below since a color shift on hover isn't the kind of motion that guard
+   is for. */
+.landing .lnd-feat-card:hover .lnd-feat-icon {
+  background: var(--lnd-navy-accent);
+  border-color: var(--lnd-navy-accent);
+  color: #fff;
+}
+/* A little variety per icon rather than one identical scale for all seven
+   — a subtle rotate, nudge, or lift, whichever suits that icon's shape. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing .lnd-feat-card:hover .lnd-feat-icon {
+    transform: scale(1.14);
+  }
+  .landing .lnd-feat-card:nth-child(2):hover .lnd-feat-icon {
+    transform: scale(1.1) rotate(-14deg);
+  }
+  .landing .lnd-feat-card:nth-child(3):hover .lnd-feat-icon {
+    transform: scale(1.1) translateY(-2px);
+  }
+  .landing .lnd-feat-card:nth-child(5):hover .lnd-feat-icon {
+    transform: scale(1.1) rotate(8deg);
+  }
+  .landing .lnd-feat-card:nth-child(7):hover .lnd-feat-icon {
+    transform: scale(1.1) translateY(3px);
+  }
 }
 .landing .lnd-feat-card h3 {
   font-family: 'Space Grotesk', sans-serif;

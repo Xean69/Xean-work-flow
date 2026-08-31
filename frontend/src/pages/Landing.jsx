@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import LandingNav from '../components/LandingNav.jsx'
 import LandingFooter from '../components/LandingFooter.jsx'
@@ -54,6 +54,62 @@ const FAQ_ITEMS = [
     a: 'Yes — the tenant portal works right in a mobile browser, no app-store download required. Tenants can optionally add it to their home screen for an app-like icon and experience, but it’s never required.',
   },
 ]
+
+// Fades/slides a Capabilities card in the moment it scrolls into view, each
+// one a beat after the previous (via `index * STAGGER_MS`) — same
+// per-instance IntersectionObserver + prefers-reduced-motion pattern as
+// components/CountUp.jsx, just driving a CSS class instead of a ticking
+// number. The stagger delay is cleared back to 0ms a moment after the
+// entrance transition finishes, so it never lingers and makes a later
+// hover feel sluggish.
+const STAGGER_MS = 70
+const ENTRANCE_MS = 550
+
+function FeatureCard({ icon, title, description, index }) {
+  const ref = useRef(null)
+  const [visible, setVisible] = useState(false)
+  const [delayMs, setDelayMs] = useState(index * STAGGER_MS)
+
+  useEffect(() => {
+    const node = ref.current
+    if (!node) return
+
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setVisible(true)
+      setDelayMs(0)
+      return
+    }
+
+    let clearDelayTimer = null
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        observer.disconnect()
+        setVisible(true)
+        clearDelayTimer = window.setTimeout(() => setDelayMs(0), index * STAGGER_MS + ENTRANCE_MS)
+      },
+      { threshold: 0.2 }
+    )
+    observer.observe(node)
+
+    return () => {
+      observer.disconnect()
+      if (clearDelayTimer) window.clearTimeout(clearDelayTimer)
+    }
+  }, [index])
+
+  return (
+    <div
+      ref={ref}
+      className={'lnd-feat-card' + (visible ? ' in-view' : '')}
+      style={{ transitionDelay: `${delayMs}ms` }}
+    >
+      <div className="lnd-feat-icon">{icon}</div>
+      <h3>{title}</h3>
+      <p>{description}</p>
+    </div>
+  )
+}
 
 function FaqItem({ item, isOpen, onToggle }) {
   return (
@@ -233,76 +289,83 @@ function Landing() {
           </div>
 
           <div className="lnd-feat-grid">
-            <div className="lnd-feat-card">
-              <div className="lnd-feat-icon">
+            <FeatureCard
+              index={0}
+              title="Document intelligence"
+              description="Leases, invoices, inspection reports — parsed into structured data the moment they're uploaded."
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
                   <path d="M14 3v5h5" />
                 </svg>
-              </div>
-              <h3>Document intelligence</h3>
-              <p>Leases, invoices, inspection reports — parsed into structured data the moment they're uploaded.</p>
-            </div>
-            <div className="lnd-feat-card">
-              <div className="lnd-feat-icon">
+              }
+            />
+            <FeatureCard
+              index={1}
+              title="Autonomous triage"
+              description="Maintenance requests are classified by urgency and trade in real time, before you even open the app."
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-3-3z" />
                 </svg>
-              </div>
-              <h3>Autonomous triage</h3>
-              <p>Maintenance requests are classified by urgency and trade in real time, before you even open the app.</p>
-            </div>
-            <div className="lnd-feat-card">
-              <div className="lnd-feat-icon">
+              }
+            />
+            <FeatureCard
+              index={2}
+              title="Unified communication"
+              description="SMS, email, and guest-platform messages converge into a single thread per unit."
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 6l9 7 9-7" />
                   <rect x="3" y="4" width="18" height="16" rx="2" />
                 </svg>
-              </div>
-              <h3>Unified communication</h3>
-              <p>SMS, email, and guest-platform messages converge into a single thread per unit.</p>
-            </div>
-            <div className="lnd-feat-card">
-              <div className="lnd-feat-icon">
+              }
+            />
+            <FeatureCard
+              index={3}
+              title="Short-term operations"
+              description="Turnover pipelines and scheduled guest messaging, running natively alongside long-term leases."
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 10.5 12 3l9 7.5" />
                   <path d="M5 9.5V20a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V9.5" />
                 </svg>
-              </div>
-              <h3>Short-term operations</h3>
-              <p>Turnover pipelines and scheduled guest messaging, running natively alongside long-term leases.</p>
-            </div>
-            <div className="lnd-feat-card">
-              <div className="lnd-feat-icon">
+              }
+            />
+            <FeatureCard
+              index={4}
+              title="Automated bookkeeping"
+              description="Receipts are captured and categorized on upload — your books stay current without the data entry."
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="6" width="18" height="13" rx="2" />
                   <path d="M3 10h18" />
                 </svg>
-              </div>
-              <h3>Automated bookkeeping</h3>
-              <p>Receipts are captured and categorized on upload — your books stay current without the data entry.</p>
-            </div>
-            <div className="lnd-feat-card">
-              <div className="lnd-feat-icon">
+              }
+            />
+            <FeatureCard
+              index={5}
+              title="A tenant-native portal"
+              description="Your tenants get their own precision-built interface — lease, repairs, and messaging, from their phone."
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="9" cy="8" r="3.2" />
                   <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
                 </svg>
-              </div>
-              <h3>A tenant-native portal</h3>
-              <p>Your tenants get their own precision-built interface — lease, repairs, and messaging, from their phone.</p>
-            </div>
-            <div className="lnd-feat-card">
-              <div className="lnd-feat-icon">
+              }
+            />
+            <FeatureCard
+              index={6}
+              title="Effortless migration"
+              description="Import your existing portfolio from Yardi, AppFolio, Buildium, or any spreadsheet — AI reads and maps the data automatically, no manual re-entry."
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 3v12" />
                   <path d="M7.5 10.5 12 15l4.5-4.5" />
                   <path d="M4 19h16" />
                 </svg>
-              </div>
-              <h3>Effortless migration</h3>
-              <p>Import your existing portfolio from Yardi, AppFolio, Buildium, or any spreadsheet — AI reads and maps the data automatically, no manual re-entry.</p>
-            </div>
+              }
+            />
           </div>
         </div>
       </section>
