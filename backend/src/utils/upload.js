@@ -76,6 +76,23 @@ export function assertChatAttachmentSizeOk(file) {
   }
 }
 
+// A drawn e-signature is a small canvas export (PNG only, well under a
+// megabyte in practice) — its own tight limit rather than reusing
+// IMAGE_DOC_MAX_SIZE, so a malformed/oversized payload fails fast instead
+// of being treated like a real document upload.
+const SIGNATURE_MAX_SIZE = 2 * 1024 * 1024;
+
+export const uploadSignature = multer({
+  storage,
+  limits: { fileSize: SIGNATURE_MAX_SIZE },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== "image/png") {
+      return cb(new ApiError(400, "Signature must be a PNG image"));
+    }
+    cb(null, true);
+  },
+});
+
 // Uploads an in-memory buffer to Cloudinary and returns the bits a route
 // needs to store and later delete the asset. resource_type "auto" lets
 // Cloudinary classify PDFs/images itself rather than us guessing — but

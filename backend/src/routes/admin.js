@@ -116,7 +116,8 @@ router.get(
   requireAdminAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.role, a.language, a.business_id, b.business_name, b.created_at AS trial_started_at
+      `SELECT a.id, a.email, a.role, a.language, a.business_id, b.business_name, b.created_at AS trial_started_at,
+              b.logo_url, b.ai_lease_generation_enabled
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,

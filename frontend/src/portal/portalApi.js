@@ -102,3 +102,19 @@ export function getPortalInspection() {
 export function signPortalInspection(signedName) {
   return request("/inspection/sign", { method: "POST", body: JSON.stringify({ signed_name: signedName }) });
 }
+
+// A draft lease never appears here — only a manager-sent one "exists" as
+// far as the tenant is concerned, same as inspections above.
+export function getPortalLeases() {
+  return request("/leases");
+}
+
+// signature_image is optional — FormData either way (uploadRequest, not
+// the JSON-only request()) since a typed-only signature still goes through
+// the same multipart endpoint, just with no file field attached.
+export function signPortalLease(id, signedName, signatureImageBlob) {
+  const formData = new FormData();
+  formData.append("signed_name", signedName);
+  if (signatureImageBlob) formData.append("signature_image", signatureImageBlob, "signature.png");
+  return uploadRequest(`/leases/${id}/sign`, formData);
+}

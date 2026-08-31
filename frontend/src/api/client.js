@@ -498,3 +498,52 @@ export function deleteInspectionPhoto(inspectionId, photoId) {
 export function finalizeInspection(inspectionId) {
   return request(`/move-in-inspections/${inspectionId}/finalize`, { method: "PUT" });
 }
+
+export function getLeases() {
+  return request("/leases");
+}
+
+export function getLease(id) {
+  return request(`/leases/${id}`);
+}
+
+// Always FormData, even for Generate mode (which has no file) — the
+// template file is optional but custom_clauses needs to travel as a
+// JSON-stringified field either way, so one upload path handles both modes.
+export function createLease(formData) {
+  return uploadRequest("/leases", formData);
+}
+
+export function updateLeaseContent(id, content) {
+  return request(`/leases/${id}`, { method: "PUT", body: JSON.stringify({ content }) });
+}
+
+export function regenerateLease(id) {
+  return request(`/leases/${id}/regenerate`, { method: "POST" });
+}
+
+export function sendLease(id, documentId) {
+  return request(`/leases/${id}/send`, {
+    method: "POST",
+    body: JSON.stringify({ document_id: documentId, reviewed_confirmation: true }),
+  });
+}
+
+export function voidLease(id, voidReason) {
+  return request(`/leases/${id}/void`, { method: "POST", body: JSON.stringify({ void_reason: voidReason }) });
+}
+
+export function deleteLease(id) {
+  return request(`/leases/${id}`, { method: "DELETE" });
+}
+
+export function uploadBusinessLogo(formData) {
+  return uploadRequest("/business/logo", formData, "PUT");
+}
+
+export function setAiLeaseGeneration(enabled, acknowledged) {
+  return request("/business/ai-lease-generation", {
+    method: "PUT",
+    body: JSON.stringify({ enabled, acknowledged }),
+  });
+}

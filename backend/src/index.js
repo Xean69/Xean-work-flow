@@ -28,6 +28,8 @@ import activityRouter from "./routes/activity.js";
 import complianceChecksRouter from "./routes/complianceChecks.js";
 import insightsRouter from "./routes/insights.js";
 import moveInInspectionsRouter from "./routes/moveInInspections.js";
+import leasesRouter from "./routes/leases.js";
+import businessRouter from "./routes/business.js";
 import chargesRouter from "./routes/charges.js";
 import recurringChargesRouter from "./routes/recurringCharges.js";
 import contactRouter from "./routes/contact.js";
@@ -157,6 +159,13 @@ app.use("/api/insights", requireAdminAuth, staffOnly, insightsRouter);
 // Owner/manager only, same reasoning as compliance-checks — not a
 // bookkeeping concern, so accountants get no access at all here.
 app.use("/api/move-in-inspections", requireAdminAuth, staffOnly, moveInInspectionsRouter);
+// Owner/manager only, matching ROUTE_ROLES on the frontend — Generate
+// mode is further gated inside leases.js itself (per-business opt-in),
+// and the /ai-lease-generation toggle below is further gated to owner
+// only inside business.js — this mount-level check is just the outer
+// "not an accountant" boundary both routers share.
+app.use("/api/leases", requireAdminAuth, staffOnly, leasesRouter);
+app.use("/api/business", requireAdminAuth, staffOnly, businessRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is

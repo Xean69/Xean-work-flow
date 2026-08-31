@@ -1,6 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { getPortalDocuments, getPortalDocumentUrl, getPortalInspection, signPortalInspection } from '../portalApi.js'
+import {
+  getPortalDocuments,
+  getPortalDocumentUrl,
+  getPortalInspection,
+  signPortalInspection,
+  getPortalLeases,
+  signPortalLease,
+} from '../portalApi.js'
+import SignaturePad from '../../components/SignaturePad.jsx'
 
 function formatMoney(amount) {
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -113,20 +121,149 @@ function MoveInInspection({ inspection, onSigned }) {
   )
 }
 
+// One card per lease a manager has sent — a draft never reaches here at
+// all (see GET /api/portal/leases). Reuses the exact typed-name + server-
+// timestamp pattern MoveInInspection above uses, plus an optional drawn
+// signature (net-new — see components/SignaturePad.jsx) as an addition,
+// not a replacement: signed_name is always required even when a drawn
+// image is also submitted.
+function LeaseESign({ lease, onSigned }) {
+  const [signMethod, setSignMethod] = useState('type')
+  const [signedName, setSignedName] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const padRef = useRef(null)
+
+  async function handleSign(e) {
+    e.preventDefault()
+    setError('')
+    if (!signedName.trim()) {
+      setError('Type your full name to sign.')
+      return
+    }
+    if (signMethod === 'draw' && padRef.current?.isEmpty()) {
+      setError('Draw your signature, or switch to "Type name" instead.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const blob = signMethod === 'draw' ? await padRef.current.getBlob() : null
+      onSigned(await signPortalLease(lease.id, signedName, blob))
+    } catch (err) {
+      setError(err.message)
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="portal-card" style={{ marginTop: 16 }}>
+      <h2>Lease agreement</h2>
+
+      {lease.ai_generated && (
+        <div className="portal-lease-disclaimer">
+          {lease.generation_mode === 'generate'
+            ? 'This lease was drafted with AI assistance. If anything looks incorrect or unclear, contact your property manager before signing.'
+            : 'This lease was filled in from your manager\'s template with AI assistance.'}
+        </div>
+      )}
+
+      {lease.content.sections.map((s, i) => (
+        <div key={i} className="portal-lease-section">
+          <strong>{s.heading}</strong>
+          <p>{s.body}</p>
+        </div>
+      ))}
+
+      {lease.signed_at ? (
+        <div style={{ marginTop: 14 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>
+            Signed by {lease.signed_name} on {formatDateTime(lease.signed_at)}
+          </p>
+          {lease.signature_image_url && (
+            <img src={lease.signature_image_url} alt="Your signature" className="portal-signature-image" />
+          )}
+          {lease.document_id && (
+            <a href={getPortalDocumentUrl(lease.document_id)} target="_blank" rel="noreferrer" className="portal-btn" style={{ marginTop: 10, display: 'inline-block' }}>
+              View document
+            </a>
+          )}
+        </div>
+      ) : (
+        <form onSubmit={handleSign} style={{ marginTop: 16 }}>
+          <p style={{ marginBottom: 10 }}>Review the lease above, then sign to accept it.</p>
+          {error && <p className="portal-error">{error}</p>}
+
+          <div className="portal-field">
+            <label htmlFor={`signed_name_${lease.id}`}>Full name</label>
+            <input
+              id={`signed_name_${lease.id}`}
+              value={signedName}
+              onChange={(e) => setSignedName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="portal-sign-tabs">
+            <button
+              type="button"
+              className={'portal-sign-tab' + (signMethod === 'type' ? ' active' : '')}
+              onClick={() => setSignMethod('type')}
+            >
+              Type name only
+            </button>
+            <button
+              type="button"
+              className={'portal-sign-tab' + (signMethod === 'draw' ? ' active' : '')}
+              onClick={() => setSignMethod('draw')}
+            >
+              Draw signature
+            </button>
+          </div>
+
+          {signMethod === 'draw' && (
+            <div className="portal-field">
+              <SignaturePad ref={padRef} />
+              <button type="button" className="portal-btn" style={{ marginTop: 6 }} onClick={() => padRef.current?.clear()}>
+                Clear
+              </button>
+            </div>
+          )}
+
+          {lease.document_id && (
+            <a href={getPortalDocumentUrl(lease.document_id)} target="_blank" rel="noreferrer" style={{ fontSize: 12.5, display: 'inline-block', marginBottom: 10 }}>
+              View the full document
+            </a>
+          )}
+
+          <button type="submit" className="portal-btn portal-btn-primary" disabled={submitting}>
+            {submitting ? 'Signing…' : 'Sign lease'}
+          </button>
+        </form>
+      )}
+    </div>
+  )
+}
+
 function Lease() {
   const { tenant } = useOutletContext()
   const [documents, setDocuments] = useState([])
   const [inspection, setInspection] = useState(null)
+  const [leases, setLeases] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getPortalDocuments(), getPortalInspection()])
-      .then(([docs, insp]) => {
+    Promise.all([getPortalDocuments(), getPortalInspection(), getPortalLeases()])
+      .then(([docs, insp, leaseRows]) => {
         setDocuments(docs)
         setInspection(insp)
+        setLeases(leaseRows)
       })
       .finally(() => setLoading(false))
   }, [])
+
+  function updateLease(updated) {
+    setLeases((prev) => prev.map((l) => (l.id === updated.id ? updated : l)))
+  }
 
   return (
     <div>
@@ -176,6 +313,10 @@ function Lease() {
           ))}
         </div>
       </div>
+
+      {leases.map((l) => (
+        <LeaseESign key={l.id} lease={l} onSigned={updateLease} />
+      ))}
 
       <MoveInInspection inspection={inspection} onSigned={setInspection} />
     </div>

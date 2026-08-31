@@ -315,6 +315,29 @@ export async function notifyStaffOfAssignment({ staffEmail, staffName, ticketTit
 // never run through tr(), since managers don't carry a language preference
 // in this app. Only the staff-facing notifyStaffOfNewMessage below is
 // localized.
+// Fires when a tenant countersigns a lease — the one lease event a manager
+// needs to know about proactively, since the lease list itself only
+// updates when someone looks at it. Plain English like the other
+// manager-facing notifications above (managers don't carry a language
+// preference in this app).
+export async function notifyManagersOfLeaseSigned({ businessId, tenantName }) {
+  try {
+    const to = await getManagerRecipients(businessId);
+    await sendEmail({
+      to,
+      subject: `Lease signed by ${tenantName}`,
+      html: renderEmail({
+        heading: "Lease signed",
+        lines: [`<strong>${tenantName}</strong> has signed their lease.`],
+        ctaText: "View in Leases",
+        ctaUrl: `${APP_BASE_URL}/leases`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyManagersOfLeaseSigned failed:", err);
+  }
+}
+
 export async function notifyManagersOfStaffMessage({ businessId, staffName, messageBody }) {
   try {
     const to = await getManagerRecipients(businessId);

@@ -631,6 +631,75 @@ body {
   text-align: start;
 }
 
+.signature-pad-canvas {
+  width: 100%;
+  height: 140px;
+  border: 1.5px dashed var(--line);
+  border-radius: 8px;
+  background: #fff;
+  touch-action: none;
+}
+
+.portal-sign-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.portal-sign-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--slate);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.portal-sign-tab.active {
+  background: var(--brass);
+  color: #fff;
+  border-color: var(--brass);
+}
+
+.portal-lease-disclaimer {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+  background: var(--blue-bg);
+  border: 1px solid var(--blue);
+  color: var(--ink);
+}
+
+.portal-lease-section {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.portal-lease-section strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.portal-lease-section p {
+  font-size: 13px;
+  color: var(--slate);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.portal-signature-image {
+  display: block;
+  max-width: 220px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-top: 8px;
+  background: #fff;
+}
+
 .portal-login-screen {
   min-height: 100svh;
   display: flex;

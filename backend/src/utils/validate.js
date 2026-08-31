@@ -659,6 +659,88 @@ export function parseContactChatBody(body) {
   };
 }
 
+const LEASE_GENERATION_MODES = ["template", "generate"];
+
+// Custom clauses are manager-authored, not AI-authored — free-text
+// heading/body pairs appended to whatever the generation mode produces.
+// Validated as a bounded array of plain strings, nothing more structured
+// than that.
+function parseCustomClausesBody(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new ApiError(400, "custom_clauses must be an array");
+  return value.map((item, i) => ({
+    heading: requireString(item.heading, `custom_clauses[${i}].heading`),
+    body: requireString(item.body, `custom_clauses[${i}].body`),
+  }));
+}
+
+export function parseLeaseCreateBody(body) {
+  if (!LEASE_GENERATION_MODES.includes(body.generation_mode)) {
+    throw new ApiError(400, `generation_mode must be one of: ${LEASE_GENERATION_MODES.join(", ")}`);
+  }
+  return {
+    tenant_id: requireNumber(body.tenant_id, "tenant_id", { min: 1 }),
+    generation_mode: body.generation_mode,
+    custom_terms: optionalString(body.custom_terms),
+    custom_clauses: parseCustomClausesBody(body.custom_clauses),
+  };
+}
+
+// The manager's edits to the generated draft — content shape mirrors what
+// leaseGeneration.js produces: { sections: [{ heading, body }] }. Only
+// reachable while a lease is still a draft (enforced in the route, not
+// here).
+export function parseLeaseContentBody(body) {
+  if (!body.content || !Array.isArray(body.content.sections)) {
+    throw new ApiError(400, "content.sections must be an array");
+  }
+  return {
+    content: {
+      sections: body.content.sections.map((s, i) => ({
+        heading: requireString(s.heading, `content.sections[${i}].heading`),
+        body: requireString(s.body, `content.sections[${i}].body`),
+      })),
+    },
+  };
+}
+
+// reviewed_confirmation must be the literal boolean true, sent only once a
+// manager has actually checked the "I've reviewed this" box — this is the
+// server-side half of the mandatory human-review gate; the route rejects
+// the send entirely without it, it's not just a UI nicety.
+export function parseLeaseSendBody(body) {
+  if (body.reviewed_confirmation !== true) {
+    throw new ApiError(400, "You must confirm you've reviewed this lease before sending it");
+  }
+  return {
+    document_id: requireNumber(body.document_id, "document_id", { min: 1 }),
+  };
+}
+
+export function parseLeaseVoidBody(body) {
+  return { void_reason: optionalString(body.void_reason) };
+}
+
+// signed_name is required even when a drawn signature is also provided —
+// the typed name is what's shown everywhere a signature is referenced in
+// text (matches move_in_inspections' signed_name-only design); the drawn
+// image, if present, is additional, not a replacement.
+export function parseLeaseSignBody(body) {
+  return { signed_name: requireString(body.signed_name, "signed_name") };
+}
+
+// Enabling requires an explicit acknowledgment of the risk; disabling never
+// does — there's nothing to acknowledge about turning a feature back off.
+export function parseAiLeaseGenerationBody(body) {
+  if (typeof body.enabled !== "boolean") {
+    throw new ApiError(400, "enabled must be a boolean");
+  }
+  if (body.enabled && body.acknowledged !== true) {
+    throw new ApiError(400, "You must acknowledge the risk before enabling AI lease drafting");
+  }
+  return { enabled: body.enabled };
+}
+
 export function parseContactDemoBody(body) {
   return {
     name: requireBoundedString(body.name, "name", 200),

@@ -3,7 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
-import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, parseLanguageBody, requireString } from "../utils/validate.js";
+import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, parseLanguageBody, parseLeaseSignBody, requireString } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply, generatePendingChatReply } from "../services/maintenanceChat.js";
 import { currentPeriod } from "../utils/period.js";
@@ -16,7 +16,8 @@ import {
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
 import { getPeriodStatus } from "../utils/ledger.js";
-import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
+import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk, uploadSignature } from "../utils/upload.js";
+import { notifyManagersOfLeaseSigned } from "../services/email.js";
 
 const router = Router();
 
@@ -229,6 +230,83 @@ router.post(
       throw new ApiError(400, "This inspection isn't available to sign right now");
     }
     res.json(await loadInspection(rows[0].id));
+  })
+);
+
+// A draft is invisible here too, same as inspections — a lease only
+// "exists" to the tenant once a manager has sent it.
+router.get(
+  "/leases",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT id, generation_mode, ai_generated, content, sent_at, signed_at, signed_name, signature_image_url, document_id,
+              rent_amount_snapshot, deposit_amount_snapshot, lease_start_snapshot, lease_end_snapshot
+       FROM leases
+       WHERE tenant_id = $1 AND status IN ('sent', 'signed')
+       ORDER BY sent_at DESC`,
+      [req.tenantId]
+    );
+    res.json(rows);
+  })
+);
+
+router.get(
+  "/leases/:id",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT id, generation_mode, ai_generated, content, sent_at, signed_at, signed_name, signature_image_url, document_id,
+              rent_amount_snapshot, deposit_amount_snapshot, lease_start_snapshot, lease_end_snapshot
+       FROM leases
+       WHERE id = $1 AND tenant_id = $2 AND status IN ('sent', 'signed')`,
+      [req.params.id, req.tenantId]
+    );
+    if (!rows[0]) throw new ApiError(404, "Lease not found");
+    res.json(rows[0]);
+  })
+);
+
+// signature_image is optional (typed-name signing is always available;
+// drawing one is an addition, not a replacement — see SignaturePad.jsx).
+// One-shot via the same signed_at IS NULL guard the inspection sign route
+// uses, so a double-submit can't re-sign or overwrite an existing
+// signature.
+router.post(
+  "/leases/:id/sign",
+  requireTenantAuth,
+  uploadSignature.single("signature_image"),
+  asyncHandler(async (req, res) => {
+    const data = parseLeaseSignBody(req.body);
+
+    let signature = null;
+    if (req.file) {
+      try {
+        signature = await uploadToCloudinary(req.file.buffer, "xean/lease-signatures");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload signature, please try again");
+      }
+    }
+
+    const { rows } = await pool.query(
+      `UPDATE leases
+       SET status = 'signed', signed_at = now(), signed_name = $1,
+           signature_image_url = $2, signature_cloudinary_public_id = $3
+       WHERE id = $4 AND tenant_id = $5 AND status = 'sent' AND signed_at IS NULL
+       RETURNING *`,
+      [data.signed_name, signature?.url || null, signature?.publicId || null, req.params.id, req.tenantId]
+    );
+    if (!rows[0]) throw new ApiError(400, "This lease isn't available to sign right now");
+
+    const { rows: tenantRows } = await pool.query("SELECT business_id, full_name FROM tenants WHERE id = $1", [
+      req.tenantId,
+    ]);
+    if (tenantRows[0]) {
+      notifyManagersOfLeaseSigned({ businessId: tenantRows[0].business_id, tenantName: tenantRows[0].full_name });
+    }
+
+    res.json(rows[0]);
   })
 );
 

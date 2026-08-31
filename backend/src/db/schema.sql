@@ -1030,4 +1030,119 @@ CREATE TABLE IF NOT EXISTS contact_submissions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ============================================================================
+-- Business branding + AI lease drafting opt-in
+--
+-- logo_* mirrors the 3-column Cloudinary pattern used everywhere else in
+-- this schema (documents, move_in_inspection_photos, etc.) — a business
+-- logo is just another Cloudinary asset, referenced from leases.
+--
+-- ai_lease_generation_enabled gates Leases' "Generate from scratch" mode
+-- specifically (see leases.generation_mode below) — Template mode (AI only
+-- fills in blanks in a manager-uploaded document, never drafts legal
+-- language) ships without this gate. Defaults false: an owner has to
+-- explicitly opt in via PUT /api/business/ai-lease-generation, which
+-- requires an acknowledgment, before AI-drafted lease text becomes
+-- available at all. This is a deliberate product control, not just a UI
+-- disclaimer — see leases.ai_generated below for the rest of the guardrail.
+-- ============================================================================
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS logo_cloudinary_public_id TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS logo_cloudinary_resource_type TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS ai_lease_generation_enabled BOOLEAN NOT NULL DEFAULT false;
+
+-- ============================================================================
+-- Leases — AI-assisted lease drafting + e-signature.
+--
+-- One row per lease document a manager creates for a tenant (not one row
+-- per tenant — a re-lease or renewal is a new row, same as how a tenant can
+-- only have one *current* lease reflected on their own record but leases
+-- here form a history). Terms are snapshotted at creation time
+-- (*_snapshot columns) rather than joined live from tenants/units/
+-- properties at read time — a lease shouldn't silently reflect a rent
+-- change made to the tenant record after the fact; it should keep saying
+-- what it said when it was drafted and sent.
+--
+-- generation_mode drives two very different AI risk profiles:
+--   'template' — the manager uploads their own lease document; AI only
+--     identifies blanks/placeholders and the SERVER does literal
+--     find-and-replace (see services/leaseGeneration.js) — legal language
+--     the manager wrote is never touched by the model.
+--   'generate' — AI drafts the document from the form data. Gated behind
+--     businesses.ai_lease_generation_enabled (see above). Even then,
+--     jurisdiction-sensitive clauses (deposit handling, notice periods,
+--     eviction process, etc.) are never freely invented — see
+--     services/leaseGeneration.js's tiered section handling.
+--
+-- ai_generated records whether ANY AI drafting (as opposed to pure
+-- mail-merge) touched this lease, independent of what a manager may have
+-- since edited — it's what drives the persistent disclaimer in the review
+-- UI and the small-print line on the rendered PDF, and it stays true even
+-- after edits so the disclaimer can't be edited away.
+--
+-- manager_reviewed_at is a hard, server-enforced gate: POST /:id/send
+-- rejects the request unless this is set (see routes/leases.js) — stronger
+-- than documents.status's soft needs_review/reviewed flag, since a lease
+-- reaching a tenant unreviewed carries real legal risk in a way a
+-- receipt-scan document doesn't.
+--
+-- signed_at/signed_name mirror move_in_inspections' signature pattern
+-- exactly (typed name + server timestamp, one-shot via signed_at IS NULL).
+-- signature_image_* is the net-new drawn-signature option, stored as an
+-- ordinary Cloudinary image upload — nothing else in this table is
+-- image/binary data.
+--
+-- document_id points at the actual rendered PDF, stored as an ordinary row
+-- in the existing `documents` table (doc_type = 'lease', tenant_id set) so
+-- it shows up wherever tenant documents already show up (Documents page,
+-- TenantProfile, the tenant portal's Lease page) with zero special-casing.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS leases (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  created_by_admin_id INTEGER REFERENCES admins(id) ON DELETE SET NULL,
+
+  generation_mode TEXT NOT NULL CHECK (generation_mode IN ('template', 'generate')),
+  template_file_url TEXT,
+  template_cloudinary_public_id TEXT,
+  template_cloudinary_resource_type TEXT,
+  template_mime_type TEXT,
+  custom_terms TEXT,
+  custom_clauses JSONB NOT NULL DEFAULT '[]',
+
+  tenant_name_snapshot TEXT NOT NULL,
+  rent_amount_snapshot NUMERIC(10,2) NOT NULL,
+  deposit_amount_snapshot NUMERIC(10,2) NOT NULL,
+  lease_start_snapshot DATE NOT NULL,
+  lease_end_snapshot DATE NOT NULL,
+  occupants_snapshot JSONB NOT NULL DEFAULT '[]',
+
+  content JSONB,
+  ai_raw_output JSONB,
+  ai_generated BOOLEAN NOT NULL DEFAULT false,
+  unmatched_placeholders JSONB NOT NULL DEFAULT '[]',
+
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'signed', 'void')),
+  manager_reviewed_at TIMESTAMPTZ,
+  sent_at TIMESTAMPTZ,
+  document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL,
+
+  signed_at TIMESTAMPTZ,
+  signed_name TEXT,
+  signature_image_url TEXT,
+  signature_cloudinary_public_id TEXT,
+
+  voided_at TIMESTAMPTZ,
+  void_reason TEXT,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_leases_business_id ON leases(business_id);
+CREATE INDEX IF NOT EXISTS idx_leases_tenant_id ON leases(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_leases_status ON leases(status);
+
 CREATE INDEX IF NOT EXISTS idx_contact_submissions_created_at ON contact_submissions(created_at DESC);
