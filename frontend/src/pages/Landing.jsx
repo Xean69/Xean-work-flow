@@ -292,6 +292,17 @@ function Landing() {
               <h3>A tenant-native portal</h3>
               <p>Your tenants get their own precision-built interface — lease, repairs, and messaging, from their phone.</p>
             </div>
+            <div className="lnd-feat-card">
+              <div className="lnd-feat-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 3v12" />
+                  <path d="M7.5 10.5 12 15l4.5-4.5" />
+                  <path d="M4 19h16" />
+                </svg>
+              </div>
+              <h3>Effortless migration</h3>
+              <p>Import your existing portfolio from Yardi, AppFolio, Buildium, or any spreadsheet — AI reads and maps the data automatically, no manual re-entry.</p>
+            </div>
           </div>
         </div>
       </section>
