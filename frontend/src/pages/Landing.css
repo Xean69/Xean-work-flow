@@ -575,6 +575,15 @@
   max-width: 560px;
   line-height: 1.65;
 }
+.landing .lnd-pricing-note a {
+  color: var(--lnd-navy-deep);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(44, 81, 117, 0.35);
+}
+.landing .lnd-pricing-note a:hover {
+  text-decoration-color: currentColor;
+}
 
 .landing .lnd-feat-grid {
   display: grid;

@@ -383,6 +383,10 @@ function Landing() {
           <div className="lnd-section-tag">Pricing</div>
           <div className="lnd-section-head">
             <h2>Priced for operators who value their time</h2>
+            <p className="lnd-pricing-note">
+              <Link to="/#contact">Contact us</Link> for custom pricing — every portfolio is different, and we're
+              happy to build a plan around what actually fits yours.
+            </p>
           </div>
 
           <div className="lnd-price-grid">
