@@ -345,6 +345,18 @@ export function commitTenantImport(rows) {
   return request("/import/tenants/commit", { method: "POST", body: JSON.stringify({ rows }) });
 }
 
+export function analyzeMigrationImport(formData) {
+  return uploadRequest("/import/migrate/analyze", formData);
+}
+
+export function previewMigrationImport(rows, mapping) {
+  return request("/import/migrate/preview", { method: "POST", body: JSON.stringify({ rows, mapping }) });
+}
+
+export function commitMigrationImport(rows) {
+  return request("/import/migrate/commit", { method: "POST", body: JSON.stringify({ rows }) });
+}
+
 export function getTeam() {
   return request("/team");
 }

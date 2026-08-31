@@ -50,7 +50,7 @@ function Properties() {
         }
       >
         <Link to="/import" className="btn btn-ghost">
-          Bulk import
+          Migrate your data
         </Link>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>
           + Add property

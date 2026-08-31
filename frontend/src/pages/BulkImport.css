@@ -134,3 +134,27 @@
 .import-summary .import-error-list {
   margin-bottom: 18px;
 }
+
+.migrate-mapping-table td {
+  min-width: 160px;
+}
+.migrate-samples-cell {
+  font-size: 12px;
+  color: var(--slate);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.migrate-low-confidence {
+  font-size: 11px;
+  color: var(--amber);
+  font-weight: 600;
+  margin-top: 3px;
+}
+.migrate-mapping-hint {
+  font-size: 12px;
+  color: var(--slate);
+  text-align: right;
+  margin-top: 6px;
+}
