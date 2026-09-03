@@ -1,0 +1,23 @@
+/* Classic — traditional, editorial: serif type, cream background, generous
+   whitespace, understated cards. */
+
+.pl-theme-classic {
+  background: #fdfaf5;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.pl-theme-classic .pl-business-name {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+.pl-theme-classic .pl-tagline {
+  font-style: italic;
+}
+.pl-theme-classic .pl-unit-card {
+  border-radius: 4px;
+  border-color: #e5ddc8;
+  background: #fffdf9;
+}
+.pl-theme-classic .pl-unit-title {
+  font-family: Georgia, serif;
+}

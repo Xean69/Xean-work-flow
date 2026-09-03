@@ -749,3 +749,45 @@ export function parseContactDemoBody(body) {
     preferred_time: requireBoundedString(body.preferred_time, "preferred_time", 200),
   };
 }
+
+const WEBSITE_THEMES = ["classic", "modern", "bold"];
+
+// Lowercase letters/digits/hyphens only, matching what's actually safe to
+// drop straight into a URL path segment (xean.ca/listings/<slug>) with no
+// further encoding — not just "non-empty" like requireString.
+const SLUG_FORMAT = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+const HEX_COLOR_FORMAT = /^#[0-9a-fA-F]{6}$/;
+
+export function parseWebsiteBody(body) {
+  const slug = requireString(body.slug, "slug").toLowerCase();
+  if (!SLUG_FORMAT.test(slug)) {
+    throw new ApiError(400, "slug must be lowercase letters, numbers, and hyphens only");
+  }
+  const theme = body.theme === undefined ? "classic" : body.theme;
+  if (!WEBSITE_THEMES.includes(theme)) {
+    throw new ApiError(400, `theme must be one of: ${WEBSITE_THEMES.join(", ")}`);
+  }
+  const primaryColor = optionalString(body.primary_color);
+  if (primaryColor !== null && !HEX_COLOR_FORMAT.test(primaryColor)) {
+    throw new ApiError(400, "primary_color must be a hex color like #3d6d9c");
+  }
+  return {
+    slug,
+    enabled: Boolean(body.enabled),
+    tagline: optionalString(body.tagline),
+    description: optionalString(body.description),
+    theme,
+    primary_color: primaryColor,
+  };
+}
+
+export function parseUnitListingOverrideBody(body) {
+  return {
+    advertised_price: body.advertised_price === undefined || body.advertised_price === null || body.advertised_price === ""
+      ? null
+      : requireNumber(body.advertised_price, "advertised_price", { min: 0 }),
+    incentive_text: optionalString(body.incentive_text),
+    description: optionalString(body.description),
+  };
+}

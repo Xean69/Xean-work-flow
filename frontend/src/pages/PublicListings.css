@@ -1,0 +1,158 @@
+/* Base structure shared by every theme — themes/*.css layer visual
+   treatment on top of these same class names, never redefine layout. This
+   page intentionally does not import styles/tokens.css: it renders a
+   customer company's own brand, not Xean's, so it stays self-contained. */
+
+.pl-not-found {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: #5b6b7a;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pl-page {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #1b2430;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pl-header {
+  text-align: center;
+  padding: 56px 24px 28px;
+}
+.pl-logo {
+  max-height: 64px;
+  margin-bottom: 16px;
+}
+.pl-business-name {
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+.pl-tagline {
+  color: #5b6b7a;
+  font-size: 16px;
+  margin: 0;
+}
+
+.pl-description {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
+  text-align: center;
+  color: #3a4550;
+  line-height: 1.6;
+}
+
+.pl-units {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+.pl-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #5b6b7a;
+  padding: 40px 0;
+}
+
+.pl-unit-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.pl-unit-photo {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: #f1f5f9;
+}
+.pl-unit-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pl-unit-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+}
+.pl-unit-incentive {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: var(--listing-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.pl-unit-body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pl-unit-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.pl-unit-meta {
+  color: #5b6b7a;
+  font-size: 13px;
+}
+.pl-unit-price {
+  margin-top: 4px;
+}
+.pl-unit-price-original {
+  text-decoration: line-through;
+  color: #94a3b8;
+  margin-right: 8px;
+  font-size: 13px;
+}
+.pl-unit-price-current {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--listing-primary);
+}
+.pl-unit-description {
+  color: #3a4550;
+  font-size: 13px;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.pl-footer {
+  text-align: center;
+  padding: 32px 24px 56px;
+  border-top: 1px solid #e2e8f0;
+}
+.pl-contact-link {
+  color: var(--listing-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+.pl-contact-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .pl-header {
+    padding: 36px 16px 20px;
+  }
+  .pl-units {
+    padding: 0 16px 40px;
+    gap: 16px;
+  }
+}

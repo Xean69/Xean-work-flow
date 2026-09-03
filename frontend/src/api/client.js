@@ -559,3 +559,31 @@ export function setAiLeaseGeneration(enabled, acknowledged) {
     body: JSON.stringify({ enabled, acknowledged }),
   });
 }
+
+export function getWebsite() {
+  return request("/websites");
+}
+
+export function updateWebsite(data) {
+  return request("/websites", { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function updateUnitListing(unitId, data) {
+  return request(`/websites/units/${unitId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export function uploadUnitListingPhoto(unitId, formData) {
+  return uploadRequest(`/websites/units/${unitId}/photos`, formData);
+}
+
+export function deleteUnitListingPhoto(unitId, photoId) {
+  return request(`/websites/units/${unitId}/photos/${photoId}`, { method: "DELETE" });
+}
+
+// Unauthenticated — the public listing page itself calls this with no
+// session, same as any other request() call (credentials: "same-origin"
+// just means "send the cookie if one happens to exist," it never requires
+// one).
+export function getPublicListing(slug) {
+  return request(`/public/listings/${slug}`);
+}

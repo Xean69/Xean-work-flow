@@ -34,6 +34,8 @@ import Documents from './pages/Documents.jsx'
 import Inbox from './pages/Inbox.jsx'
 import Expenses from './pages/Expenses.jsx'
 import Compliance from './pages/Compliance.jsx'
+import Websites from './pages/Websites.jsx'
+import PublicListings from './pages/PublicListings.jsx'
 import VoiceCalls from './pages/VoiceCalls.jsx'
 import Intercom from './pages/Intercom.jsx'
 import STRLicensing from './pages/STRLicensing.jsx'
@@ -112,6 +114,12 @@ function App() {
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogPost />} />
 
+      {/* A company's public vacant-unit listing page — no login, no shared
+          layout with anything else (not even the marketing site's nav/
+          footer, since this renders the company's own branding, not
+          Xean's). See routes/publicListings.js on the backend. */}
+      <Route path="/listings/:slug" element={<PublicListings />} />
+
       {/* Manager dashboard: its own login, separate from the tenant
           portal's — Layout itself guards every route nested under it. */}
       <Route path="/login" element={<Login />} />
@@ -134,6 +142,7 @@ function App() {
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/compliance" element={<Compliance />} />
+        <Route path="/websites" element={<Websites />} />
         <Route path="/voice" element={<VoiceCalls />} />
         <Route path="/intercom" element={<Intercom />} />
         <Route path="/licensing" element={<STRLicensing />} />

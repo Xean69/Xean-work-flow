@@ -16,6 +16,7 @@ export const ROUTE_ROLES = {
   '/inbox': ['owner', 'manager'],
   '/expenses': ['owner', 'manager', 'accountant'],
   '/compliance': ['owner', 'manager'],
+  '/websites': ['owner', 'manager'],
   '/voice': ['owner', 'manager'],
   '/intercom': ['owner', 'manager'],
   '/licensing': ['owner', 'manager'],

@@ -1,0 +1,29 @@
+/* Bold — large photos, high-contrast accent-colored header, soft shadows
+   instead of borders. */
+
+.pl-theme-bold .pl-header {
+  background: var(--listing-primary);
+  color: #fff;
+  padding: 64px 24px;
+}
+.pl-theme-bold .pl-tagline {
+  color: rgba(255, 255, 255, 0.85);
+}
+.pl-theme-bold .pl-business-name {
+  font-size: 40px;
+  font-weight: 900;
+}
+.pl-theme-bold .pl-unit-card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+.pl-theme-bold .pl-unit-photo {
+  aspect-ratio: 3 / 2;
+}
+.pl-theme-bold .pl-unit-incentive {
+  background: #1b2430;
+}
+.pl-theme-bold .pl-unit-price-current {
+  font-size: 20px;
+}

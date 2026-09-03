@@ -1,0 +1,29 @@
+/* Modern — clean grid, bold uppercase headlines, sharp edges. */
+
+.pl-theme-modern {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+.pl-theme-modern .pl-business-name {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 800;
+}
+.pl-theme-modern .pl-tagline {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pl-theme-modern .pl-unit-card {
+  border-radius: 0;
+  border-width: 2px;
+  border-color: #1b2430;
+}
+.pl-theme-modern .pl-unit-title {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 13px;
+}
+.pl-theme-modern .pl-unit-incentive {
+  border-radius: 0;
+}

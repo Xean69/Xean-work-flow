@@ -1146,3 +1146,46 @@ CREATE INDEX IF NOT EXISTS idx_leases_tenant_id ON leases(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_leases_status ON leases(status);
 
 CREATE INDEX IF NOT EXISTS idx_contact_submissions_created_at ON contact_submissions(created_at DESC);
+
+-- The "Websites" feature: a public, no-login listing page per business
+-- advertising its vacant units. business_websites holds site-level
+-- branding/config (one row per business, at most); unit_listing_overrides
+-- holds marketing-only overrides layered on top of a real vacant unit
+-- without ever touching units.rent_amount itself (a unit with no override
+-- row just falls back to the real data); unit_listing_photos holds the
+-- Cloudinary-backed photo gallery per unit. custom_domain/
+-- custom_domain_verified are reserved for a later phase (bring-your-own
+-- domain) — unused until then, but included now so the table doesn't need
+-- to change shape later.
+CREATE TABLE IF NOT EXISTS business_websites (
+  business_id INTEGER PRIMARY KEY REFERENCES businesses(id),
+  slug TEXT UNIQUE NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  tagline TEXT,
+  description TEXT,
+  theme TEXT NOT NULL DEFAULT 'classic' CHECK (theme IN ('classic', 'modern', 'bold')),
+  primary_color TEXT,
+  custom_domain TEXT UNIQUE,
+  custom_domain_verified BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS unit_listing_overrides (
+  unit_id INTEGER PRIMARY KEY REFERENCES units(id),
+  advertised_price NUMERIC(10, 2),
+  incentive_text TEXT,
+  description TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS unit_listing_photos (
+  id SERIAL PRIMARY KEY,
+  unit_id INTEGER NOT NULL REFERENCES units(id),
+  url TEXT NOT NULL,
+  cloudinary_public_id TEXT NOT NULL,
+  cloudinary_resource_type TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_unit_listing_photos_unit_id ON unit_listing_photos(unit_id);

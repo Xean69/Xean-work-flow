@@ -33,6 +33,8 @@ import businessRouter from "./routes/business.js";
 import chargesRouter from "./routes/charges.js";
 import recurringChargesRouter from "./routes/recurringCharges.js";
 import contactRouter from "./routes/contact.js";
+import websitesRouter from "./routes/websites.js";
+import publicListingsRouter from "./routes/publicListings.js";
 import { startLedgerScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
@@ -110,6 +112,11 @@ app.use("/api/staff", maintenanceStaffRouter);
 // standing between this and unbounded abuse — see routes/contact.js and
 // schema.sql's contact_submissions note for the full reasoning.
 app.use("/api/contact", contactRouter);
+// The public listing page a company's prospective tenants browse — same
+// "no requireAdminAuth" shape as contact.js above, but a read instead of a
+// write, and business-scoped via the slug in the URL rather than a single
+// hardcoded destination.
+app.use("/api/public/listings", publicListingsRouter);
 
 // Accountants are read-only on documents/expenses and have no access at
 // all to anything else here — the mount-level check below only covers the
@@ -166,6 +173,9 @@ app.use("/api/move-in-inspections", requireAdminAuth, staffOnly, moveInInspectio
 // "not an accountant" boundary both routers share.
 app.use("/api/leases", requireAdminAuth, staffOnly, leasesRouter);
 app.use("/api/business", requireAdminAuth, staffOnly, businessRouter);
+// Owner/manager only, matching ROUTE_ROLES on the frontend — marketing
+// setup, not a bookkeeping concern.
+app.use("/api/websites", requireAdminAuth, staffOnly, websitesRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is
