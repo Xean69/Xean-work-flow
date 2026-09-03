@@ -580,10 +580,30 @@ export function deleteUnitListingPhoto(unitId, photoId) {
   return request(`/websites/units/${unitId}/photos/${photoId}`, { method: "DELETE" });
 }
 
+export function activateSubdomain(subdomain) {
+  return request("/websites/subdomain", { method: "POST", body: JSON.stringify({ subdomain }) });
+}
+
+export function checkSubdomainStatus() {
+  return request("/websites/subdomain/check", { method: "POST" });
+}
+
+export function deactivateSubdomain() {
+  return request("/websites/subdomain", { method: "DELETE" });
+}
+
 // Unauthenticated — the public listing page itself calls this with no
 // session, same as any other request() call (credentials: "same-origin"
 // just means "send the cookie if one happens to exist," it never requires
 // one).
 export function getPublicListing(slug) {
   return request(`/public/listings/${slug}`);
+}
+
+// Same shape as getPublicListing above, but for a visitor on a business's
+// <subdomain>.xean.ca — the browser sends the real Host header on its own,
+// so there's nothing to pass in here (see routes/publicListings.js's
+// /by-host route and App.jsx's SubdomainGate, the only caller).
+export function getPublicListingByHost() {
+  return request("/public/listings/by-host");
 }

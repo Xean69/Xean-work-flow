@@ -20,6 +20,33 @@
   border: none !important;
   outline: none !important;
 }
+.websites-slug-suffix {
+  padding: 9px 12px 9px 0;
+  color: var(--slate);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.websites-subdomain-card {
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+.websites-subdomain-hint {
+  color: var(--slate);
+  font-size: 13.5px;
+  margin: 0 0 var(--space-4);
+}
+.websites-subdomain-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.websites-subdomain-domain {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
 
 .websites-color-input {
   display: flex;

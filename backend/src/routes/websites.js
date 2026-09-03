@@ -2,10 +2,14 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseWebsiteBody, parseUnitListingOverrideBody } from "../utils/validate.js";
+import { parseWebsiteBody, parseUnitListingOverrideBody, parseSubdomainBody } from "../utils/validate.js";
 import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
+import { addDomain, getDomainStatus, removeDomain } from "../services/vercelDomains.js";
+import { notifyHrOfSubdomainActivationRequest } from "../services/email.js";
 
 const router = Router();
+
+const SUBDOMAIN_APEX = "xean.ca";
 
 // Same shape as maintenance.js's assertUnitInBusiness — units have no
 // business_id of their own, so ownership is only checkable through the
@@ -84,6 +88,107 @@ router.put(
       [req.businessId, data.slug, data.enabled, data.tagline, data.description, data.theme, data.primary_color]
     );
     res.json(rows[0]);
+  })
+);
+
+// Activates <subdomain>.xean.ca for this business — adds the domain to the
+// Vercel project (safe, additive, automatic) and leaves it "pending" until
+// the CNAME manually added at Namecheap propagates (see the Phase 2 plan
+// and notifyHrOfSubdomainActivationRequest for why that one step stays
+// manual). services/scheduler.js's poller flips custom_domain_verified on
+// its own once Vercel confirms it; POST /subdomain/check below exists for
+// a manager to get that same answer immediately instead of waiting.
+router.post(
+  "/subdomain",
+  asyncHandler(async (req, res) => {
+    const { subdomain } = parseSubdomainBody(req.body);
+    const hostname = `${subdomain}.${SUBDOMAIN_APEX}`;
+
+    // A subdomain points at the listing page a business has already
+    // configured — same requirement as the public /listings/:slug route
+    // having nothing to serve until the branding form (PUT /websites) has
+    // been saved at least once, which is what creates this row and its
+    // slug in the first place.
+    const { rows: siteRows } = await pool.query("SELECT business_id FROM business_websites WHERE business_id = $1", [
+      req.businessId,
+    ]);
+    if (!siteRows[0]) throw new ApiError(400, "Set up your Websites page before activating a subdomain");
+
+    const { rows: existing } = await pool.query(
+      "SELECT business_id FROM business_websites WHERE custom_domain = $1 AND business_id != $2",
+      [hostname, req.businessId]
+    );
+    if (existing[0]) throw new ApiError(400, "That subdomain is already taken");
+
+    const { rows: businessRows } = await pool.query("SELECT business_name FROM businesses WHERE id = $1", [
+      req.businessId,
+    ]);
+
+    try {
+      await addDomain(hostname);
+    } catch (err) {
+      console.error(`Failed to add Vercel domain ${hostname}:`, err);
+      throw new ApiError(502, "Couldn't activate that subdomain right now, please try again");
+    }
+
+    const { rows } = await pool.query(
+      `UPDATE business_websites SET custom_domain = $2, custom_domain_verified = false, updated_at = now()
+       WHERE business_id = $1
+       RETURNING *`,
+      [req.businessId, hostname]
+    );
+
+    notifyHrOfSubdomainActivationRequest({ businessName: businessRows[0]?.business_name || "A business", subdomain });
+
+    res.status(201).json(rows[0]);
+  })
+);
+
+// On-demand refresh — see the poller note above for why this isn't the
+// only way a manager finds out their subdomain went live.
+router.post(
+  "/subdomain/check",
+  asyncHandler(async (req, res) => {
+    const { rows: siteRows } = await pool.query(
+      "SELECT custom_domain, custom_domain_verified FROM business_websites WHERE business_id = $1",
+      [req.businessId]
+    );
+    const site = siteRows[0];
+    if (!site?.custom_domain) throw new ApiError(404, "No subdomain has been activated");
+    if (site.custom_domain_verified) return res.json({ custom_domain_verified: true });
+
+    let status;
+    try {
+      status = await getDomainStatus(site.custom_domain);
+    } catch (err) {
+      console.error(`Failed to check Vercel domain status for ${site.custom_domain}:`, err);
+      throw new ApiError(502, "Couldn't check status right now, please try again");
+    }
+
+    if (status.verified) {
+      await pool.query("UPDATE business_websites SET custom_domain_verified = true WHERE business_id = $1", [
+        req.businessId,
+      ]);
+    }
+    res.json({ custom_domain_verified: Boolean(status.verified) });
+  })
+);
+
+router.delete(
+  "/subdomain",
+  asyncHandler(async (req, res) => {
+    const { rows: siteRows } = await pool.query("SELECT custom_domain FROM business_websites WHERE business_id = $1", [
+      req.businessId,
+    ]);
+    const hostname = siteRows[0]?.custom_domain;
+    if (!hostname) throw new ApiError(404, "No subdomain has been activated");
+
+    await removeDomain(hostname);
+    await pool.query(
+      "UPDATE business_websites SET custom_domain = NULL, custom_domain_verified = false WHERE business_id = $1",
+      [req.businessId]
+    );
+    res.status(204).end();
   })
 );
 

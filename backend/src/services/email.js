@@ -485,6 +485,34 @@ export async function notifyHrOfChatMessage({ name, email, message }) {
   }
 }
 
+// Fires when a manager activates a <subdomain>.xean.ca on the Websites page
+// (see routes/websites.js) — the Vercel side is added automatically, but
+// the CNAME at Namecheap is a deliberate manual step (see the Phase 2 plan:
+// Namecheap's DNS API replaces a domain's entire record set per call, with
+// a documented history of silently dropping records it can't read back, so
+// this one step stays manual rather than risking xean.ca's own live DNS).
+// This is the only thing that tells hrsupport@xean.ca a CNAME needs adding.
+export async function notifyHrOfSubdomainActivationRequest({ businessName, subdomain }) {
+  try {
+    return await sendEmail({
+      to: HR_EMAIL,
+      subject: `Subdomain activation needed: ${subdomain}`,
+      html: renderEmail({
+        heading: "New subdomain pending DNS setup",
+        lines: [
+          `<strong>${escapeHtml(businessName)}</strong> activated <strong>${escapeHtml(subdomain)}</strong> on their Websites page.`,
+          `Add a CNAME record at Namecheap: host <strong>${escapeHtml(subdomain)}</strong> → <strong>cname.vercel-dns.com</strong>. It'll go live on its own shortly after — no further action needed.`,
+        ],
+        ctaText: "Open Namecheap DNS",
+        ctaUrl: "https://ap.www.namecheap.com/domains/domaincontrolpanel/xean.ca/advancedns",
+      }),
+    });
+  } catch (err) {
+    console.error("notifyHrOfSubdomainActivationRequest failed:", err);
+    return false;
+  }
+}
+
 export async function notifyHrOfDemoRequest({ name, email, phone, preferredTime }) {
   try {
     return await sendEmail({

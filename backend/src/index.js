@@ -35,7 +35,7 @@ import recurringChargesRouter from "./routes/recurringCharges.js";
 import contactRouter from "./routes/contact.js";
 import websitesRouter from "./routes/websites.js";
 import publicListingsRouter from "./routes/publicListings.js";
-import { startLedgerScheduler } from "./services/scheduler.js";
+import { startLedgerScheduler, startSubdomainVerificationScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -196,3 +196,4 @@ app.listen(PORT, () => {
 });
 
 startLedgerScheduler();
+startSubdomainVerificationScheduler();

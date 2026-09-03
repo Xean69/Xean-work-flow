@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
-import { getWebsite, updateWebsite, updateUnitListing, uploadUnitListingPhoto, deleteUnitListingPhoto } from '../api/client.js'
+import {
+  getWebsite,
+  updateWebsite,
+  updateUnitListing,
+  uploadUnitListingPhoto,
+  deleteUnitListingPhoto,
+  activateSubdomain,
+  checkSubdomainStatus,
+  deactivateSubdomain,
+} from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import WebsiteUnitCard from '../components/WebsiteUnitCard.jsx'
+import Badge from '../components/Badge.jsx'
 import './Websites.css'
 
 const THEMES = [
@@ -19,6 +29,10 @@ function Websites() {
   const [loadError, setLoadError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+
+  const [subdomainInput, setSubdomainInput] = useState('')
+  const [subdomainBusy, setSubdomainBusy] = useState(false)
+  const [subdomainError, setSubdomainError] = useState('')
 
   useEffect(() => {
     load()
@@ -83,6 +97,47 @@ function Websites() {
   async function handleDeletePhoto(unitId, photoId) {
     await deleteUnitListingPhoto(unitId, photoId)
     setUnits((prev) => prev.map((u) => (u.id === unitId ? { ...u, photos: u.photos.filter((p) => p.id !== photoId) } : u)))
+  }
+
+  async function handleActivateSubdomain(e) {
+    e.preventDefault()
+    setSubdomainError('')
+    setSubdomainBusy(true)
+    try {
+      const updated = await activateSubdomain(subdomainInput.trim().toLowerCase())
+      setSite((s) => ({ ...s, custom_domain: updated.custom_domain, custom_domain_verified: updated.custom_domain_verified }))
+      setSubdomainInput('')
+    } catch (err) {
+      setSubdomainError(err.message)
+    } finally {
+      setSubdomainBusy(false)
+    }
+  }
+
+  async function handleCheckSubdomainStatus() {
+    setSubdomainError('')
+    setSubdomainBusy(true)
+    try {
+      const result = await checkSubdomainStatus()
+      setSite((s) => ({ ...s, custom_domain_verified: result.custom_domain_verified }))
+    } catch (err) {
+      setSubdomainError(err.message)
+    } finally {
+      setSubdomainBusy(false)
+    }
+  }
+
+  async function handleDeactivateSubdomain() {
+    setSubdomainError('')
+    setSubdomainBusy(true)
+    try {
+      await deactivateSubdomain()
+      setSite((s) => ({ ...s, custom_domain: null, custom_domain_verified: false }))
+    } catch (err) {
+      setSubdomainError(err.message)
+    } finally {
+      setSubdomainBusy(false)
+    }
   }
 
   const previewUrl = site.slug ? `/listings/${site.slug}` : null
@@ -182,6 +237,68 @@ function Websites() {
                 </button>
               </div>
             </form>
+
+            <div className="section-head">
+              <h2>Custom web address</h2>
+            </div>
+            <div className="card websites-subdomain-card">
+              {subdomainError && <p className="form-error">{subdomainError}</p>}
+
+              {!site.custom_domain ? (
+                <>
+                  <p className="websites-subdomain-hint">
+                    Give your page its own address, like <strong>acmeproperties.xean.ca</strong>, instead of the{' '}
+                    {previewUrl || '/listings/…'} link above.
+                  </p>
+                  <form className="form-row" onSubmit={handleActivateSubdomain}>
+                    <div className="form-field">
+                      <label htmlFor="subdomain">Subdomain</label>
+                      <div className="websites-slug-input">
+                        <input
+                          id="subdomain"
+                          value={subdomainInput}
+                          onChange={(e) => setSubdomainInput(e.target.value)}
+                          placeholder="your-company-name"
+                          required
+                        />
+                        <span className="websites-slug-suffix">.xean.ca</span>
+                      </div>
+                    </div>
+                    <div className="form-actions">
+                      <button type="submit" className="btn btn-primary" disabled={subdomainBusy || !subdomainInput.trim()}>
+                        {subdomainBusy ? 'Activating…' : 'Activate'}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                <div className="websites-subdomain-status">
+                  <div>
+                    <div className="websites-subdomain-domain">{site.custom_domain}</div>
+                    {site.custom_domain_verified ? (
+                      <Badge variant="green">Active</Badge>
+                    ) : (
+                      <Badge variant="amber">Pending — usually live within a few hours</Badge>
+                    )}
+                  </div>
+                  <div className="form-actions">
+                    {site.custom_domain_verified && (
+                      <a className="btn btn-ghost" href={`https://${site.custom_domain}`} target="_blank" rel="noreferrer">
+                        Visit
+                      </a>
+                    )}
+                    {!site.custom_domain_verified && (
+                      <button type="button" className="btn btn-ghost" onClick={handleCheckSubdomainStatus} disabled={subdomainBusy}>
+                        {subdomainBusy ? 'Checking…' : 'Check status'}
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-danger" onClick={handleDeactivateSubdomain} disabled={subdomainBusy}>
+                      Deactivate
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="section-head">
               <h2>Vacant units</h2>

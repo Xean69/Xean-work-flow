@@ -78,7 +78,23 @@ function ManifestSync() {
   return null
 }
 
+// A visitor on xean.ca (or a Vercel preview URL) gets the normal app below;
+// anything else is a business's activated <subdomain>.xean.ca (see
+// routes/publicListings.js's /by-host route and Phase 2's plan) and gets
+// only that business's listing page, full stop — no marketing site, no
+// dashboard, nothing else reachable from a subdomain a manager handed out
+// to prospective tenants.
+const KNOWN_HOSTS = ['xean.ca', 'www.xean.ca', 'localhost']
+function isSubdomainVisitor() {
+  const host = window.location.hostname
+  return !KNOWN_HOSTS.includes(host) && !host.endsWith('.vercel.app')
+}
+
 function App() {
+  if (isSubdomainVisitor()) {
+    return <PublicListings byHost />
+  }
+
   return (
     <>
       <ManifestSync />

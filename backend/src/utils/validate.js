@@ -791,3 +791,24 @@ export function parseUnitListingOverrideBody(body) {
     description: optionalString(body.description),
   };
 }
+
+// Names that would collide with xean.ca's own infrastructure (the app
+// itself, mail, DNS, or a future feature) if a business were allowed to
+// claim them as a <subdomain>.xean.ca — see routes/websites.js's subdomain
+// routes, the only caller of this.
+const RESERVED_SUBDOMAINS = new Set([
+  "www", "api", "app", "admin", "mail", "email", "smtp", "ftp", "ns1", "ns2",
+  "autodiscover", "webmail", "staff", "portal", "listings", "blog", "cdn",
+  "assets", "static", "app-staging", "staging", "dev", "test",
+]);
+
+export function parseSubdomainBody(body) {
+  const subdomain = requireString(body.subdomain, "subdomain").toLowerCase();
+  if (!SLUG_FORMAT.test(subdomain)) {
+    throw new ApiError(400, "subdomain must be lowercase letters, numbers, and hyphens only");
+  }
+  if (RESERVED_SUBDOMAINS.has(subdomain)) {
+    throw new ApiError(400, "That subdomain isn't available — please choose another");
+  }
+  return { subdomain };
+}

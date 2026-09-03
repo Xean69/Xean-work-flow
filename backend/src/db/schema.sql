@@ -1154,9 +1154,13 @@ CREATE INDEX IF NOT EXISTS idx_contact_submissions_created_at ON contact_submiss
 -- without ever touching units.rent_amount itself (a unit with no override
 -- row just falls back to the real data); unit_listing_photos holds the
 -- Cloudinary-backed photo gallery per unit. custom_domain/
--- custom_domain_verified are reserved for a later phase (bring-your-own
--- domain) — unused until then, but included now so the table doesn't need
--- to change shape later.
+-- custom_domain_verified back the Phase 2 <subdomain>.xean.ca feature (see
+-- routes/websites.js's subdomain routes and routes/publicListings.js's
+-- /by-host route) — custom_domain holds the full hostname (e.g.
+-- "acmeproperties.xean.ca"), verified flips true once Vercel confirms the
+-- domain. Deliberately the same two columns a true bring-your-own-domain
+-- phase would use — a verified hostname pointing at this business either
+-- way, only the activation UI and DNS step would differ.
 CREATE TABLE IF NOT EXISTS business_websites (
   business_id INTEGER PRIMARY KEY REFERENCES businesses(id),
   slug TEXT UNIQUE NOT NULL,

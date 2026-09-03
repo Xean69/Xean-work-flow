@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getPublicListing } from '../api/client.js'
+import { getPublicListing, getPublicListingByHost } from '../api/client.js'
 import './PublicListings.css'
 import './themes/classic.css'
 import './themes/modern.css'
@@ -37,7 +37,10 @@ function UnitCard({ unit }) {
   )
 }
 
-function PublicListings() {
+// byHost is set by App.jsx's SubdomainGate for a visitor on a business's
+// <subdomain>.xean.ca — same component, same rendering, just fetched by
+// the browser's own Host header instead of the /listings/:slug param.
+function PublicListings({ byHost = false }) {
   const { slug } = useParams()
   const [listing, setListing] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -47,7 +50,8 @@ function PublicListings() {
     let cancelled = false
     setLoading(true)
     setNotFound(false)
-    getPublicListing(slug)
+    const fetchListing = byHost ? getPublicListingByHost() : getPublicListing(slug)
+    fetchListing
       .then((data) => {
         if (!cancelled) setListing(data)
       })
@@ -60,7 +64,7 @@ function PublicListings() {
     return () => {
       cancelled = true
     }
-  }, [slug])
+  }, [byHost, slug])
 
   if (loading) return null
 
