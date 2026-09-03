@@ -81,6 +81,11 @@ router.get(
     const { rows } = await pool.query(
       `SELECT
          m.id, m.title, m.description, m.status, m.priority, m.created_at, m.resolved_at,
+         -- DATE columns carry no timezone, but node-pg's default parser reads
+         -- them as local midnight in the server's own timezone, which can
+         -- serialize to a different UTC calendar day — same cast used by the
+         -- detail endpoint below and by maintenance.js's own list query.
+         m.entry_permission, m.entry_date::text AS entry_date,
          u.unit_number, p.name AS property_name, t.full_name AS tenant_name
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id

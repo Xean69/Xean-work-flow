@@ -41,3 +41,26 @@
   padding: 0;
   text-decoration: underline;
 }
+
+/* Mirrors Maintenance.css's .ticket-thread-entry-note-granted/denied — the
+   manager-side block note for a ticket's expanded detail view. The list
+   view's own tag reuses portal.css's .portal-entry-tag as-is; this is only
+   for the fuller sentence shown in the expanded thread. */
+.staff-entry-note-granted,
+.staff-entry-note-denied {
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.staff-entry-note-granted {
+  color: var(--green);
+  background: var(--green-bg);
+  border: 1px solid var(--green);
+}
+.staff-entry-note-denied {
+  color: var(--amber);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber);
+}

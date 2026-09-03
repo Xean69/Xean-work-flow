@@ -19,6 +19,14 @@ function formatTime(value) {
   })
 }
 
+// entry_date is a plain calendar date (no time component) — reading it in
+// UTC avoids rolling it back a day in a negative-UTC-offset timezone, same
+// reasoning as Maintenance.jsx's and PrintableTicket.jsx's own copies of
+// this helper.
+function formatEntryDate(value) {
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
 // resource_type comes straight from Cloudinary — same distinction the
 // manager and tenant sides already use to pick a preview.
 function AttachmentPreview({ url, resourceType, fileName }) {
@@ -129,6 +137,11 @@ function Tickets() {
               {t.property_name} · {t.unit_number}
               {t.tenant_name ? ` · ${t.tenant_name}` : ''}
             </p>
+            {t.entry_permission != null && (
+              <div className={'portal-entry-tag ' + (t.entry_permission ? 'portal-entry-tag-granted' : 'portal-entry-tag-denied')}>
+                {t.entry_permission ? `🔑 Entry OK — ${formatEntryDate(t.entry_date)}` : '🔒 No entry permission'}
+              </div>
+            )}
             {t.description && <p style={{ marginTop: 6 }}>{t.description}</p>}
             <p style={{ marginTop: 8, fontSize: 11.5 }}>Reported {formatDate(t.created_at)}</p>
 
@@ -206,6 +219,13 @@ function Tickets() {
                   <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>Loading…</p>
                 ) : (
                   <>
+                    {threadData.entry_permission != null && (
+                      <p className={threadData.entry_permission ? 'staff-entry-note-granted' : 'staff-entry-note-denied'}>
+                        {threadData.entry_permission
+                          ? `Entry permitted — available ${formatEntryDate(threadData.entry_date)}, anytime between 9am–5pm.`
+                          : 'Entry permission not granted — coordinate access with the tenant separately.'}
+                      </p>
+                    )}
                     <button
                       type="button"
                       className="portal-btn"
