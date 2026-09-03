@@ -55,7 +55,7 @@ router.get(
          EXISTS (
            SELECT 1 FROM maintenance_comments c
            WHERE c.request_id = m.id
-             AND c.sender IN ('tenant', 'ai')
+             AND c.sender IN ('tenant', 'ai', 'staff')
              AND c.created_at > COALESCE(m.manager_last_read_at, '-infinity'::timestamptz)
          ) AS unread_by_manager,
          -- Overrides m.*'s entry_date (last column with a given name wins in
@@ -180,8 +180,12 @@ router.get(
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
 
     const { rows: comments } = await pool.query(
-      `SELECT id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at
-       FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
+      `SELECT mc.id, mc.sender, mc.body, mc.attachment_url, mc.attachment_cloudinary_resource_type,
+              mc.attachment_file_name, mc.created_at, mc.staff_id, mc.is_completion_note,
+              st.first_name AS staff_first_name
+       FROM maintenance_comments mc
+       LEFT JOIN maintenance_staff st ON st.id = mc.staff_id
+       WHERE mc.request_id = $1 ORDER BY mc.created_at ASC`,
       [req.params.id]
     );
 

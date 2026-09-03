@@ -362,7 +362,7 @@ router.get(
          EXISTS (
            SELECT 1 FROM maintenance_comments c
            WHERE c.request_id = m.id
-             AND c.sender IN ('manager', 'ai')
+             AND c.sender IN ('manager', 'ai', 'staff')
              AND c.created_at > COALESCE(m.tenant_last_read_at, '-infinity'::timestamptz)
          ) AS unread_by_tenant
        FROM maintenance_requests m
@@ -502,8 +502,12 @@ router.get(
     if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
 
     const { rows: comments } = await pool.query(
-      `SELECT id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at
-       FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
+      `SELECT mc.id, mc.sender, mc.body, mc.attachment_url, mc.attachment_cloudinary_resource_type,
+              mc.attachment_file_name, mc.created_at, mc.staff_id, mc.is_completion_note,
+              st.first_name AS staff_first_name
+       FROM maintenance_comments mc
+       LEFT JOIN maintenance_staff st ON st.id = mc.staff_id
+       WHERE mc.request_id = $1 ORDER BY mc.created_at ASC`,
       [req.params.id]
     );
 
@@ -568,7 +572,7 @@ router.post(
     ]);
 
     const { rows: comments } = await pool.query(
-      `SELECT sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name
+      `SELECT sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, is_completion_note
        FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
       [req.params.id]
     );
@@ -608,9 +612,13 @@ router.post(
           outcome === "resolved"
         );
       }
-    } else if (!ticket.is_emergency) {
+    } else if (!ticket.is_emergency && !comments.some((c) => c.sender === "staff" && !c.is_completion_note)) {
       // Already a real ticket — once flagged an emergency, the AI stops
       // chiming in entirely, a human manager has taken over from there.
+      // Same once a maintenance staff member has actually posted in this
+      // thread (not just left a completion note) — a live technician is
+      // handling it, an automated suggestion alongside their reply would
+      // just be noise.
       const reply = await generateMaintenanceChatReply({
         title: ticket.title,
         description: ticket.description,

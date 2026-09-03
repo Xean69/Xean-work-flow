@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   getPortalMaintenance,
@@ -373,23 +373,42 @@ function Repairs() {
                           {t('noMessagesYet')}
                         </p>
                       )}
-                      {threadData.comments.map((c) => (
-                        <div
-                          key={c.id}
-                          className={`portal-bubble ${c.sender === 'tenant' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
-                        >
-                          {c.sender === 'ai' && <div className="portal-bubble-sender">{t('assistant')}</div>}
-                          {c.body}
-                          {c.attachment_url && (
-                            <AttachmentPreview
-                              url={c.attachment_url}
-                              resourceType={c.attachment_cloudinary_resource_type}
-                              fileName={c.attachment_file_name}
-                            />
-                          )}
-                          <div className="portal-bubble-time">{formatTime(c.created_at, i18n.language)}</div>
-                        </div>
-                      ))}
+                      {(() => {
+                        const seenStaffIds = new Set()
+                        return threadData.comments.map((c) => {
+                          const isStaffChat = c.sender === 'staff' && !c.is_completion_note
+                          const isFirstFromThisStaffer = isStaffChat && !seenStaffIds.has(c.staff_id)
+                          if (isStaffChat) seenStaffIds.add(c.staff_id)
+                          return (
+                            <Fragment key={c.id}>
+                              {isFirstFromThisStaffer && (
+                                <div className="portal-join-banner">
+                                  {c.staff_first_name} (Maintenance) joined the conversation
+                                </div>
+                              )}
+                              <div
+                                className={`portal-bubble ${c.sender === 'tenant' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
+                              >
+                                {c.sender === 'ai' && <div className="portal-bubble-sender">{t('assistant')}</div>}
+                                {isStaffChat && (
+                                  <div className="portal-bubble-sender portal-bubble-sender-staff">
+                                    {c.staff_first_name} (Maintenance)
+                                  </div>
+                                )}
+                                {c.body}
+                                {c.attachment_url && (
+                                  <AttachmentPreview
+                                    url={c.attachment_url}
+                                    resourceType={c.attachment_cloudinary_resource_type}
+                                    fileName={c.attachment_file_name}
+                                  />
+                                )}
+                                <div className="portal-bubble-time">{formatTime(c.created_at, i18n.language)}</div>
+                              </div>
+                            </Fragment>
+                          )
+                        })
+                      })()}
                     </div>
 
                     <form className="portal-ticket-composer" onSubmit={handleSendComment}>

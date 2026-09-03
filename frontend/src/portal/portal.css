@@ -404,6 +404,16 @@ body {
   color: var(--amber);
   margin-bottom: 3px;
 }
+.portal-bubble-sender-staff {
+  color: var(--green);
+}
+.portal-join-banner {
+  align-self: center;
+  font-size: 11px;
+  color: var(--slate);
+  text-align: center;
+  margin: 10px 0;
+}
 .portal-bubble-announce-subject {
   font-weight: 700;
   font-size: 13px;

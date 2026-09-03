@@ -4,7 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, requireStaffAuth } from "../utils/auth.js";
 import { parseStaffStatusBody, parseAwayStatusBody, parseMessageBody } from "../utils/validate.js";
-import { notifyManagersOfStaffMessage } from "../services/email.js";
+import { notifyManagersOfStaffMessage, notifyTenantOfMaintenanceReply } from "../services/email.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
 
 const router = Router();
@@ -99,10 +99,10 @@ router.get(
   })
 );
 
-// Includes the full comment thread (tenant/manager/ai) read-only — a
+// Includes the full comment thread (tenant/manager/ai/staff) — a
 // technician needs the tenant's description/photos and any manager notes
-// to actually do the job, even though staff can't post into this thread
-// themselves in this pass, only change status (see PATCH below).
+// to actually do the job. Staff can also post into this thread themselves
+// (see POST below) in addition to changing status.
 router.get(
   "/maintenance/:id",
   requireStaffAuth,
@@ -123,12 +123,81 @@ router.get(
     if (!rows[0]) throw new ApiError(404, "Ticket not found");
 
     const { rows: comments } = await pool.query(
-      `SELECT sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at
-       FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
+      `SELECT mc.id, mc.sender, mc.body, mc.attachment_url, mc.attachment_cloudinary_resource_type,
+              mc.attachment_file_name, mc.created_at, mc.staff_id, mc.is_completion_note,
+              st.first_name AS staff_first_name
+       FROM maintenance_comments mc
+       LEFT JOIN maintenance_staff st ON st.id = mc.staff_id
+       WHERE mc.request_id = $1 ORDER BY mc.created_at ASC`,
       [req.params.id]
     );
 
     res.json({ ...rows[0], comments });
+  })
+);
+
+// The staff counterpart to routes/maintenance.js's manager comment route —
+// same shape (attachment upload, plain INSERT, tenant notification), no AI
+// call either, since a real human is typing. Scoped to this staff member's
+// own assignment, same WHERE as the GET above, so posting into a ticket
+// that isn't theirs 404s instead of silently succeeding.
+router.post(
+  "/maintenance/:id/comments",
+  requireStaffAuth,
+  uploadChatAttachment.single("attachment"),
+  asyncHandler(async (req, res) => {
+    if (req.file) assertChatAttachmentSizeOk(req.file);
+    const data = parseMessageBody(req.body, { requireBody: !req.file });
+
+    const { rows: ticketRows } = await pool.query(
+      `SELECT m.id, m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
+       FROM maintenance_requests m
+       LEFT JOIN tenants t ON t.id = m.tenant_id
+       WHERE m.id = $1 AND m.assigned_staff_id = $2 AND m.business_id = $3`,
+      [req.params.id, req.staffId, req.businessId]
+    );
+    if (!ticketRows[0]) throw new ApiError(404, "Ticket not found");
+
+    let uploaded = null;
+    if (req.file) {
+      try {
+        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        throw new ApiError(502, "Failed to upload attachment, please try again");
+      }
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO maintenance_comments
+         (business_id, request_id, sender, staff_id, is_completion_note, body,
+          attachment_url, attachment_cloudinary_public_id, attachment_cloudinary_resource_type, attachment_file_name)
+       VALUES ($1, $2, 'staff', $3, false, $4, $5, $6, $7, $8)
+       RETURNING id, sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, created_at`,
+      [
+        req.businessId,
+        req.params.id,
+        req.staffId,
+        data.body,
+        uploaded?.url || null,
+        uploaded?.publicId || null,
+        uploaded?.resourceType || null,
+        req.file?.originalname || null,
+      ]
+    );
+
+    // No tenant_email means either the ticket has no tenant attached or
+    // that tenant has no email on file — notifyTenantOfMaintenanceReply
+    // no-ops in that case rather than failing.
+    await notifyTenantOfMaintenanceReply({
+      tenantEmail: ticketRows[0].tenant_email,
+      tenantName: ticketRows[0].tenant_name,
+      ticketTitle: ticketRows[0].title,
+      commentBody: data.body || "(sent an attachment)",
+      language: ticketRows[0].tenant_language,
+    });
+
+    res.status(201).json(rows[0]);
   })
 );
 
@@ -137,9 +206,10 @@ router.get(
 // routes/maintenance.js's own, separate endpoints. Resolving requires a
 // completion note (enforced in parseStaffStatusBody); it's inserted as a
 // maintenance_comments row in the same transaction as the status change,
-// so the note and the resolution can never end up disagreeing. That insert
-// is also the *only* way a sender='staff' comment is ever created, which
-// is what lets the UI safely label every one of them a completion note.
+// so the note and the resolution can never end up disagreeing. This is one
+// of two ways a sender='staff' comment gets created now (the other being
+// the free-text POST /maintenance/:id/comments above) — is_completion_note
+// is what the UI actually keys off to tell the two apart, not sender alone.
 router.patch(
   "/maintenance/:id/status",
   requireStaffAuth,
@@ -165,8 +235,8 @@ router.patch(
 
       if (data.completionNote) {
         await client.query(
-          "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'staff', $3)",
-          [rows[0].business_id, req.params.id, data.completionNote]
+          "INSERT INTO maintenance_comments (business_id, request_id, sender, staff_id, body) VALUES ($1, $2, 'staff', $3, $4)",
+          [rows[0].business_id, req.params.id, req.staffId, data.completionNote]
         );
       }
 

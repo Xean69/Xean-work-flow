@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   getMaintenanceRequests,
@@ -388,26 +388,45 @@ function Maintenance() {
                     {tr('noCommentsYet')}
                   </p>
                 )}
-                {threadData.comments.map((c) => (
-                  <div
-                    className={`bubble ${c.sender === 'manager' ? 'out' : c.sender === 'staff' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
-                    key={c.id}
-                  >
-                    {c.sender === 'ai' && <div className="bubble-sender">{tr('assistant')}</div>}
-                    {/* Every sender='staff' comment is a completion note — the resolve
-                        flow in routes/staff.js is the only way one is ever created. */}
-                    {c.sender === 'staff' && <div className="bubble-sender">{tr('completionNote')}</div>}
-                    {linkify(c.body)}
-                    {c.attachment_url && (
-                      <AttachmentPreview
-                        url={c.attachment_url}
-                        resourceType={c.attachment_cloudinary_resource_type}
-                        fileName={c.attachment_file_name}
-                      />
-                    )}
-                    <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(c.created_at, i18n.language)}</div>
-                  </div>
-                ))}
+                {(() => {
+                  const seenStaffIds = new Set()
+                  return threadData.comments.map((c) => {
+                    const isStaffChat = c.sender === 'staff' && !c.is_completion_note
+                    const isFirstFromThisStaffer = isStaffChat && !seenStaffIds.has(c.staff_id)
+                    if (isStaffChat) seenStaffIds.add(c.staff_id)
+                    return (
+                      <Fragment key={c.id}>
+                        {isFirstFromThisStaffer && (
+                          <div className="join-banner">{c.staff_first_name} (Maintenance) joined the conversation</div>
+                        )}
+                        <div
+                          className={`bubble ${c.sender === 'manager' ? 'out' : c.sender === 'staff' ? 'out' : c.sender === 'ai' ? 'ai' : 'in'}`}
+                        >
+                          {c.sender === 'ai' && <div className="bubble-sender">{tr('assistant')}</div>}
+                          {/* is_completion_note distinguishes the resolve flow's note
+                              from a real staff chat message. */}
+                          {c.sender === 'staff' && c.is_completion_note && (
+                            <div className="bubble-sender">{tr('completionNote')}</div>
+                          )}
+                          {isStaffChat && (
+                            <div className="bubble-sender bubble-sender-staff">{c.staff_first_name} (Maintenance)</div>
+                          )}
+                          {linkify(c.body)}
+                          {c.attachment_url && (
+                            <AttachmentPreview
+                              url={c.attachment_url}
+                              resourceType={c.attachment_cloudinary_resource_type}
+                              fileName={c.attachment_file_name}
+                            />
+                          )}
+                          <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>
+                            {formatTime(c.created_at, i18n.language)}
+                          </div>
+                        </div>
+                      </Fragment>
+                    )
+                  })
+                })()}
               </div>
 
               <form className="ticket-thread-composer" onSubmit={handleSendComment}>

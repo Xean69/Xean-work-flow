@@ -990,12 +990,13 @@ ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS away_note TEXT;
 -- ============================================================================
 -- Required completion note
 --
--- Relaxes maintenance_comments.sender further to allow 'staff' — the only
--- way a 'staff' comment can ever be created is the resolve flow in
--- routes/staff.js, which requires a non-empty note and inserts it in the
--- same transaction as the status change. That's what lets the UI safely
--- label every 'staff' comment as a completion note with no extra flag:
--- there's no other path that produces one.
+-- Relaxes maintenance_comments.sender further to allow 'staff'. At the time
+-- this was written, the resolve flow in routes/staff.js (requires a
+-- non-empty note, inserts it in the same transaction as the status change)
+-- was the *only* way a 'staff' comment could be created, so the UI safely
+-- labeled every one a completion note with no extra flag. That's no longer
+-- true — see the later "Staff replies in the ticket thread" migration
+-- below, which adds is_completion_note to tell the two apart.
 -- ============================================================================
 ALTER TABLE maintenance_comments DROP CONSTRAINT IF EXISTS maintenance_comments_sender_check;
 ALTER TABLE maintenance_comments ADD CONSTRAINT maintenance_comments_sender_check
@@ -1193,3 +1194,23 @@ CREATE TABLE IF NOT EXISTS unit_listing_photos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_unit_listing_photos_unit_id ON unit_listing_photos(unit_id);
+
+-- ============================================================================
+-- Staff replies in the ticket thread
+--
+-- Lets a maintenance worker post real messages into the same tenant/
+-- manager/AI thread they could previously only read (routes/staff.js
+-- POST /maintenance/:id/comments). staff_id attributes the row to a
+-- specific person — nullable, ON DELETE SET NULL, same pattern as
+-- maintenance_requests.assigned_staff_id, so removing a staff account
+-- never deletes history — and is what a "first message in this thread"
+-- join-marker check is computed from at read time.
+--
+-- is_completion_note preserves the guarantee the resolve-flow comment at
+-- line ~990 relies on: every sender='staff' row that already exists today
+-- *is* a completion note, so DEFAULT true keeps every existing row
+-- correctly labeled with no backfill needed. The new free-text staff
+-- route below explicitly inserts false.
+-- ============================================================================
+ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES maintenance_staff(id) ON DELETE SET NULL;
+ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS is_completion_note BOOLEAN NOT NULL DEFAULT true;

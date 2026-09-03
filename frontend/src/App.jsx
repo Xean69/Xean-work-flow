@@ -48,6 +48,7 @@ import LanguageSettings from './pages/LanguageSettings.jsx'
 import StaffLayout from './staff/StaffLayout.jsx'
 import StaffLogin from './staff/pages/Login.jsx'
 import StaffTickets from './staff/pages/Tickets.jsx'
+import StaffTicketDetail from './staff/pages/TicketDetail.jsx'
 import StaffMessages from './staff/pages/Messages.jsx'
 
 // index.html's inline script picks the right manifest and apple-touch-icon
@@ -119,6 +120,7 @@ function App() {
       <Route path="/staff/login" element={<StaffLogin />} />
       <Route element={<StaffLayout />}>
         <Route path="/staff/tickets" element={<StaffTickets />} />
+        <Route path="/staff/tickets/:id" element={<StaffTicketDetail />} />
         <Route path="/staff/messages" element={<StaffMessages />} />
       </Route>
 

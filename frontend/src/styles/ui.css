@@ -628,6 +628,16 @@ tr:last-child td {
   color: var(--amber);
   margin-bottom: 3px;
 }
+.bubble-sender-staff {
+  color: var(--green);
+}
+.join-banner {
+  align-self: center;
+  font-size: 11px;
+  color: var(--slate);
+  text-align: center;
+  margin: 10px 0;
+}
 .bubble-attachment-img {
   display: block;
   max-width: 100%;

@@ -64,6 +64,10 @@ export function updateTicketStatus(id, status, completionNote) {
   });
 }
 
+export function addTicketComment(id, formData) {
+  return uploadRequest(`/maintenance/${id}/comments`, formData);
+}
+
 export function getMyMessages() {
   return request("/messages");
 }

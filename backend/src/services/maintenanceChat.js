@@ -138,7 +138,8 @@ export async function generateMaintenanceChatReply({ title, description, trade, 
       .filter(Boolean)
       .join("\n");
 
-    const speakerFor = (sender) => (sender === "tenant" ? "Tenant" : sender === "ai" ? "You" : "Manager");
+    const speakerFor = (sender) =>
+      sender === "tenant" ? "Tenant" : sender === "ai" ? "You" : sender === "staff" ? "Maintenance" : "Manager";
     const conversationBlocks = buildConversationBlocks(comments, speakerFor);
 
     const content = [
