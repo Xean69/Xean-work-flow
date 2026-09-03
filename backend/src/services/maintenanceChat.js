@@ -171,26 +171,27 @@ export async function generateMaintenanceChatReply({ title, description, trade, 
 
 // Used before a real ticket exists — the tenant is only chatting so far
 // (maintenance_requests.status = 'pending'). Every turn, the model decides
-// both what to say and whether it's out of safe options, via tool use
-// rather than plain text, since the caller needs a structured signal to act
-// on (routes/portal.js promotes the row to a real ticket once
-// ready_for_ticket comes back true).
-const PENDING_SYSTEM_PROMPT = `You are a maintenance assistant for a property management company, chatting directly with a tenant who just reported an issue with their unit. No ticket has been created yet — your job is to try to help resolve it through this chat first, and only once you've genuinely run out of safe options, hand it off to a human property manager by creating a real ticket.
+// both what to say and the conversation's outcome, via tool use rather than
+// plain text, since the caller needs a structured signal to act on
+// (routes/portal.js promotes the row to a real ticket — 'new' or already
+// 'resolved' — once outcome comes back anything other than "continue").
+const PENDING_SYSTEM_PROMPT = `You are a maintenance assistant for a property management company, chatting directly with a tenant who just reported an issue with their unit. No ticket has been created yet — your job is to try to help resolve it through this chat first. Every conversation must end with a real ticket for the manager: either because you resolved it yourself and it just needs to be logged, or because you've genuinely run out of safe options and a human needs to take over.
 
-Each turn, decide both your reply and whether it's time to create a ticket:
-- If there's still a genuinely useful safe step or clarifying question, ask or suggest exactly one of them (never more than one at a time), and set ready_for_ticket to false.
-- Set ready_for_ticket to true once nothing on the safe list below applies to this issue, or the tenant already tried the one safe step that did apply and it didn't fix things, or the tenant says the issue still isn't resolved after 1-2 exchanges. When ready_for_ticket is true, your reply should tell the tenant you're creating a ticket now so a manager can take care of it — don't keep asking questions at that point.
-- Don't drag the conversation out — if you don't have a genuinely useful safe next step, escalate rather than stalling with small talk.
+Each turn, decide both your reply and the conversation's outcome so far, via the outcome field:
+- Set outcome to "continue" if there's still a genuinely useful safe step or clarifying question worth trying — ask or suggest exactly one of them (never more than one at a time).
+- Set outcome to "resolved" once the tenant confirms, or clearly indicates, that a safe step you suggested actually fixed the issue. Your reply should acknowledge that and let them know it's being logged for the manager's records — don't keep asking questions at that point.
+- Set outcome to "escalate" once nothing on the safe list below applies to this issue, or the tenant already tried the one safe step that did apply and it didn't fix things, or the tenant says the issue still isn't resolved after 1-2 exchanges. Your reply should tell the tenant you're creating a ticket now so a manager can take care of it — don't keep asking questions at that point.
+- Don't drag the conversation out — if you don't have a genuinely useful safe next step and it isn't resolved, escalate rather than stalling with small talk. Never leave a conversation on "continue" with nothing further to try.
 
-${VISUAL_GUIDANCE} Asking for a photo/video counts as a clarifying question for that turn — set ready_for_ticket to false when you do.
+${VISUAL_GUIDANCE} Asking for a photo/video counts as a clarifying question for that turn — set outcome to "continue" when you do.
 
 ${SAFETY_RULES}
 
-If nothing on the safe list applies, or you're at all unsure, set ready_for_ticket to true and let the tenant know a manager will follow up — never guess toward being "helpful" when a suggestion could be risky.`;
+If nothing on the safe list applies, or you're at all unsure, set outcome to "escalate" and let the tenant know a manager will follow up — never guess toward being "helpful" when a suggestion could be risky.`;
 
 const PENDING_TOOL = {
   name: "respond_to_tenant",
-  description: "Reply to the tenant and decide whether it's time to create a real maintenance ticket for a manager.",
+  description: "Reply to the tenant and decide the conversation's outcome, so a real maintenance ticket can be created for the manager either way.",
   strict: true,
   input_schema: {
     type: "object",
@@ -199,13 +200,14 @@ const PENDING_TOOL = {
         type: "string",
         description: "Your conversational reply to the tenant. 1-3 short sentences, no headers, no bullet lists, no markdown formatting.",
       },
-      ready_for_ticket: {
-        type: "boolean",
+      outcome: {
+        type: "string",
+        enum: ["continue", "resolved", "escalate"],
         description:
-          "True once you're out of safe suggestions or questions for this issue — nothing on the safe list applies, or the one that did apply didn't fix it — and a manager needs to take over. False if there's still one reasonable safe step or clarifying question worth trying first.",
+          "\"continue\" if there's still one reasonable safe step or clarifying question worth trying first. \"resolved\" once the tenant confirms a suggested safe step actually fixed the issue — a ticket still gets created, just already resolved, so the manager has a record of it. \"escalate\" once you're out of safe suggestions or questions for this issue — nothing on the safe list applies, or the one that did apply didn't fix it — and a manager needs to take over.",
       },
     },
-    required: ["reply", "ready_for_ticket"],
+    required: ["reply", "outcome"],
     additionalProperties: false,
   },
 };
@@ -216,7 +218,7 @@ const PENDING_TOOL = {
 // else in this prompt.
 const FALLBACK_RESULT = {
   reply: "I'm having trouble responding right now — I'll get a manager to follow up on this.",
-  readyForTicket: true,
+  outcome: "escalate",
 };
 
 export async function generatePendingChatReply({ title, description, priority, comments, language }) {
@@ -261,7 +263,7 @@ export async function generatePendingChatReply({ title, description, priority, c
     const reply = toolUse.input.reply?.trim();
     return {
       reply: reply || FALLBACK_RESULT.reply,
-      readyForTicket: Boolean(toolUse.input.ready_for_ticket),
+      outcome: toolUse.input.outcome || FALLBACK_RESULT.outcome,
     };
   } catch (err) {
     console.error("Pending maintenance chat reply generation failed:", err);

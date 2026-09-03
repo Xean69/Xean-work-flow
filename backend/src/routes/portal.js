@@ -9,6 +9,7 @@ import { generateMaintenanceChatReply, generatePendingChatReply } from "../servi
 import { currentPeriod } from "../utils/period.js";
 import {
   notifyManagersOfMaintenanceRequest,
+  notifyManagersOfResolvedMaintenanceRequest,
   notifyManagersOfMaintenanceEmergency,
   notifyManagersOfTenantMessage,
   sendTenantPasswordResetEmail,
@@ -312,12 +313,14 @@ router.post(
 
 // Turns a 'pending' pre-ticket conversation into a real, manager-visible
 // ticket: runs the same classification pass that used to run at creation
-// (before pending existed), flips status to 'new', and sends the same
-// "new maintenance request" email a manager would have gotten immediately
-// under the old flow. Shared by the natural AI-escalation path (comment
-// route) and the tenant's manual emergency flag (which promotes too, just
-// skipping straight here without asking the AI first).
-async function classifyAndPromote(ticketId, { businessId, propertyName, unitNumber, tenantName }) {
+// (before pending existed), and sends a manager notification. Every pending
+// conversation ends up here one way or another — resolved=false is the
+// natural AI-escalation path (still needs a human) and the tenant's manual
+// emergency flag (which promotes too, just skipping straight here without
+// asking the AI first); resolved=true is the AI's own troubleshooting
+// having fixed the issue, still logged as a real ticket for the manager's
+// awareness rather than vanishing with no record.
+async function classifyAndPromote(ticketId, { businessId, propertyName, unitNumber, tenantName }, resolved = false) {
   const { rows } = await pool.query("SELECT title, description FROM maintenance_requests WHERE id = $1", [
     ticketId,
   ]);
@@ -325,13 +328,15 @@ async function classifyAndPromote(ticketId, { businessId, propertyName, unitNumb
   const result = await classifyMaintenanceRequest(ticket.title, ticket.description);
   const { rows: updated } = await pool.query(
     `UPDATE maintenance_requests
-     SET status = 'new', ai_urgency = $1, ai_trade = $2, ai_reasoning = $3, ai_classification_status = $4
-     WHERE id = $5
+     SET status = $1, resolved_at = CASE WHEN $1 = 'resolved' THEN now() ELSE NULL END,
+         ai_urgency = $2, ai_trade = $3, ai_reasoning = $4, ai_classification_status = $5
+     WHERE id = $6
      RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency, entry_permission, entry_date::text AS entry_date`,
-    [result.urgency, result.trade, result.reasoning, result.status, ticketId]
+    [resolved ? "resolved" : "new", result.urgency, result.trade, result.reasoning, result.status, ticketId]
   );
 
-  await notifyManagersOfMaintenanceRequest({
+  const notify = resolved ? notifyManagersOfResolvedMaintenanceRequest : notifyManagersOfMaintenanceRequest;
+  await notify({
     businessId,
     title: ticket.title,
     description: ticket.description,
@@ -394,10 +399,10 @@ router.post(
     );
 
     // Starts as 'pending' — invisible to the manager dashboard and not yet
-    // classified. The AI tries to troubleshoot via chat first; a real
-    // ticket only gets created once it's out of safe suggestions or the
-    // tenant flags an emergency (see generatePendingChatReply and the
-    // /emergency route below).
+    // classified. The AI tries to troubleshoot via chat first; every
+    // conversation ends in a real ticket either way, resolved or new (see
+    // generatePendingChatReply and classifyAndPromote), or via the
+    // tenant's manual /emergency flag below.
     const { rows } = await pool.query(
       `INSERT INTO maintenance_requests
          (business_id, unit_id, tenant_id, title, description, status, priority, entry_permission, entry_date)
@@ -450,7 +455,7 @@ router.post(
     // suggest (e.g. a structural issue) and escalate immediately. If a
     // photo/video came with the report, the AI needs to see it was sent
     // here too — not just on later turns.
-    const { reply, readyForTicket } = await generatePendingChatReply({
+    const { reply, outcome } = await generatePendingChatReply({
       title: ticket.title,
       description: ticket.description,
       priority: ticket.priority,
@@ -462,13 +467,17 @@ router.post(
       [unitRows[0]?.business_id, ticket.id, reply]
     );
 
-    if (readyForTicket) {
-      ticket = await classifyAndPromote(ticket.id, {
-        businessId: unitRows[0]?.business_id,
-        propertyName: unitRows[0]?.property_name,
-        unitNumber: unitRows[0]?.unit_number,
-        tenantName: tenantRows[0].full_name,
-      });
+    if (outcome !== "continue") {
+      ticket = await classifyAndPromote(
+        ticket.id,
+        {
+          businessId: unitRows[0]?.business_id,
+          propertyName: unitRows[0]?.property_name,
+          unitNumber: unitRows[0]?.unit_number,
+          tenantName: tenantRows[0].full_name,
+        },
+        outcome === "resolved"
+      );
     }
 
     res.status(201).json(ticket);
@@ -567,7 +576,7 @@ router.post(
     if (ticket.status === "pending") {
       // Still troubleshooting via chat — no ticket exists yet. Every turn
       // decides both a reply and whether it's time to promote.
-      const { reply, readyForTicket } = await generatePendingChatReply({
+      const { reply, outcome } = await generatePendingChatReply({
         title: ticket.title,
         description: ticket.description,
         comments,
@@ -578,7 +587,7 @@ router.post(
         [ticket.business_id, req.params.id, reply]
       );
 
-      if (readyForTicket) {
+      if (outcome !== "continue") {
         const { rows: contextRows } = await pool.query(
           `SELECT p.name AS property_name, u.unit_number, t.full_name AS tenant_name
            FROM maintenance_requests m
@@ -588,12 +597,16 @@ router.post(
            WHERE m.id = $1`,
           [req.params.id]
         );
-        await classifyAndPromote(req.params.id, {
-          businessId: ticket.business_id,
-          propertyName: contextRows[0]?.property_name,
-          unitNumber: contextRows[0]?.unit_number,
-          tenantName: contextRows[0]?.tenant_name,
-        });
+        await classifyAndPromote(
+          req.params.id,
+          {
+            businessId: ticket.business_id,
+            propertyName: contextRows[0]?.property_name,
+            unitNumber: contextRows[0]?.unit_number,
+            tenantName: contextRows[0]?.tenant_name,
+          },
+          outcome === "resolved"
+        );
       }
     } else if (!ticket.is_emergency) {
       // Already a real ticket — once flagged an emergency, the AI stops

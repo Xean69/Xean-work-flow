@@ -102,6 +102,45 @@ export async function notifyManagersOfMaintenanceRequest({
 }
 
 // Distinct from notifyManagersOfMaintenanceRequest above — this fires when
+// the AI's own troubleshooting chat resolved the issue before any manager
+// touched it. Still worth a real email (the manager never saw this happen),
+// but "New maintenance request" would misleadingly suggest it needs action.
+export async function notifyManagersOfResolvedMaintenanceRequest({
+  businessId,
+  title,
+  description,
+  propertyName,
+  unitNumber,
+  tenantName,
+  aiUrgency,
+  aiTrade,
+}) {
+  try {
+    const to = await getManagerRecipients(businessId);
+    const lines = [
+      `<strong>${tenantName || "A tenant"}</strong> at ${propertyName} · ${unitNumber} reported an issue that the AI assistant resolved through chat.`,
+      `<strong>${title}</strong>`,
+    ];
+    if (description) lines.push(description);
+    if (aiUrgency && aiTrade) {
+      lines.push(`AI read: ${URGENCY_LABEL[aiUrgency] || aiUrgency} urgency · ${aiTrade}`);
+    }
+    await sendEmail({
+      to,
+      subject: `Resolved by AI: ${title}`,
+      html: renderEmail({
+        heading: "Maintenance request resolved by AI assistant",
+        lines,
+        ctaText: "View in Maintenance",
+        ctaUrl: `${APP_BASE_URL}/maintenance`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyManagersOfResolvedMaintenanceRequest failed:", err);
+  }
+}
+
+// Distinct from notifyManagersOfMaintenanceRequest above — this fires when
 // a tenant flags an *existing* ticket's chat as an emergency, not when a
 // new one is created, so it gets its own subject/heading rather than the
 // misleading "New maintenance request."
