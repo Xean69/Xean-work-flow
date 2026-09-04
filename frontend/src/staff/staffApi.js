@@ -46,6 +46,18 @@ export function setMyStatus(away, awayNote) {
   return request("/me/status", { method: "PATCH", body: JSON.stringify({ away, away_note: awayNote }) });
 }
 
+export function updateStaffPushPreference(notifyOther) {
+  return request("/me/push-preference", { method: "PATCH", body: JSON.stringify({ notify_other: notifyOther }) });
+}
+
+export function subscribeStaffToPush(subscription) {
+  return request("/push/subscribe", { method: "POST", body: JSON.stringify(subscription) });
+}
+
+export function unsubscribeStaffFromPush(endpoint) {
+  return request("/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }) });
+}
+
 export function getMyTickets() {
   return request("/maintenance");
 }

@@ -2,5 +2,10 @@
   "title": "Language",
   "subtitle": "Choose the language you'd like to use.",
   "current": "Current",
-  "saving": "Saving…"
+  "saving": "Saving…",
+  "notifications": {
+    "title": "Notifications",
+    "otherLabel": "Payments, messages, and leases",
+    "otherNote": "Maintenance updates (new tickets, messages, status changes) are always sent once notifications are enabled — this only controls everything else."
+  }
 }

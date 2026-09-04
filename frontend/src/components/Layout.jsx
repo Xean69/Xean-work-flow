@@ -6,6 +6,7 @@ import OfflineBanner from './OfflineBanner.jsx'
 import { getMe, logout } from '../api/client.js'
 import { canAccessPath, defaultRouteForRole } from '../utils/permissions.js'
 import { applyLanguage, ADMIN_LANG_KEY } from '../i18n/sync.js'
+import { usePushSubscription } from '../utils/usePushSubscription.js'
 import './Layout.css'
 
 // Guards every dashboard route: fetches the logged-in admin once here (not
@@ -25,8 +26,10 @@ function Layout() {
   // Sidebar is always visible at desktop width; below the mobile breakpoint
   // (see Sidebar.css) it becomes an off-canvas drawer that this controls.
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [pushDismissed, setPushDismissed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  const { permission: pushPermission, subscribe: subscribeToPush } = usePushSubscription()
 
   useEffect(() => {
     getMe()
@@ -75,6 +78,24 @@ function Layout() {
       <div className="main">
         <OfflineBanner />
         <TrialBanner admin={admin} />
+        {pushPermission === 'default' && !pushDismissed && (
+          <div className="trial-banner">
+            <span>Enable notifications to hear about new maintenance tickets and messages right away.</span>
+            <div className="trial-banner-actions">
+              <button type="button" className="btn btn-primary btn-sm" onClick={subscribeToPush}>
+                Enable
+              </button>
+              <button
+                type="button"
+                className="trial-banner-dismiss"
+                onClick={() => setPushDismissed(true)}
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
         <div className="mobile-topbar">
           <button
             type="button"

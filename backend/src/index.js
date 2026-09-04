@@ -35,6 +35,7 @@ import recurringChargesRouter from "./routes/recurringCharges.js";
 import contactRouter from "./routes/contact.js";
 import websitesRouter from "./routes/websites.js";
 import publicListingsRouter from "./routes/publicListings.js";
+import pushRouter from "./routes/push.js";
 import { startLedgerScheduler, startSubdomainVerificationScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
@@ -117,6 +118,9 @@ app.use("/api/contact", contactRouter);
 // write, and business-scoped via the slug in the URL rather than a single
 // hardcoded destination.
 app.use("/api/public/listings", publicListingsRouter);
+// Just the VAPID public key — see routes/push.js's note on why this one
+// route is deliberately unauthenticated.
+app.use("/api/push", pushRouter);
 
 // Accountants are read-only on documents/expenses and have no access at
 // all to anything else here — the mount-level check below only covers the

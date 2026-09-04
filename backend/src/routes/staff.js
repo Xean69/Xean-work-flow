@@ -3,7 +3,15 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, requireStaffAuth } from "../utils/auth.js";
-import { parseStaffStatusBody, parseAwayStatusBody, parseMessageBody, parseRescheduleProposalBody } from "../utils/validate.js";
+import {
+  parseStaffStatusBody,
+  parseAwayStatusBody,
+  parseMessageBody,
+  parseRescheduleProposalBody,
+  parsePushPreferenceBody,
+  parsePushSubscriptionBody,
+  parsePushUnsubscribeBody,
+} from "../utils/validate.js";
 import {
   notifyManagersOfStaffMessage,
   notifyTenantOfMaintenanceReply,
@@ -11,6 +19,8 @@ import {
 } from "../services/email.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
 import { proposeReschedule } from "../services/maintenanceReschedule.js";
+import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
+import { pushToBusinessAdmins, pushToTenant } from "../services/webPush.js";
 
 const router = Router();
 
@@ -51,11 +61,51 @@ router.get(
   requireStaffAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "SELECT id, first_name, last_name, email, phone, language, away, away_note FROM maintenance_staff WHERE id = $1",
+      "SELECT id, first_name, last_name, email, phone, language, away, away_note, push_notify_other FROM maintenance_staff WHERE id = $1",
       [req.staffId]
     );
     if (!rows[0]) throw new ApiError(404, "Not found");
     res.json(rows[0]);
+  })
+);
+
+// Controls only the OTHER-category push toggle — mandatory maintenance
+// pushes ignore this value entirely (see services/webPush.js).
+router.patch(
+  "/me/push-preference",
+  requireStaffAuth,
+  asyncHandler(async (req, res) => {
+    const data = parsePushPreferenceBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE maintenance_staff SET push_notify_other = $1 WHERE id = $2 RETURNING id, push_notify_other",
+      [data.notifyOther, req.staffId]
+    );
+    res.json(rows[0]);
+  })
+);
+
+router.post(
+  "/push/subscribe",
+  requireStaffAuth,
+  asyncHandler(async (req, res) => {
+    const subscription = parsePushSubscriptionBody(req.body);
+    await upsertSubscription({
+      businessId: req.businessId,
+      ownerColumn: "staff_id",
+      ownerId: req.staffId,
+      subscription,
+    });
+    res.status(204).end();
+  })
+);
+
+router.post(
+  "/push/unsubscribe",
+  requireStaffAuth,
+  asyncHandler(async (req, res) => {
+    const data = parsePushUnsubscribeBody(req.body);
+    await deleteSubscription({ ownerColumn: "staff_id", ownerId: req.staffId, endpoint: data.endpoint });
+    res.status(204).end();
   })
 );
 
@@ -165,7 +215,7 @@ router.post(
     const data = parseMessageBody(req.body, { requireBody: !req.file });
 
     const { rows: ticketRows } = await pool.query(
-      `SELECT m.id, m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
+      `SELECT m.id, m.title, m.tenant_id, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
        FROM maintenance_requests m
        LEFT JOIN tenants t ON t.id = m.tenant_id
        WHERE m.id = $1 AND m.assigned_staff_id = $2 AND m.business_id = $3`,
@@ -211,6 +261,13 @@ router.post(
       commentBody: data.body || "(sent an attachment)",
       language: ticketRows[0].tenant_language,
     });
+    if (ticketRows[0].tenant_id) {
+      await pushToTenant(
+        ticketRows[0].tenant_id,
+        { title: ticketRows[0].title, body: data.body || "Sent an attachment", url: `/portal/repairs?ticket=${req.params.id}` },
+        { mandatory: true }
+      );
+    }
 
     res.status(201).json(rows[0]);
   })
@@ -226,7 +283,7 @@ router.post(
     const data = parseRescheduleProposalBody(req.body);
 
     const { rows: ticketRows } = await pool.query(
-      `SELECT m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
+      `SELECT m.title, m.tenant_id, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
        FROM maintenance_requests m
        LEFT JOIN tenants t ON t.id = m.tenant_id
        WHERE m.id = $1 AND m.assigned_staff_id = $2 AND m.business_id = $3`,
@@ -250,6 +307,13 @@ router.post(
       proposedDate: proposal.proposed_date,
       language: ticketRows[0].tenant_language,
     });
+    if (ticketRows[0].tenant_id) {
+      await pushToTenant(
+        ticketRows[0].tenant_id,
+        { title: "New visit date proposed", body: ticketRows[0].title, url: `/portal/repairs?ticket=${req.params.id}` },
+        { mandatory: true }
+      );
+    }
 
     res.status(201).json(proposal);
   })
@@ -270,8 +334,16 @@ router.patch(
   asyncHandler(async (req, res) => {
     const data = parseStaffStatusBody(req.body);
     const client = await pool.connect();
+    let statusChanged = false;
     try {
       await client.query("BEGIN");
+
+      const { rows: beforeRows } = await client.query(
+        "SELECT status FROM maintenance_requests WHERE id = $1 AND assigned_staff_id = $2 AND business_id = $3 FOR UPDATE",
+        [req.params.id, req.staffId, req.businessId]
+      );
+      if (!beforeRows[0]) throw new ApiError(404, "Ticket not found");
+      statusChanged = beforeRows[0].status !== data.status;
 
       const { rows } = await client.query(
         `UPDATE maintenance_requests
@@ -286,7 +358,7 @@ router.patch(
                ELSE sla_clock_started_at
              END
          WHERE id = $2 AND assigned_staff_id = $3 AND business_id = $4
-         RETURNING id, status, resolved_at, business_id`,
+         RETURNING id, status, resolved_at, business_id, tenant_id, title`,
         [data.status, req.params.id, req.staffId, req.businessId]
       );
       if (!rows[0]) throw new ApiError(404, "Ticket not found");
@@ -308,6 +380,18 @@ router.patch(
       }
 
       await client.query("COMMIT");
+
+      // The staff member who made the change is the actor, not a recipient
+      // — only the tenant and the rest of the business get pushed.
+      if (statusChanged) {
+        const ticket = rows[0];
+        const body = `Status changed to ${ticket.status.replace("_", " ")}`;
+        if (ticket.tenant_id) {
+          await pushToTenant(ticket.tenant_id, { title: ticket.title, body, url: `/portal/repairs?ticket=${ticket.id}` }, { mandatory: true });
+        }
+        await pushToBusinessAdmins(req.businessId, { title: ticket.title, body, url: `/maintenance?ticket=${ticket.id}` }, { mandatory: true });
+      }
+
       res.json({ id: rows[0].id, status: rows[0].status, resolved_at: rows[0].resolved_at });
     } catch (err) {
       await client.query("ROLLBACK");
@@ -382,6 +466,11 @@ router.post(
       staffName: `${staff.first_name} ${staff.last_name}`,
       messageBody: data.body || "(sent an attachment)",
     });
+    await pushToBusinessAdmins(
+      req.businessId,
+      { title: `${staff.first_name} ${staff.last_name}`, body: data.body || "Sent an attachment", url: "/inbox" },
+      { mandatory: false }
+    );
 
     res.status(201).json(rows[0]);
   })

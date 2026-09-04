@@ -7,6 +7,7 @@ import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/uploa
 import { requireRole } from "../utils/auth.js";
 import { extractDocumentData, isExtractableDocType, mimeTypeForFilename } from "../services/extraction.js";
 import { notifyTenantOfNewDocument } from "../services/email.js";
+import { pushToTenant } from "../services/webPush.js";
 
 const router = Router();
 
@@ -135,6 +136,9 @@ router.post(
           fileName: doc.file_name,
           language: tenant.language,
         });
+        // Documents (including a sent lease) all surface on the same
+        // /portal/lease page — there's no separate documents route.
+        pushToTenant(doc.tenant_id, { title: "New document", body: doc.file_name, url: "/portal/lease" }, { mandatory: false });
       }
     }
 
@@ -234,7 +238,7 @@ router.post(
   staffOnly,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT d.doc_type, d.file_name, t.full_name AS tenant_name, t.email AS tenant_email, t.language AS tenant_language
+      `SELECT d.doc_type, d.file_name, d.tenant_id, t.full_name AS tenant_name, t.email AS tenant_email, t.language AS tenant_language
        FROM documents d
        LEFT JOIN tenants t ON t.id = d.tenant_id
        WHERE d.id = $1 AND d.business_id = $2`,
@@ -254,6 +258,7 @@ router.post(
       language: doc.tenant_language,
     });
     if (!sent) throw new ApiError(502, "Failed to send the email, please try again");
+    await pushToTenant(doc.tenant_id, { title: "New document", body: doc.file_name, url: "/portal/lease" }, { mandatory: false });
     res.json({ sent: true });
   })
 );

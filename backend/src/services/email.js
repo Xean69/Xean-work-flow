@@ -289,6 +289,30 @@ export async function notifyTenantOfMaintenanceReply({ tenantEmail, tenantName, 
   }
 }
 
+// No email or push of any kind fired here before this — a receipt is
+// exactly the "lasting written record" case email exists for, so unlike
+// most of this feature's other new push-only trigger points, this one
+// gets a real email too.
+export async function notifyTenantOfPaymentReceived({ tenantEmail, tenantName, amount, paymentDate, language }) {
+  try {
+    if (!tenantEmail) return;
+    const name = tenantName || tr(language, "defaultTenantName");
+    const formattedAmount = `$${Number(amount).toFixed(2)}`;
+    await sendEmail({
+      to: tenantEmail,
+      subject: tr(language, "paymentReceived.subject", { amount: formattedAmount }),
+      html: renderEmail({
+        heading: tr(language, "paymentReceived.heading"),
+        lines: [tr(language, "paymentReceived.body", { tenantName: name, amount: formattedAmount, paymentDate })],
+        ctaText: tr(language, "paymentReceived.cta"),
+        ctaUrl: `${APP_BASE_URL}/portal/home`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyTenantOfPaymentReceived failed:", err);
+  }
+}
+
 // The two password-reset senders. Unlike the notify* functions above,
 // there's no businessId/tenantId lookup here — the route already knows the
 // account exists and its email by the time it calls this, since the

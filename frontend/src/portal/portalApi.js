@@ -45,6 +45,18 @@ export function updateTenantLanguage(language) {
   return request("/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
 }
 
+export function updateTenantPushPreference(notifyOther) {
+  return request("/me/push-preference", { method: "PATCH", body: JSON.stringify({ notify_other: notifyOther }) });
+}
+
+export function subscribeTenantToPush(subscription) {
+  return request("/push/subscribe", { method: "POST", body: JSON.stringify(subscription) });
+}
+
+export function unsubscribeTenantFromPush(endpoint) {
+  return request("/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }) });
+}
+
 export function getPortalDocuments() {
   return request("/documents");
 }

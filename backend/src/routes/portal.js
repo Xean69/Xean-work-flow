@@ -12,6 +12,9 @@ import {
   parseLeaseSignBody,
   parseRescheduleResponseBody,
   parseRescheduleEntryPermissionBody,
+  parsePushPreferenceBody,
+  parsePushSubscriptionBody,
+  parsePushUnsubscribeBody,
   requireString,
 } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
@@ -32,6 +35,8 @@ import { getPeriodStatus } from "../utils/ledger.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk, uploadSignature } from "../utils/upload.js";
 import { notifyManagersOfLeaseSigned } from "../services/email.js";
 import { respondToReschedule, answerRescheduleEntryPermission } from "../services/maintenanceReschedule.js";
+import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
+import { pushToBusinessAdmins, pushToStaff, pushToTenant } from "../services/webPush.js";
 
 const router = Router();
 
@@ -116,7 +121,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
-         t.id, t.full_name, t.email, t.language, t.rent_amount, t.deposit_amount,
+         t.id, t.full_name, t.email, t.language, t.push_notify_other, t.rent_amount, t.deposit_amount,
          t.lease_start, t.lease_end, t.first_period_rent_amount,
          u.unit_number,
          p.name AS property_name, p.address, p.city, p.province, p.postal_code,
@@ -173,6 +178,50 @@ router.patch(
       [data.language, req.tenantId]
     );
     res.json(rows[0]);
+  })
+);
+
+// Controls only the OTHER-category push toggle — mandatory maintenance
+// pushes ignore this value entirely (see services/webPush.js).
+router.patch(
+  "/me/push-preference",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parsePushPreferenceBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE tenants SET push_notify_other = $1 WHERE id = $2 RETURNING id, push_notify_other",
+      [data.notifyOther, req.tenantId]
+    );
+    res.json(rows[0]);
+  })
+);
+
+// No business_id in the tenant session (unlike admin/staff) — looked up
+// directly off the tenants row, which already carries it.
+router.post(
+  "/push/subscribe",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const subscription = parsePushSubscriptionBody(req.body);
+    const { rows } = await pool.query("SELECT business_id FROM tenants WHERE id = $1", [req.tenantId]);
+    if (!rows[0]) throw new ApiError(404, "Tenant not found");
+    await upsertSubscription({
+      businessId: rows[0].business_id,
+      ownerColumn: "tenant_id",
+      ownerId: req.tenantId,
+      subscription,
+    });
+    res.status(204).end();
+  })
+);
+
+router.post(
+  "/push/unsubscribe",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parsePushUnsubscribeBody(req.body);
+    await deleteSubscription({ ownerColumn: "tenant_id", ownerId: req.tenantId, endpoint: data.endpoint });
+    res.status(204).end();
   })
 );
 
@@ -318,6 +367,11 @@ router.post(
     ]);
     if (tenantRows[0]) {
       notifyManagersOfLeaseSigned({ businessId: tenantRows[0].business_id, tenantName: tenantRows[0].full_name });
+      await pushToBusinessAdmins(
+        tenantRows[0].business_id,
+        { title: "Lease signed", body: `${tenantRows[0].full_name} signed their lease`, url: "/leases" },
+        { mandatory: false }
+      );
     }
 
     res.json(rows[0]);
@@ -365,6 +419,15 @@ async function classifyAndPromote(ticketId, { businessId, propertyName, unitNumb
     aiUrgency: result.urgency,
     aiTrade: result.trade,
   });
+  await pushToBusinessAdmins(
+    businessId,
+    {
+      title: resolved ? "Ticket resolved by assistant" : "New maintenance ticket",
+      body: ticket.title,
+      url: `/maintenance?ticket=${ticketId}`,
+    },
+    { mandatory: true }
+  );
 
   return updated[0];
 }
@@ -485,6 +548,9 @@ router.post(
       "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
       [unitRows[0]?.business_id, ticket.id, reply]
     );
+    // Still 'pending' at this point — no ticket exists for a manager/staff
+    // to see yet, so only the tenant is pushed.
+    await pushToTenant(req.tenantId, { title: ticket.title, body: reply, url: "/portal/repairs" }, { mandatory: true });
 
     if (outcome !== "continue") {
       ticket = await classifyAndPromote(
@@ -570,6 +636,10 @@ router.post(
       [req.params.id]
     );
 
+    const pushPayload = {
+      title: ticketRows[0]?.title,
+      body: data.decision === "approved" ? "Tenant approved the proposed date" : "Tenant declined the proposed date",
+    };
     if (reschedule.proposed_by === "staff" && reschedule.staff_id) {
       const { rows: staffRows } = await pool.query(
         "SELECT email, first_name, last_name, language FROM maintenance_staff WHERE id = $1",
@@ -586,6 +656,7 @@ router.post(
           language: staff.language,
         });
       }
+      await pushToStaff(reschedule.staff_id, { ...pushPayload, url: `/staff/tickets/${req.params.id}` }, { mandatory: true });
     } else {
       await notifyManagersOfRescheduleResponse({
         businessId: ticketRows[0]?.business_id,
@@ -593,6 +664,11 @@ router.post(
         decision: data.decision,
         proposedDate: reschedule.proposed_date,
       });
+      await pushToBusinessAdmins(
+        ticketRows[0]?.business_id,
+        { ...pushPayload, url: `/maintenance?ticket=${req.params.id}` },
+        { mandatory: true }
+      );
     }
 
     res.json(reschedule);
@@ -601,7 +677,9 @@ router.post(
 
 // The follow-up step once a reschedule is approved — re-asks the same
 // entry_permission question the ticket was created with, scoped to this
-// one reschedule so the previous answer stays visible in history.
+// one reschedule so the previous answer stays visible in history. No email
+// exists for this step today — push-only, deliberately, rather than
+// inventing a new email nobody asked for.
 router.post(
   "/maintenance/:id/reschedule/entry-permission",
   requireTenantAuth,
@@ -613,6 +691,20 @@ router.post(
       entryPermission: data.entryPermission,
       entryDate: data.entryDate,
     });
+
+    const { rows: ticketRows } = await pool.query(
+      "SELECT title, business_id, assigned_staff_id FROM maintenance_requests WHERE id = $1",
+      [req.params.id]
+    );
+    if (ticketRows[0]) {
+      const pushPayload = {
+        title: ticketRows[0].title,
+        body: data.entryPermission ? "Tenant granted entry permission" : "Tenant did not grant entry permission",
+      };
+      await pushToBusinessAdmins(ticketRows[0].business_id, { ...pushPayload, url: `/maintenance?ticket=${req.params.id}` }, { mandatory: true });
+      await pushToStaff(ticketRows[0].assigned_staff_id, { ...pushPayload, url: `/staff/tickets/${req.params.id}` }, { mandatory: true });
+    }
+
     res.json(reschedule);
   })
 );
@@ -628,7 +720,7 @@ router.post(
     const data = parseMessageBody(req.body, { requireBody: !req.file });
     const { rows: ticketRows } = await pool.query(
       `SELECT m.id, m.business_id, m.title, m.description, m.status, m.ai_trade, m.ai_urgency, m.is_emergency,
-              t.language AS tenant_language
+              m.assigned_staff_id, t.language AS tenant_language
        FROM maintenance_requests m
        LEFT JOIN tenants t ON t.id = m.tenant_id
        WHERE m.id = $1 AND m.tenant_id = $2`,
@@ -669,6 +761,15 @@ router.post(
       req.params.id,
     ]);
 
+    // A real ticket already exists once promoted — the manager/staff side
+    // can act on this reply, so they get pushed too. While still 'pending',
+    // nobody but the tenant can even see this thread yet.
+    if (ticket.status !== "pending") {
+      const replyPayload = { title: ticket.title, body: data.body || "Sent an attachment" };
+      await pushToBusinessAdmins(ticket.business_id, { ...replyPayload, url: `/maintenance?ticket=${req.params.id}` }, { mandatory: true });
+      await pushToStaff(ticket.assigned_staff_id, { ...replyPayload, url: `/staff/tickets/${req.params.id}` }, { mandatory: true });
+    }
+
     const { rows: comments } = await pool.query(
       `SELECT sender, body, attachment_url, attachment_cloudinary_resource_type, attachment_file_name, is_completion_note
        FROM maintenance_comments WHERE request_id = $1 ORDER BY created_at ASC`,
@@ -688,6 +789,9 @@ router.post(
         "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
         [ticket.business_id, req.params.id, reply]
       );
+      // Still 'pending' — same reasoning as the tenant-reply push above,
+      // nobody else can see this thread yet.
+      await pushToTenant(req.tenantId, { title: ticket.title, body: reply, url: "/portal/repairs" }, { mandatory: true });
 
       if (outcome !== "continue") {
         const { rows: contextRows } = await pool.query(
@@ -730,6 +834,11 @@ router.post(
           "INSERT INTO maintenance_comments (business_id, request_id, sender, body) VALUES ($1, $2, 'ai', $3)",
           [ticket.business_id, req.params.id, reply]
         );
+        // Already a real ticket — same audience as any other chat message
+        // on it, not just the tenant.
+        await pushToTenant(req.tenantId, { title: ticket.title, body: reply, url: "/portal/repairs" }, { mandatory: true });
+        await pushToBusinessAdmins(ticket.business_id, { title: ticket.title, body: reply, url: `/maintenance?ticket=${req.params.id}` }, { mandatory: true });
+        await pushToStaff(ticket.assigned_staff_id, { title: ticket.title, body: reply, url: `/staff/tickets/${req.params.id}` }, { mandatory: true });
       }
     }
 
@@ -793,6 +902,11 @@ router.post(
       unitNumber: ticket.unit_number,
       tenantName: ticket.tenant_name,
     });
+    await pushToBusinessAdmins(
+      ticket.business_id,
+      { title: "🚨 Emergency flagged", body: ticket.title, url: `/maintenance?ticket=${ticket.id}` },
+      { mandatory: true }
+    );
 
     res.json({ is_emergency: true });
   })
@@ -835,6 +949,11 @@ router.post(
       tenantName: tenantRows[0].full_name,
       messageBody: data.body,
     });
+    await pushToBusinessAdmins(
+      tenantRows[0].business_id,
+      { title: tenantRows[0].full_name, body: data.body, url: "/inbox" },
+      { mandatory: false }
+    );
 
     res.status(201).json(rows[0]);
   })

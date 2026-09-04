@@ -13,6 +13,7 @@ import {
 } from "../services/email.js";
 import { proposeReschedule } from "../services/maintenanceReschedule.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
+import { pushToBusinessAdmins, pushToTenant, pushToStaff } from "../services/webPush.js";
 
 const router = Router();
 
@@ -139,6 +140,11 @@ router.post(
       aiUrgency: result.urgency,
       aiTrade: result.trade,
     });
+    await pushToBusinessAdmins(
+      req.businessId,
+      { title: "New maintenance ticket", body: ticket.title, url: `/maintenance?ticket=${ticket.id}` },
+      { mandatory: true }
+    );
 
     // Only when a tenant is actually attached — a manager-only ticket with
     // no tenant has no one for the assistant to chat with.
@@ -229,7 +235,7 @@ router.post(
     if (req.file) assertChatAttachmentSizeOk(req.file);
     const data = parseMessageBody(req.body, { requireBody: !req.file });
     const { rows: ticketRows } = await pool.query(
-      `SELECT m.id, m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
+      `SELECT m.id, m.title, m.tenant_id, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
        FROM maintenance_requests m
        LEFT JOIN tenants t ON t.id = m.tenant_id
        WHERE m.id = $1 AND m.business_id = $2`,
@@ -277,6 +283,13 @@ router.post(
       commentBody: data.body || "(sent an attachment)",
       language: ticketRows[0].tenant_language,
     });
+    if (ticketRows[0].tenant_id) {
+      await pushToTenant(
+        ticketRows[0].tenant_id,
+        { title: ticketRows[0].title, body: data.body || "Sent an attachment", url: `/portal/repairs?ticket=${req.params.id}` },
+        { mandatory: true }
+      );
+    }
 
     res.status(201).json(rows[0]);
   })
@@ -300,8 +313,16 @@ router.put(
     await assertTenantInBusiness(data.tenant_id, req.businessId);
 
     const client = await pool.connect();
+    let statusChanged = false;
     try {
       await client.query("BEGIN");
+
+      const { rows: beforeRows } = await client.query(
+        "SELECT status FROM maintenance_requests WHERE id = $1 AND business_id = $2 FOR UPDATE",
+        [req.params.id, req.businessId]
+      );
+      if (!beforeRows[0]) throw new ApiError(404, "Maintenance request not found");
+      statusChanged = beforeRows[0].status !== data.status;
 
       const { rows } = await client.query(
         `UPDATE maintenance_requests
@@ -336,6 +357,25 @@ router.put(
       }
 
       await client.query("COMMIT");
+
+      // Status transitions matter to everyone with a stake in the ticket —
+      // the manager who made the change doesn't need to push themselves.
+      if (statusChanged) {
+        const ticket = rows[0];
+        const payload = {
+          title: ticket.title,
+          body: `Status changed to ${ticket.status.replace("_", " ")}`,
+          url: `/maintenance?ticket=${ticket.id}`,
+        };
+        if (ticket.tenant_id) {
+          await pushToTenant(ticket.tenant_id, { ...payload, url: `/portal/repairs?ticket=${ticket.id}` }, { mandatory: true });
+        }
+        await pushToBusinessAdmins(req.businessId, payload, { mandatory: true, excludeAdminId: req.adminId });
+        if (ticket.assigned_staff_id) {
+          await pushToStaff(ticket.assigned_staff_id, { ...payload, url: `/staff/tickets/${ticket.id}` }, { mandatory: true });
+        }
+      }
+
       res.json(rows[0]);
     } catch (err) {
       await client.query("ROLLBACK");
@@ -363,7 +403,7 @@ router.post(
     });
 
     const { rows: ticketRows } = await pool.query(
-      `SELECT m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
+      `SELECT m.title, m.tenant_id, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
        FROM maintenance_requests m
        LEFT JOIN tenants t ON t.id = m.tenant_id
        WHERE m.id = $1`,
@@ -376,6 +416,13 @@ router.post(
       proposedDate: proposal.proposed_date,
       language: ticketRows[0]?.tenant_language,
     });
+    if (ticketRows[0]?.tenant_id) {
+      await pushToTenant(
+        ticketRows[0].tenant_id,
+        { title: "New visit date proposed", body: ticketRows[0].title, url: `/portal/repairs?ticket=${req.params.id}` },
+        { mandatory: true }
+      );
+    }
 
     res.status(201).json(proposal);
   })
@@ -416,6 +463,11 @@ router.patch(
         unitNumber: contextRows[0]?.unit_number,
         language: staff.language,
       });
+      await pushToStaff(
+        data.assignedStaffId,
+        { title: "New ticket assigned", body: rows[0].title, url: `/staff/tickets/${rows[0].id}` },
+        { mandatory: true }
+      );
     }
 
     res.status(204).end();

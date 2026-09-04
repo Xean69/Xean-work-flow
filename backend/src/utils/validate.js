@@ -47,6 +47,32 @@ export function parseLanguageBody(body) {
   return { language: body.language };
 }
 
+// Controls only the OTHER-category push toggle (payments, messages,
+// leases, etc.) — mandatory maintenance pushes never consult this value.
+export function parsePushPreferenceBody(body) {
+  if (typeof body.notify_other !== "boolean") {
+    throw new ApiError(400, "notify_other must be a boolean");
+  }
+  return { notifyOther: body.notify_other };
+}
+
+// A raw PushSubscription.toJSON() shape: { endpoint, keys: { p256dh, auth } }.
+// Returned in the same nested shape so it can be passed straight through to
+// pushSubscriptions.js's upsertSubscription without re-wrapping.
+export function parsePushSubscriptionBody(body) {
+  return {
+    endpoint: requireString(body.endpoint, "endpoint"),
+    keys: {
+      p256dh: requireString(body.keys?.p256dh, "keys.p256dh"),
+      auth: requireString(body.keys?.auth, "keys.auth"),
+    },
+  };
+}
+
+export function parsePushUnsubscribeBody(body) {
+  return { endpoint: requireString(body.endpoint, "endpoint") };
+}
+
 export function parseForgotPasswordBody(body) {
   return { email: requireString(body.email, "email") };
 }

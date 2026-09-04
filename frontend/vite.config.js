@@ -13,14 +13,18 @@ export default defineConfig({
     // One service worker still covers both: same origin, same JS/CSS build.
     VitePWA({
       manifest: false,
-      strategies: 'generateSW',
+      // injectManifest (not generateSW) so src/sw.js can carry a custom
+      // push/notificationclick handler — generateSW only accepts
+      // declarative Workbox options, no inline JS. navigateFallback and
+      // globIgnores both moved into sw.js/injectManifest.globIgnores below;
+      // the old top-level `workbox: {...}` key is generateSW-only and is
+      // silently ignored under this strategy.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      workbox: {
-        // Any navigation not otherwise cached falls back to the app shell
-        // instead of a browser offline error — this is the app-shell-only
-        // offline behavior, not offline data (see useOnlineStatus.js).
-        navigateFallback: '/index.html',
+      injectManifest: {
         // jspdf/exceljs are dynamically imported only when a user clicks a
         // "Download PDF/Excel" button — excluded from precache so every
         // install/update doesn't force-download ~1MB of export libraries

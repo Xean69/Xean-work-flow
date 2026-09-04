@@ -1290,3 +1290,59 @@ ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS sla_clock_started_at T
 UPDATE maintenance_requests SET sla_clock_started_at = created_at WHERE sla_clock_started_at IS NULL;
 ALTER TABLE maintenance_requests ALTER COLUMN sla_clock_started_at SET NOT NULL;
 ALTER TABLE maintenance_requests ALTER COLUMN sla_clock_started_at SET DEFAULT now();
+
+-- ============================================================================
+-- Web Push notifications
+--
+-- push_notify_other lives on the identity tables (like language already
+-- does), not on push_subscriptions — it's a per-person preference that has
+-- to be readable/settable independent of whether any device is currently
+-- subscribed, not a per-device setting. Mandatory maintenance pushes never
+-- consult this column at all; only the OTHER-category sends do.
+--
+-- push_subscriptions uses real FK columns (one of three set, enforced by
+-- the CHECK below) rather than a polymorphic (type, id) pair, matching
+-- every other table in this file. platform/device_token exist now, unused,
+-- so a future APNs/FCM subscription is just a row with platform set and
+-- device_token populated instead of endpoint/p256dh/auth — no redesign
+-- needed when native push lands.
+--
+-- Uniqueness is scoped to (endpoint, owner column), not endpoint alone.
+-- There is exactly one shared service worker across all three portals
+-- (same origin, scope '/') — the same browser subscribing from /dashboard
+-- and later /staff produces the identical PushSubscription.endpoint. A
+-- plain unique index on endpoint would let the second identity's subscribe
+-- call silently steal or collide with the first's row; the three partial
+-- indexes below let a shared browser correctly hold one row per identity
+-- that's actually subscribed from it.
+-- ============================================================================
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS push_notify_other BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS push_notify_other BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS push_notify_other BOOLEAN NOT NULL DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  admin_id INTEGER REFERENCES admins(id) ON DELETE CASCADE,
+  tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+  staff_id INTEGER REFERENCES maintenance_staff(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL DEFAULT 'web_push' CHECK (platform IN ('web_push', 'apns', 'fcm')),
+  endpoint TEXT,
+  p256dh TEXT,
+  auth TEXT,
+  device_token TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK ((admin_id IS NOT NULL)::int + (tenant_id IS NOT NULL)::int + (staff_id IS NOT NULL)::int = 1)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint_admin
+  ON push_subscriptions(endpoint, admin_id) WHERE endpoint IS NOT NULL AND admin_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint_tenant
+  ON push_subscriptions(endpoint, tenant_id) WHERE endpoint IS NOT NULL AND tenant_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint_staff
+  ON push_subscriptions(endpoint, staff_id) WHERE endpoint IS NOT NULL AND staff_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_business_id ON push_subscriptions(business_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_admin_id ON push_subscriptions(admin_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_tenant_id ON push_subscriptions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_staff_id ON push_subscriptions(staff_id);

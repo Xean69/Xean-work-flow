@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   getMaintenanceRequests,
@@ -102,10 +103,28 @@ function Maintenance() {
   const [rescheduleTimeWindow, setRescheduleTimeWindow] = useState('')
   const [proposingReschedule, setProposingReschedule] = useState(false)
   const threadBodyRef = useRef(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
     load()
   }, [])
+
+  // Deep-link from a push notification — e.g. /maintenance?ticket=72. Gated
+  // on the ticket list actually being loaded, since opening the thread
+  // reuses an already-fetched row rather than fetching by id directly.
+  useEffect(() => {
+    const wanted = searchParams.get('ticket')
+    if (!wanted || threadTicketId || tickets.length === 0) return
+    const match = tickets.find((t) => String(t.id) === wanted)
+    if (match) {
+      openThread(match)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('ticket')
+        return next
+      })
+    }
+  }, [searchParams, tickets])
 
   useEffect(() => {
     if (threadBodyRef.current) threadBodyRef.current.scrollTop = threadBodyRef.current.scrollHeight

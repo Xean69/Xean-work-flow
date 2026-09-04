@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { getMe, logout, setMyStatus } from './staffApi.js'
+import { usePushSubscription } from './usePushSubscription.js'
 import '../portal/portal.css'
 import './staff.css'
 
 const NAV_ITEMS = [
   { to: '/staff/tickets', label: 'My Tickets', icon: '🔧' },
   { to: '/staff/messages', label: 'Messages', icon: '💬' },
+  { to: '/staff/settings', label: 'Settings', icon: '⚙️' },
 ]
 
 // How often the heartbeat pings while the tab is open — see schema.sql's
@@ -22,8 +24,10 @@ function StaffLayout() {
   const [loading, setLoading] = useState(true)
   const [awayDraftOpen, setAwayDraftOpen] = useState(false)
   const [awayNoteDraft, setAwayNoteDraft] = useState('')
+  const [pushDismissed, setPushDismissed] = useState(false)
   const navigate = useNavigate()
   const heartbeatRef = useRef(null)
+  const { permission: pushPermission, subscribe: subscribeToPush } = usePushSubscription()
 
   useEffect(() => {
     getMe()
@@ -87,6 +91,20 @@ function StaffLayout() {
           Log out
         </button>
       </header>
+
+      {pushPermission === 'default' && !pushDismissed && (
+        <div className="portal-push-banner">
+          <span>Enable notifications to hear about new tickets and messages right away.</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" className="portal-btn portal-btn-primary" style={{ padding: '6px 12px', fontSize: 12.5 }} onClick={subscribeToPush}>
+              Enable
+            </button>
+            <button type="button" className="portal-push-banner-dismiss" onClick={() => setPushDismissed(true)} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="staff-status-bar">
         <span style={{ fontSize: 13, color: 'var(--slate)' }}>

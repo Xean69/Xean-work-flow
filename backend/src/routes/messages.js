@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseMessageBody, parseAnnouncementBody } from "../utils/validate.js";
 import { notifyTenantOfNewMessage, notifyTenantOfAnnouncement, notifyStaffOfNewMessage } from "../services/email.js";
+import { pushToTenant, pushToStaff } from "../services/webPush.js";
 
 const router = Router();
 
@@ -84,6 +85,7 @@ router.post(
       messageBody: data.body,
       language: staffRows[0].language,
     });
+    await pushToStaff(req.params.staffId, { title: "New message", body: data.body, url: "/staff/messages" }, { mandatory: false });
 
     res.status(201).json(rows[0]);
   })
@@ -171,6 +173,7 @@ router.post(
           announcementBody: data.body,
           language: t.language,
         });
+        await pushToTenant(t.id, { title: data.subject || "Announcement", body: data.body, url: "/portal/messages" }, { mandatory: false });
       })
     );
 
@@ -201,6 +204,7 @@ router.post(
       messageBody: data.body,
       language: tenantRows[0].language,
     });
+    await pushToTenant(req.params.tenantId, { title: "New message", body: data.body, url: "/portal/messages" }, { mandatory: false });
 
     res.status(201).json(rows[0]);
   })

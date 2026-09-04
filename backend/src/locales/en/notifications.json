@@ -53,6 +53,12 @@
       "cta": "View ticket"
     }
   },
+  "paymentReceived": {
+    "subject": "Payment received — {{amount}}",
+    "heading": "Payment received",
+    "body": "Hi {{tenantName}}, we've received your payment of {{amount}} on {{paymentDate}}. Thank you!",
+    "cta": "View in Portal"
+  },
   "passwordReset": {
     "subject": "Reset your tenant portal password",
     "heading": "Reset your password",

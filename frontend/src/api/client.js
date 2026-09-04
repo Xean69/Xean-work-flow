@@ -51,6 +51,24 @@ export function updateAdminLanguage(language) {
   return request("/admin/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
 }
 
+export function updateAdminPushPreference(notifyOther) {
+  return request("/admin/me/push-preference", { method: "PATCH", body: JSON.stringify({ notify_other: notifyOther }) });
+}
+
+// Unauthenticated, shared by all three portals — a VAPID public key is
+// meant to be public.
+export function getVapidPublicKey() {
+  return request("/push/vapid-public-key");
+}
+
+export function subscribeAdminToPush(subscription) {
+  return request("/admin/push/subscribe", { method: "POST", body: JSON.stringify(subscription) });
+}
+
+export function unsubscribeAdminFromPush(endpoint) {
+  return request("/admin/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }) });
+}
+
 export function getProperties() {
   return request("/properties");
 }

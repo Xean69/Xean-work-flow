@@ -7,5 +7,9 @@
     "lease": "Lease",
     "language": "Language"
   },
-  "logout": "Log out"
+  "logout": "Log out",
+  "pushBanner": {
+    "text": "Enable notifications to hear about new repair updates and messages right away.",
+    "enable": "Enable"
+  }
 }

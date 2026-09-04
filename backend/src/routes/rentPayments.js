@@ -5,6 +5,8 @@ import { ApiError } from "../utils/errors.js";
 import { parseRentPaymentBody } from "../utils/validate.js";
 import { requireRole } from "../utils/auth.js";
 import { allocatePayment, clearAllocationsForPayment } from "../utils/ledger.js";
+import { notifyTenantOfPaymentReceived } from "../services/email.js";
+import { pushToTenant } from "../services/webPush.js";
 
 const router = Router();
 
@@ -81,6 +83,30 @@ router.post(
       throw err;
     } finally {
       client.release();
+    }
+
+    // No notification of any kind existed for this before — a tenant-
+    // facing receipt (email + push), not a manager one: no existing
+    // precedent to notify managers per payment, and doing so for every
+    // payment on a large portfolio would be exactly the noise the
+    // "don't fire both for every minor event" principle warns against.
+    const { rows: tenantRows } = await pool.query(
+      "SELECT email, full_name, language FROM tenants WHERE id = $1",
+      [data.tenant_id]
+    );
+    if (tenantRows[0]) {
+      await notifyTenantOfPaymentReceived({
+        tenantEmail: tenantRows[0].email,
+        tenantName: tenantRows[0].full_name,
+        amount: payment.amount,
+        paymentDate: payment.payment_date,
+        language: tenantRows[0].language,
+      });
+      await pushToTenant(
+        data.tenant_id,
+        { title: "Payment received", body: `$${Number(payment.amount).toFixed(2)} — thank you!`, url: "/portal/home" },
+        { mandatory: false }
+      );
     }
 
     res.status(201).json(payment);

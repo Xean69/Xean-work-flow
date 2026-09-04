@@ -3,10 +3,19 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireAdminAuth } from "../utils/auth.js";
-import { parseSignupBody, parseForgotPasswordBody, parseAdminResetPasswordBody, parseLanguageBody } from "../utils/validate.js";
+import {
+  parseSignupBody,
+  parseForgotPasswordBody,
+  parseAdminResetPasswordBody,
+  parseLanguageBody,
+  parsePushPreferenceBody,
+  parsePushSubscriptionBody,
+  parsePushUnsubscribeBody,
+} from "../utils/validate.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { sendAdminPasswordResetEmail } from "../services/email.js";
 import { computeTrialStatus } from "../utils/trial.js";
+import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
 
 const router = Router();
 
@@ -116,8 +125,8 @@ router.get(
   requireAdminAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.role, a.language, a.business_id, b.business_name, b.created_at AS trial_started_at,
-              b.logo_url, b.ai_lease_generation_enabled
+      `SELECT a.id, a.email, a.role, a.language, a.push_notify_other, a.business_id, b.business_name,
+              b.created_at AS trial_started_at, b.logo_url, b.ai_lease_generation_enabled
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,
@@ -141,6 +150,46 @@ router.patch(
       [data.language, req.adminId]
     );
     res.json(rows[0]);
+  })
+);
+
+// Controls only the OTHER-category push toggle — mandatory maintenance
+// pushes ignore this value entirely (see services/webPush.js).
+router.patch(
+  "/me/push-preference",
+  requireAdminAuth,
+  asyncHandler(async (req, res) => {
+    const data = parsePushPreferenceBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE admins SET push_notify_other = $1 WHERE id = $2 RETURNING id, push_notify_other",
+      [data.notifyOther, req.adminId]
+    );
+    res.json(rows[0]);
+  })
+);
+
+router.post(
+  "/push/subscribe",
+  requireAdminAuth,
+  asyncHandler(async (req, res) => {
+    const subscription = parsePushSubscriptionBody(req.body);
+    await upsertSubscription({
+      businessId: req.businessId,
+      ownerColumn: "admin_id",
+      ownerId: req.adminId,
+      subscription,
+    });
+    res.status(204).end();
+  })
+);
+
+router.post(
+  "/push/unsubscribe",
+  requireAdminAuth,
+  asyncHandler(async (req, res) => {
+    const data = parsePushUnsubscribeBody(req.body);
+    await deleteSubscription({ ownerColumn: "admin_id", ownerId: req.adminId, endpoint: data.endpoint });
+    res.status(204).end();
   })
 );
 

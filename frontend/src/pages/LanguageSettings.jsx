@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import PageHeader from '../components/PageHeader.jsx'
 import Badge from '../components/Badge.jsx'
-import { updateAdminLanguage } from '../api/client.js'
+import { updateAdminLanguage, updateAdminPushPreference } from '../api/client.js'
 import { SUPPORTED_LANGUAGES } from '../i18n/languages.js'
 import './LanguageSettings.css'
 
@@ -11,6 +11,7 @@ function LanguageSettings() {
   const { admin, refreshAdmin } = useOutletContext()
   const { t } = useTranslation('language')
   const [saving, setSaving] = useState(null) // language code currently being saved, or null
+  const [savingPushPref, setSavingPushPref] = useState(false)
 
   async function handleSelect(code) {
     if (code === admin.language || saving) return
@@ -20,6 +21,16 @@ function LanguageSettings() {
       await refreshAdmin()
     } finally {
       setSaving(null)
+    }
+  }
+
+  async function handleTogglePushPreference() {
+    setSavingPushPref(true)
+    try {
+      await updateAdminPushPreference(!admin.push_notify_other)
+      await refreshAdmin()
+    } finally {
+      setSavingPushPref(false)
     }
   }
 
@@ -46,6 +57,20 @@ function LanguageSettings() {
             )
           })}
         </div>
+
+        <h3 style={{ marginTop: 32, marginBottom: 4 }}>{t('notifications.title')}</h3>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+          <input
+            type="checkbox"
+            checked={admin.push_notify_other}
+            onChange={handleTogglePushPreference}
+            disabled={savingPushPref}
+          />
+          {t('notifications.otherLabel')}
+        </label>
+        <p style={{ fontSize: 12.5, color: 'var(--slate)', marginTop: 6, maxWidth: 480 }}>
+          {t('notifications.otherNote')}
+        </p>
       </div>
     </div>
   )

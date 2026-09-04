@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { getMe, logout } from './portalApi.js'
 import PortalOfflineBanner from './PortalOfflineBanner.jsx'
 import { applyLanguage, TENANT_LANG_KEY } from '../i18n/sync.js'
+import { usePushSubscription } from './usePushSubscription.js'
 import './portal.css'
 
 const NAV_ITEMS = [
@@ -21,9 +22,11 @@ const NAV_ITEMS = [
 function PortalLayout() {
   const [tenant, setTenant] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [pushDismissed, setPushDismissed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation('portal-common')
+  const { permission: pushPermission, subscribe: subscribeToPush } = usePushSubscription()
 
   useEffect(() => {
     getMe()
@@ -57,6 +60,19 @@ function PortalLayout() {
   return (
     <div className="portal-shell">
       <PortalOfflineBanner />
+      {pushPermission === 'default' && !pushDismissed && (
+        <div className="portal-push-banner">
+          <span>{t('pushBanner.text')}</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" className="portal-btn portal-btn-primary" style={{ padding: '6px 12px', fontSize: 12.5 }} onClick={subscribeToPush}>
+              {t('pushBanner.enable')}
+            </button>
+            <button type="button" className="portal-push-banner-dismiss" onClick={() => setPushDismissed(true)} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       <header className="portal-header">
         <span className="portal-brand-group">
           <img src="/logo-nav.png" alt="" className="portal-brand-mark" />
