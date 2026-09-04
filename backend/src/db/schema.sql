@@ -776,15 +776,13 @@ CREATE INDEX IF NOT EXISTS idx_payment_allocations_charge_id ON payment_allocati
 -- ============================================================================
 -- AI-assisted maintenance chat
 --
--- Relaxes the pre-existing maintenance_comments.sender constraint (already
--- deployed in production) to allow 'ai', and adds a tenant-settable
--- emergency flag. Everything else the chat needs — the thread itself,
--- priority as the field that actually drives kanban urgency — already
--- existed; see services/maintenanceChat.js for the reasoning.
+-- Adds a tenant-settable emergency flag. The 'ai' sender value the chat
+-- needs is part of maintenance_comments_sender_check's canonical
+-- definition further down this file, not declared here — everything else
+-- the chat needs — the thread itself, priority as the field that actually
+-- drives kanban urgency — already existed; see services/maintenanceChat.js
+-- for the reasoning.
 -- ============================================================================
-ALTER TABLE maintenance_comments DROP CONSTRAINT IF EXISTS maintenance_comments_sender_check;
-ALTER TABLE maintenance_comments ADD CONSTRAINT maintenance_comments_sender_check
-  CHECK (sender IN ('tenant', 'manager', 'ai'));
 
 -- Set once a tenant flags a ticket as an emergency (POST /portal/maintenance/
 -- :id/emergency) — never cleared automatically afterward, even if a manager
@@ -988,15 +986,29 @@ ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS away BOOLEAN NOT NULL DEF
 ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS away_note TEXT;
 
 -- ============================================================================
--- Required completion note
+-- maintenance_comments.sender — canonical allowed values
 --
--- Relaxes maintenance_comments.sender further to allow 'staff'. At the time
--- this was written, the resolve flow in routes/staff.js (requires a
--- non-empty note, inserts it in the same transaction as the status change)
--- was the *only* way a 'staff' comment could be created, so the UI safely
--- labeled every one a completion note with no extra flag. That's no longer
--- true — see the later "Staff replies in the ticket thread" migration
--- below, which adds is_completion_note to tell the two apart.
+-- This is the ONE place sender's allowed values are declared. The base
+-- CREATE TABLE near the top of this file only ever allowed
+-- 'tenant'/'manager'/'ai'; 'staff' was added here so a resolved ticket's
+-- completion note (routes/staff.js's PATCH /maintenance/:id/status) could
+-- live in the same thread.
+--
+-- migrate.js replays this whole file on every run, including this
+-- statement — so if this constraint ever needs to widen again, edit the
+-- CHECK below in place rather than adding a second DROP+ADD pair
+-- elsewhere in the file. A second copy would leave this statement's OLD,
+-- narrower list sitting earlier in the file, where replaying it would
+-- fail the moment real rows use the newer value. That's exactly what
+-- happened here: an 'ai'-only version of this same constraint used to
+-- live near the AI-chat migration above, and once real 'staff' rows
+-- existed in dev and production, replaying that old version on every
+-- `npm run migrate` broke the migration outright.
+--
+-- is_completion_note (further down) is what actually distinguishes a
+-- staff completion note from a staff chat reply — 'staff' alone no longer
+-- implies "completion note" now that staff can also post free-text
+-- messages in the thread (see "Staff replies in the ticket thread" below).
 -- ============================================================================
 ALTER TABLE maintenance_comments DROP CONSTRAINT IF EXISTS maintenance_comments_sender_check;
 ALTER TABLE maintenance_comments ADD CONSTRAINT maintenance_comments_sender_check
