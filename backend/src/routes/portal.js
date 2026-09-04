@@ -3,7 +3,17 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireTenantAuth } from "../utils/auth.js";
-import { parsePortalRepairBody, parseMessageBody, parseForgotPasswordBody, parseTenantResetPasswordBody, parseLanguageBody, parseLeaseSignBody, requireString } from "../utils/validate.js";
+import {
+  parsePortalRepairBody,
+  parseMessageBody,
+  parseForgotPasswordBody,
+  parseTenantResetPasswordBody,
+  parseLanguageBody,
+  parseLeaseSignBody,
+  parseRescheduleResponseBody,
+  parseRescheduleEntryPermissionBody,
+  requireString,
+} from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply, generatePendingChatReply } from "../services/maintenanceChat.js";
 import { currentPeriod } from "../utils/period.js";
@@ -13,12 +23,15 @@ import {
   notifyManagersOfMaintenanceEmergency,
   notifyManagersOfTenantMessage,
   sendTenantPasswordResetEmail,
+  notifyManagersOfRescheduleResponse,
+  notifyStaffOfRescheduleResponse,
 } from "../services/email.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
 import { getPeriodStatus } from "../utils/ledger.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk, uploadSignature } from "../utils/upload.js";
 import { notifyManagersOfLeaseSigned } from "../services/email.js";
+import { respondToReschedule, answerRescheduleEntryPermission } from "../services/maintenanceReschedule.js";
 
 const router = Router();
 
@@ -329,6 +342,12 @@ async function classifyAndPromote(ticketId, { businessId, propertyName, unitNumb
   const { rows: updated } = await pool.query(
     `UPDATE maintenance_requests
      SET status = $1, resolved_at = CASE WHEN $1 = 'resolved' THEN now() ELSE NULL END,
+         -- The 7-day SLA clock starts here, at promotion, not at the
+         -- 'pending' row's original insert time — a tenant can spend hours
+         -- troubleshooting with the AI before this ever becomes a real,
+         -- actionable ticket, and that pre-ticket time shouldn't count
+         -- against it.
+         sla_clock_started_at = now(),
          ai_urgency = $2, ai_trade = $3, ai_reasoning = $4, ai_classification_status = $5
      WHERE id = $6
      RETURNING id, title, description, status, priority, created_at, resolved_at, ai_urgency, ai_trade, ai_reasoning, ai_classification_status, is_emergency, entry_permission, entry_date::text AS entry_date`,
@@ -511,11 +530,90 @@ router.get(
       [req.params.id]
     );
 
+    // Excludes 'cancelled' — a proposal superseded before the tenant ever
+    // got to respond to it isn't something they should see; the manager/
+    // staff views show every row, this one doesn't.
+    const { rows: reschedules } = await pool.query(
+      `SELECT id, proposed_by, proposed_date::text AS proposed_date, proposed_time_window,
+              status, responded_at, entry_permission, entry_date::text AS entry_date, created_at
+       FROM maintenance_reschedules
+       WHERE request_id = $1 AND status != 'cancelled'
+       ORDER BY created_at ASC`,
+      [req.params.id]
+    );
+
     await pool.query("UPDATE maintenance_requests SET tenant_last_read_at = now() WHERE id = $1", [
       req.params.id,
     ]);
 
-    res.json({ ...rows[0], comments });
+    res.json({ ...rows[0], comments, reschedules });
+  })
+);
+
+// Approves or declines the ticket's current pending reschedule proposal.
+// Approving bumps the ticket's SLA clock to the newly-agreed date; declining
+// leaves the ticket exactly as it was, so the manager/staff can propose
+// again. Whoever proposed it gets notified either way.
+router.post(
+  "/maintenance/:id/reschedule/respond",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseRescheduleResponseBody(req.body);
+    const reschedule = await respondToReschedule({
+      requestId: req.params.id,
+      tenantId: req.tenantId,
+      decision: data.decision,
+    });
+
+    const { rows: ticketRows } = await pool.query(
+      "SELECT title, business_id FROM maintenance_requests WHERE id = $1",
+      [req.params.id]
+    );
+
+    if (reschedule.proposed_by === "staff" && reschedule.staff_id) {
+      const { rows: staffRows } = await pool.query(
+        "SELECT email, first_name, last_name, language FROM maintenance_staff WHERE id = $1",
+        [reschedule.staff_id]
+      );
+      const staff = staffRows[0];
+      if (staff) {
+        await notifyStaffOfRescheduleResponse({
+          staffEmail: staff.email,
+          staffName: `${staff.first_name} ${staff.last_name}`,
+          ticketTitle: ticketRows[0]?.title,
+          decision: data.decision,
+          proposedDate: reschedule.proposed_date,
+          language: staff.language,
+        });
+      }
+    } else {
+      await notifyManagersOfRescheduleResponse({
+        businessId: ticketRows[0]?.business_id,
+        ticketTitle: ticketRows[0]?.title,
+        decision: data.decision,
+        proposedDate: reschedule.proposed_date,
+      });
+    }
+
+    res.json(reschedule);
+  })
+);
+
+// The follow-up step once a reschedule is approved — re-asks the same
+// entry_permission question the ticket was created with, scoped to this
+// one reschedule so the previous answer stays visible in history.
+router.post(
+  "/maintenance/:id/reschedule/entry-permission",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseRescheduleEntryPermissionBody(req.body);
+    const reschedule = await answerRescheduleEntryPermission({
+      requestId: req.params.id,
+      tenantId: req.tenantId,
+      entryPermission: data.entryPermission,
+      entryDate: data.entryDate,
+    });
+    res.json(reschedule);
   })
 );
 

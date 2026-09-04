@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getTicketDetail, updateTicketStatus, addTicketComment } from '../staffApi.js'
+import { getTicketDetail, updateTicketStatus, addTicketComment, proposeTicketReschedule } from '../staffApi.js'
 import { linkify } from '../../utils/linkify.jsx'
 import PrintableTicket from '../../components/PrintableTicket.jsx'
 
@@ -62,6 +62,9 @@ function TicketDetail() {
   const [commentDraft, setCommentDraft] = useState('')
   const [commentFile, setCommentFile] = useState(null)
   const [sendingComment, setSendingComment] = useState(false)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleTimeWindow, setRescheduleTimeWindow] = useState('')
+  const [proposingReschedule, setProposingReschedule] = useState(false)
   const messagesRef = useRef(null)
 
   useEffect(() => {
@@ -117,6 +120,23 @@ function TicketDetail() {
       await load()
     } finally {
       setSendingComment(false)
+    }
+  }
+
+  async function handleProposeReschedule(e) {
+    e.preventDefault()
+    if (!rescheduleDate) return
+    setProposingReschedule(true)
+    try {
+      await proposeTicketReschedule(id, {
+        proposed_date: rescheduleDate,
+        proposed_time_window: rescheduleTimeWindow.trim() || undefined,
+      })
+      setRescheduleDate('')
+      setRescheduleTimeWindow('')
+      await load()
+    } finally {
+      setProposingReschedule(false)
     }
   }
 
@@ -222,6 +242,62 @@ function TicketDetail() {
               ? `Entry permitted — available ${formatEntryDate(ticket.entry_date)}, anytime between 9am–5pm.`
               : 'Entry permission not granted — coordinate access with the tenant separately.'}
           </p>
+        )}
+        {ticket.reschedules?.some((r) => r.status === 'approved' && r.entry_permission == null) && (
+          <p className="staff-entry-note-denied" style={{ marginTop: 10 }}>
+            Waiting on the tenant to confirm entry permission for the new date.
+          </p>
+        )}
+
+        {ticket.status !== 'resolved' && (
+          <form className="staff-reschedule-form" onSubmit={handleProposeReschedule} style={{ marginTop: 10 }}>
+            <div className="form-field">
+              <label htmlFor="rescheduleDate">Propose new visit date</label>
+              <input
+                id="rescheduleDate"
+                type="date"
+                value={rescheduleDate}
+                onChange={(e) => setRescheduleDate(e.target.value)}
+                disabled={proposingReschedule}
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="rescheduleTimeWindow">Time window (optional)</label>
+              <input
+                id="rescheduleTimeWindow"
+                type="text"
+                placeholder="e.g. 2:00 PM or morning"
+                value={rescheduleTimeWindow}
+                onChange={(e) => setRescheduleTimeWindow(e.target.value)}
+                disabled={proposingReschedule}
+              />
+            </div>
+            <button
+              type="submit"
+              className="portal-btn portal-btn-primary"
+              style={{ padding: '6px 12px', fontSize: 12.5 }}
+              disabled={proposingReschedule || !rescheduleDate}
+            >
+              Propose
+            </button>
+          </form>
+        )}
+
+        {ticket.reschedules?.length > 0 && (
+          <div className="staff-reschedule-history">
+            <h4>Reschedule history</h4>
+            {ticket.reschedules.map((r) => (
+              <div key={r.id} className="staff-reschedule-row">
+                <span>
+                  {r.proposed_by === 'staff' ? `${r.staff_first_name} (Maintenance)` : 'Manager'} proposed{' '}
+                  {formatEntryDate(r.proposed_date)}
+                </span>
+                <span className={`reschedule-status-${r.status}`}>
+                  {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
 
         <button

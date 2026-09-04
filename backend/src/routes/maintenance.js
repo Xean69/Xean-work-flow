@@ -2,10 +2,16 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseMaintenanceBody, parseMessageBody, parseAssignBody } from "../utils/validate.js";
+import { parseMaintenanceBody, parseMessageBody, parseAssignBody, parseRescheduleProposalBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply } from "../services/maintenanceChat.js";
-import { notifyManagersOfMaintenanceRequest, notifyTenantOfMaintenanceReply, notifyStaffOfAssignment } from "../services/email.js";
+import {
+  notifyManagersOfMaintenanceRequest,
+  notifyTenantOfMaintenanceReply,
+  notifyStaffOfAssignment,
+  notifyTenantOfRescheduleProposed,
+} from "../services/email.js";
+import { proposeReschedule } from "../services/maintenanceReschedule.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
 
 const router = Router();
@@ -58,6 +64,12 @@ router.get(
              AND c.sender IN ('tenant', 'ai', 'staff')
              AND c.created_at > COALESCE(m.manager_last_read_at, '-infinity'::timestamptz)
          ) AS unread_by_manager,
+         -- No stored flag — a ticket is "still pending" purely as a function
+         -- of its current status and how long ago its SLA clock last reset
+         -- (see schema.sql's note on sla_clock_started_at), so this can
+         -- never drift out of sync with reality the way a periodically-swept
+         -- flag could.
+         (m.status IN ('new', 'in_progress') AND m.sla_clock_started_at <= now() - interval '6 days') AS sla_warning,
          -- Overrides m.*'s entry_date (last column with a given name wins in
          -- node-pg's row-to-object mapping) — DATE columns carry no
          -- timezone, but node-pg's default parser reads them as local
@@ -72,7 +84,7 @@ router.get(
        LEFT JOIN tenants t ON t.id = m.tenant_id
        LEFT JOIN maintenance_staff s ON s.id = m.assigned_staff_id
        WHERE m.business_id = $1 AND m.status != 'pending'
-       ORDER BY m.created_at DESC`,
+       ORDER BY (m.status IN ('new', 'in_progress') AND m.sla_clock_started_at <= now() - interval '6 days') DESC, m.created_at DESC`,
       [req.businessId]
     );
     res.json(rows);
@@ -168,6 +180,7 @@ router.get(
          t.phone AS tenant_phone,
          s.first_name AS assigned_staff_first_name,
          s.last_name AS assigned_staff_last_name,
+         (m.status IN ('new', 'in_progress') AND m.sla_clock_started_at <= now() - interval '6 days') AS sla_warning,
          m.entry_date::text AS entry_date
        FROM maintenance_requests m
        JOIN units u ON u.id = m.unit_id
@@ -189,11 +202,23 @@ router.get(
       [req.params.id]
     );
 
+    // Unfiltered — a manager should see cancelled/superseded proposals too,
+    // not just the ones the tenant actually got to respond to.
+    const { rows: reschedules } = await pool.query(
+      `SELECT r.id, r.proposed_by, r.staff_id, r.proposed_date::text AS proposed_date, r.proposed_time_window,
+              r.status, r.responded_at, r.entry_permission, r.entry_date::text AS entry_date, r.created_at,
+              st.first_name AS staff_first_name
+       FROM maintenance_reschedules r
+       LEFT JOIN maintenance_staff st ON st.id = r.staff_id
+       WHERE r.request_id = $1 ORDER BY r.created_at ASC`,
+      [req.params.id]
+    );
+
     await pool.query("UPDATE maintenance_requests SET manager_last_read_at = now() WHERE id = $1", [
       req.params.id,
     ]);
 
-    res.json({ ...rows[0], comments });
+    res.json({ ...rows[0], comments, reschedules });
   })
 );
 
@@ -260,6 +285,13 @@ router.post(
 // Used both for editing a ticket's details and for moving it between
 // columns. resolved_at is managed here, not by the client: it's stamped
 // the moment status becomes 'resolved' and cleared the moment it isn't.
+// sla_clock_started_at gets the same reopen treatment — a ticket reopened
+// months after being resolved shouldn't instantly re-flag as overdue using
+// a clock that stopped mattering the moment it closed. And since a dangling
+// reschedule proposal on a now-closed ticket would let a tenant "respond"
+// to something moot, resolving cancels any of its own that's still
+// pending, or approved but waiting on an entry-permission answer — both in
+// the same transaction as the status change.
 router.put(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -267,25 +299,85 @@ router.put(
     await assertUnitInBusiness(data.unit_id, req.businessId);
     await assertTenantInBusiness(data.tenant_id, req.businessId);
 
-    const { rows } = await pool.query(
-      `UPDATE maintenance_requests
-       SET unit_id = $1,
-           tenant_id = $2,
-           title = $3,
-           description = $4,
-           status = $5,
-           priority = $6,
-           resolved_at = CASE
-             WHEN $5 = 'resolved' AND status != 'resolved' THEN now()
-             WHEN $5 != 'resolved' THEN NULL
-             ELSE resolved_at
-           END
-       WHERE id = $7 AND business_id = $8
-       RETURNING *`,
-      [data.unit_id, data.tenant_id, data.title, data.description, data.status, data.priority, req.params.id, req.businessId]
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const { rows } = await client.query(
+        `UPDATE maintenance_requests
+         SET unit_id = $1,
+             tenant_id = $2,
+             title = $3,
+             description = $4,
+             status = $5,
+             priority = $6,
+             resolved_at = CASE
+               WHEN $5 = 'resolved' AND status != 'resolved' THEN now()
+               WHEN $5 != 'resolved' THEN NULL
+               ELSE resolved_at
+             END,
+             sla_clock_started_at = CASE
+               WHEN $5 != 'resolved' AND status = 'resolved' THEN now()
+               ELSE sla_clock_started_at
+             END
+         WHERE id = $7 AND business_id = $8
+         RETURNING *`,
+        [data.unit_id, data.tenant_id, data.title, data.description, data.status, data.priority, req.params.id, req.businessId]
+      );
+      if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
+
+      if (data.status === "resolved") {
+        await client.query(
+          `UPDATE maintenance_reschedules
+           SET status = 'cancelled'
+           WHERE request_id = $1 AND (status = 'pending' OR (status = 'approved' AND entry_permission IS NULL))`,
+          [req.params.id]
+        );
+      }
+
+      await client.query("COMMIT");
+      res.json(rows[0]);
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  })
+);
+
+// Proposes a new visit date on an open ticket — see
+// services/maintenanceReschedule.js for the shared logic with the staff
+// equivalent (staff.js POST /maintenance/:id/reschedules).
+router.post(
+  "/:id/reschedules",
+  asyncHandler(async (req, res) => {
+    const data = parseRescheduleProposalBody(req.body);
+    const proposal = await proposeReschedule({
+      requestId: req.params.id,
+      businessId: req.businessId,
+      proposedBy: "manager",
+      staffId: null,
+      proposedDate: data.proposedDate,
+      proposedTimeWindow: data.proposedTimeWindow,
+    });
+
+    const { rows: ticketRows } = await pool.query(
+      `SELECT m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
+       FROM maintenance_requests m
+       LEFT JOIN tenants t ON t.id = m.tenant_id
+       WHERE m.id = $1`,
+      [req.params.id]
     );
-    if (!rows[0]) throw new ApiError(404, "Maintenance request not found");
-    res.json(rows[0]);
+    await notifyTenantOfRescheduleProposed({
+      tenantEmail: ticketRows[0]?.tenant_email,
+      tenantName: ticketRows[0]?.tenant_name,
+      ticketTitle: ticketRows[0]?.title,
+      proposedDate: proposal.proposed_date,
+      language: ticketRows[0]?.tenant_language,
+    });
+
+    res.status(201).json(proposal);
   })
 );
 

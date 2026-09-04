@@ -3,9 +3,14 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, requireStaffAuth } from "../utils/auth.js";
-import { parseStaffStatusBody, parseAwayStatusBody, parseMessageBody } from "../utils/validate.js";
-import { notifyManagersOfStaffMessage, notifyTenantOfMaintenanceReply } from "../services/email.js";
+import { parseStaffStatusBody, parseAwayStatusBody, parseMessageBody, parseRescheduleProposalBody } from "../utils/validate.js";
+import {
+  notifyManagersOfStaffMessage,
+  notifyTenantOfMaintenanceReply,
+  notifyTenantOfRescheduleProposed,
+} from "../services/email.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
+import { proposeReschedule } from "../services/maintenanceReschedule.js";
 
 const router = Router();
 
@@ -132,7 +137,17 @@ router.get(
       [req.params.id]
     );
 
-    res.json({ ...rows[0], comments });
+    const { rows: reschedules } = await pool.query(
+      `SELECT r.id, r.proposed_by, r.staff_id, r.proposed_date::text AS proposed_date, r.proposed_time_window,
+              r.status, r.responded_at, r.entry_permission, r.entry_date::text AS entry_date, r.created_at,
+              st.first_name AS staff_first_name
+       FROM maintenance_reschedules r
+       LEFT JOIN maintenance_staff st ON st.id = r.staff_id
+       WHERE r.request_id = $1 ORDER BY r.created_at ASC`,
+      [req.params.id]
+    );
+
+    res.json({ ...rows[0], comments, reschedules });
   })
 );
 
@@ -201,6 +216,45 @@ router.post(
   })
 );
 
+// Proposes a new visit date on this staff member's own assigned ticket —
+// see services/maintenanceReschedule.js for the shared logic with the
+// manager equivalent (routes/maintenance.js POST /:id/reschedules).
+router.post(
+  "/maintenance/:id/reschedules",
+  requireStaffAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseRescheduleProposalBody(req.body);
+
+    const { rows: ticketRows } = await pool.query(
+      `SELECT m.title, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
+       FROM maintenance_requests m
+       LEFT JOIN tenants t ON t.id = m.tenant_id
+       WHERE m.id = $1 AND m.assigned_staff_id = $2 AND m.business_id = $3`,
+      [req.params.id, req.staffId, req.businessId]
+    );
+    if (!ticketRows[0]) throw new ApiError(404, "Ticket not found");
+
+    const proposal = await proposeReschedule({
+      requestId: req.params.id,
+      businessId: req.businessId,
+      proposedBy: "staff",
+      staffId: req.staffId,
+      proposedDate: data.proposedDate,
+      proposedTimeWindow: data.proposedTimeWindow,
+    });
+
+    await notifyTenantOfRescheduleProposed({
+      tenantEmail: ticketRows[0].tenant_email,
+      tenantName: ticketRows[0].tenant_name,
+      ticketTitle: ticketRows[0].title,
+      proposedDate: proposal.proposed_date,
+      language: ticketRows[0].tenant_language,
+    });
+
+    res.status(201).json(proposal);
+  })
+);
+
 // The one field a staff member is allowed to change on their own assigned
 // ticket — title/description/priority/reassignment stay manager-only via
 // routes/maintenance.js's own, separate endpoints. Resolving requires a
@@ -226,6 +280,10 @@ router.patch(
                WHEN $1 = 'resolved' AND status != 'resolved' THEN now()
                WHEN $1 != 'resolved' THEN NULL
                ELSE resolved_at
+             END,
+             sla_clock_started_at = CASE
+               WHEN $1 != 'resolved' AND status = 'resolved' THEN now()
+               ELSE sla_clock_started_at
              END
          WHERE id = $2 AND assigned_staff_id = $3 AND business_id = $4
          RETURNING id, status, resolved_at, business_id`,
@@ -237,6 +295,15 @@ router.patch(
         await client.query(
           "INSERT INTO maintenance_comments (business_id, request_id, sender, staff_id, body) VALUES ($1, $2, 'staff', $3, $4)",
           [rows[0].business_id, req.params.id, req.staffId, data.completionNote]
+        );
+      }
+
+      if (data.status === "resolved") {
+        await client.query(
+          `UPDATE maintenance_reschedules
+           SET status = 'cancelled'
+           WHERE request_id = $1 AND (status = 'pending' OR (status = 'approved' AND entry_permission IS NULL))`,
+          [req.params.id]
         );
       }
 

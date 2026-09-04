@@ -6,6 +6,8 @@ import {
   getPortalMaintenanceDetail,
   addPortalMaintenanceComment,
   flagPortalMaintenanceEmergency,
+  respondToPortalReschedule,
+  answerPortalRescheduleEntryPermission,
 } from '../portalApi.js'
 
 const STATUS_VARIANT = {
@@ -84,6 +86,10 @@ function Repairs() {
   // Ticket id currently being flagged, or null — the button now lives on
   // each card's header, so more than one card could act at once.
   const [flagging, setFlagging] = useState(null)
+  const [respondingReschedule, setRespondingReschedule] = useState(false)
+  const [rescheduleEntryPermission, setRescheduleEntryPermission] = useState('')
+  const [rescheduleEntryDate, setRescheduleEntryDate] = useState('')
+  const [answeringEntryPermission, setAnsweringEntryPermission] = useState(false)
   const threadBodyRef = useRef(null)
 
   useEffect(() => {
@@ -144,12 +150,53 @@ function Repairs() {
       setThreadData(null)
       setCommentDraft('')
       setCommentFile(null)
+      setRescheduleEntryPermission('')
+      setRescheduleEntryDate('')
       return
     }
     setExpandedId(request.id)
     setThreadData(null)
+    setRescheduleEntryPermission('')
+    setRescheduleEntryDate('')
     setThreadData(await getPortalMaintenanceDetail(request.id))
     setRequests((rows) => rows.map((r) => (r.id === request.id ? { ...r, unread_by_tenant: false } : r)))
+  }
+
+  async function handleRespondToReschedule(decision) {
+    setRespondingReschedule(true)
+    try {
+      await respondToPortalReschedule(expandedId, decision)
+      setThreadData(await getPortalMaintenanceDetail(expandedId))
+    } finally {
+      setRespondingReschedule(false)
+    }
+  }
+
+  async function handleAnswerReschedulEntryPermission(e) {
+    e.preventDefault()
+    if (!rescheduleEntryPermission) return
+    setAnsweringEntryPermission(true)
+    try {
+      await answerPortalRescheduleEntryPermission(
+        expandedId,
+        rescheduleEntryPermission,
+        rescheduleEntryPermission === 'yes' ? rescheduleEntryDate : undefined
+      )
+      setRescheduleEntryPermission('')
+      setRescheduleEntryDate('')
+      const detail = await getPortalMaintenanceDetail(expandedId)
+      setThreadData(detail)
+      // The ticket's own entry_permission/entry_date just changed — sync the
+      // card's cached copy so the tag on the list view reflects the new
+      // answer without needing a full reload.
+      setRequests((rows) =>
+        rows.map((r) =>
+          r.id === expandedId ? { ...r, entry_permission: detail.entry_permission, entry_date: detail.entry_date } : r
+        )
+      )
+    } finally {
+      setAnsweringEntryPermission(false)
+    }
   }
 
   async function handleSendComment(e) {
@@ -367,6 +414,109 @@ function Repairs() {
                   <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>{t('loading')}</p>
                 ) : (
                   <>
+                    {(() => {
+                      const pending = threadData.reschedules?.find((rs) => rs.status === 'pending')
+                      const awaitingEntry = threadData.reschedules?.find(
+                        (rs) => rs.status === 'approved' && rs.entry_permission == null
+                      )
+                      if (pending) {
+                        return (
+                          <div className="portal-reschedule-card">
+                            <p>
+                              {t('reschedule.proposedTitle')}: {formatEntryDate(pending.proposed_date, i18n.language)}
+                              {pending.proposed_time_window ? ` · ${pending.proposed_time_window}` : ''}
+                            </p>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                              <button
+                                type="button"
+                                className="portal-btn portal-btn-primary"
+                                style={{ padding: '6px 12px', fontSize: 12.5 }}
+                                onClick={() => handleRespondToReschedule('approved')}
+                                disabled={respondingReschedule}
+                              >
+                                {t('reschedule.approve')}
+                              </button>
+                              <button
+                                type="button"
+                                className="portal-btn"
+                                style={{ padding: '6px 12px', fontSize: 12.5, background: 'var(--line)', color: 'var(--ink)' }}
+                                onClick={() => handleRespondToReschedule('declined')}
+                                disabled={respondingReschedule}
+                              >
+                                {t('reschedule.decline')}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      }
+                      if (awaitingEntry) {
+                        return (
+                          <form className="portal-reschedule-card" onSubmit={handleAnswerReschedulEntryPermission}>
+                            <p>{t('reschedule.entryPermissionIntro')}</p>
+                            <div className="portal-field">
+                              <select
+                                value={rescheduleEntryPermission}
+                                onChange={(e) => {
+                                  setRescheduleEntryPermission(e.target.value)
+                                  if (e.target.value !== 'yes') setRescheduleEntryDate('')
+                                }}
+                                disabled={answeringEntryPermission}
+                                required
+                              >
+                                <option value="" disabled>
+                                  {t('entryPermissionChoose')}
+                                </option>
+                                <option value="yes">{t('entryPermissionYes')}</option>
+                                <option value="no">{t('entryPermissionNo')}</option>
+                              </select>
+                            </div>
+                            {rescheduleEntryPermission === 'yes' && (
+                              <div className="portal-field">
+                                <label htmlFor="reschedule-entry-date">{t('entryDateLabel')}</label>
+                                <input
+                                  id="reschedule-entry-date"
+                                  type="date"
+                                  value={rescheduleEntryDate}
+                                  onChange={(e) => setRescheduleEntryDate(e.target.value)}
+                                  disabled={answeringEntryPermission}
+                                  required
+                                />
+                                <span style={{ fontSize: 12, color: 'var(--slate)' }}>{t('entryWindowNote')}</span>
+                              </div>
+                            )}
+                            <button
+                              type="submit"
+                              className="portal-btn portal-btn-primary"
+                              style={{ padding: '6px 12px', fontSize: 12.5 }}
+                              disabled={answeringEntryPermission || !rescheduleEntryPermission}
+                            >
+                              {answeringEntryPermission ? t('sending') : t('submit')}
+                            </button>
+                          </form>
+                        )
+                      }
+                      return null
+                    })()}
+
+                    {threadData.reschedules?.length > 0 && (
+                      <div className="portal-reschedule-history">
+                        <h4>{t('reschedule.historyTitle')}</h4>
+                        {threadData.reschedules.map((rs) => (
+                          <div key={rs.id} className="portal-reschedule-row">
+                            <span>
+                              {t('reschedule.proposedBy', {
+                                name: rs.proposed_by === 'staff' ? t('reschedule.maintenanceLabel') : t('reschedule.managerLabel'),
+                                date: formatEntryDate(rs.proposed_date, i18n.language),
+                              })}
+                            </span>
+                            <span className={`reschedule-status-${rs.status}`}>
+                              {t(`reschedule.status${rs.status.charAt(0).toUpperCase()}${rs.status.slice(1)}`)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="portal-ticket-messages" ref={threadBodyRef}>
                       {threadData.comments.length === 0 && (
                         <p style={{ fontSize: 12.5, color: 'var(--slate)', textAlign: 'center' }}>

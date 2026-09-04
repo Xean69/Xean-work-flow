@@ -3,49 +3,69 @@
     "body": "Olá {{tenantName}}, o seu gestor de imóveis enviou um comunicado:",
     "cta": "Ver nas Mensagens"
   },
-  "defaultTenantName": "tudo bem",
+  "defaultTenantName": "a todos",
   "docType": {
     "application": "Candidatura",
-    "inspection": "Vistoria",
+    "inspection": "Inspeção",
     "invoice": "Fatura",
     "lease": "Contrato de arrendamento",
     "other": "Documento"
   },
   "maintenanceReply": {
-    "body": "Olá {{tenantName}}, há uma nova resposta em \"{{ticketTitle}}\":",
-    "cta": "Ver em Reparações",
+    "subject": "Nova resposta em \"{{ticketTitle}}\"",
     "heading": "O seu gestor de imóveis respondeu",
-    "subject": "Nova resposta em \"{{ticketTitle}}\""
+    "body": "Olá {{tenantName}}, há uma nova resposta em \"{{ticketTitle}}\":",
+    "cta": "Ver em Reparações"
   },
   "newDocument": {
+    "subject": "Novo(a) {{docTypeLabel}} adicionado(a) à sua conta",
+    "heading": "Novo(a) {{docTypeLabel}}",
     "body": "Olá {{tenantName}}, o seu gestor de imóveis adicionou um novo documento à sua conta:",
-    "cta": "Ver no Portal",
-    "heading": "Novo {{docTypeLabel}}",
-    "subject": "Novo {{docTypeLabel}} adicionado à sua conta"
+    "cta": "Ver no Portal"
   },
   "newMessage": {
-    "body": "Olá {{tenantName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
-    "cta": "Ver nas Mensagens",
+    "subject": "Nova mensagem do seu gestor de imóveis",
     "heading": "Nova mensagem",
-    "subject": "Nova mensagem do seu gestor de imóveis"
+    "body": "Olá {{tenantName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
+    "cta": "Ver nas Mensagens"
   },
   "passwordReset": {
-    "cta": "Redefinir palavra-passe",
+    "subject": "Redefinir a palavra-passe do portal do inquilino",
     "heading": "Redefinir a sua palavra-passe",
     "line1": "Recebemos um pedido para redefinir a palavra-passe do seu portal do inquilino.",
-    "line2": "Este link expira em 1 hora e só pode ser usado uma vez. Se não fez este pedido, pode ignorar este e-mail com segurança.",
-    "subject": "Redefinir a palavra-passe do portal do inquilino"
+    "line2": "Este link expira dentro de 1 hora e só pode ser utilizado uma vez. Se não fez este pedido, pode ignorar este e-mail em segurança.",
+    "cta": "Redefinir palavra-passe"
+  },
+  "reschedule": {
+    "proposed": {
+      "subject": "Nova data de visita proposta para \"{{ticketTitle}}\"",
+      "heading": "Foi proposta uma nova data de visita",
+      "body": "Olá {{tenantName}}, foi proposta uma nova data de visita para \"{{ticketTitle}}\": {{proposedDate}}. Reveja-a e diga-nos se lhe convém.",
+      "cta": "Rever em Reparações"
+    },
+    "staffResponseApproved": {
+      "subject": "Data aprovada: {{ticketTitle}}",
+      "heading": "A data que propôs foi aprovada",
+      "body": "Olá {{staffName}}, o inquilino aprovou {{proposedDate}} para \"{{ticketTitle}}\".",
+      "cta": "Ver pedido"
+    },
+    "staffResponseDeclined": {
+      "subject": "Data recusada: {{ticketTitle}}",
+      "heading": "A data que propôs foi recusada",
+      "body": "Olá {{staffName}}, o inquilino recusou {{proposedDate}} para \"{{ticketTitle}}\". Pode propor outra data.",
+      "cta": "Ver pedido"
+    }
   },
   "staffAssignment": {
-    "body": "Olá {{staffName}}, foi-lhe atribuído o pedido \"{{ticketTitle}}\" em {{propertyName}} · {{unitNumber}}:",
-    "cta": "Ver pedido",
+    "subject": "Novo pedido atribuído: {{ticketTitle}}",
     "heading": "Foi-lhe atribuído um pedido de manutenção",
-    "subject": "Novo pedido atribuído: {{ticketTitle}}"
+    "body": "Olá {{staffName}}, foi-lhe atribuído \"{{ticketTitle}}\" em {{propertyName}} · {{unitNumber}}:",
+    "cta": "Ver pedido"
   },
   "staffMessage": {
-    "body": "Olá {{staffName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
-    "cta": "Ver nas Mensagens",
+    "subject": "Nova mensagem do seu gestor de imóveis",
     "heading": "Nova mensagem",
-    "subject": "Nova mensagem do seu gestor de imóveis"
+    "body": "Olá {{staffName}}, o seu gestor de imóveis enviou-lhe uma mensagem:",
+    "cta": "Ver nas Mensagens"
   }
 }

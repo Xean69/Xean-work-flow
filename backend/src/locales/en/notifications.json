@@ -33,6 +33,26 @@
     "body": "Hi {{staffName}}, your property manager sent you a message:",
     "cta": "View in Messages"
   },
+  "reschedule": {
+    "proposed": {
+      "subject": "New visit date proposed for \"{{ticketTitle}}\"",
+      "heading": "A new visit date has been proposed",
+      "body": "Hi {{tenantName}}, a new visit date has been proposed for \"{{ticketTitle}}\": {{proposedDate}}. Please review it and let us know if it works.",
+      "cta": "Review in Repairs"
+    },
+    "staffResponseApproved": {
+      "subject": "Date approved: {{ticketTitle}}",
+      "heading": "Your proposed date was approved",
+      "body": "Hi {{staffName}}, the tenant approved {{proposedDate}} for \"{{ticketTitle}}\".",
+      "cta": "View ticket"
+    },
+    "staffResponseDeclined": {
+      "subject": "Date declined: {{ticketTitle}}",
+      "heading": "Your proposed date was declined",
+      "body": "Hi {{staffName}}, the tenant declined {{proposedDate}} for \"{{ticketTitle}}\". You can propose a different date.",
+      "cta": "View ticket"
+    }
+  },
   "passwordReset": {
     "subject": "Reset your tenant portal password",
     "heading": "Reset your password",

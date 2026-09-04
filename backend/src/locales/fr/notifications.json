@@ -12,7 +12,7 @@
     "other": "Document"
   },
   "maintenanceReply": {
-    "body": "Bonjour {{tenantName}}, il y a une nouvelle réponse sur « {{ticketTitle}} » :",
+    "body": "Bonjour {{tenantName}}, une nouvelle réponse a été ajoutée à « {{ticketTitle}} » :",
     "cta": "Voir dans Réparations",
     "heading": "Votre gestionnaire immobilier a répondu",
     "subject": "Nouvelle réponse sur « {{ticketTitle}} »"
@@ -20,8 +20,8 @@
   "newDocument": {
     "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier a ajouté un nouveau document à votre compte :",
     "cta": "Voir dans le portail",
-    "heading": "Nouveau document : {{docTypeLabel}}",
-    "subject": "Nouveau document ajouté à votre compte : {{docTypeLabel}}"
+    "heading": "Nouveau {{docTypeLabel}}",
+    "subject": "Nouveau {{docTypeLabel}} ajouté à votre compte"
   },
   "newMessage": {
     "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier vous a envoyé un message :",
@@ -36,11 +36,31 @@
     "line2": "Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois. Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.",
     "subject": "Réinitialisez le mot de passe de votre portail locataire"
   },
+  "reschedule": {
+    "proposed": {
+      "body": "Bonjour {{tenantName}}, une nouvelle date de visite a été proposée pour « {{ticketTitle}} » : {{proposedDate}}. Merci de la vérifier et de nous dire si elle vous convient.",
+      "cta": "Vérifier dans Réparations",
+      "heading": "Une nouvelle date de visite a été proposée",
+      "subject": "Nouvelle date de visite proposée pour « {{ticketTitle}} »"
+    },
+    "staffResponseApproved": {
+      "body": "Bonjour {{staffName}}, le locataire a accepté la date du {{proposedDate}} pour « {{ticketTitle}} ».",
+      "cta": "Voir le ticket",
+      "heading": "Votre date proposée a été acceptée",
+      "subject": "Date acceptée : {{ticketTitle}}"
+    },
+    "staffResponseDeclined": {
+      "body": "Bonjour {{staffName}}, le locataire a refusé la date du {{proposedDate}} pour « {{ticketTitle}} ». Vous pouvez proposer une autre date.",
+      "cta": "Voir le ticket",
+      "heading": "Votre date proposée a été refusée",
+      "subject": "Date refusée : {{ticketTitle}}"
+    }
+  },
   "staffAssignment": {
-    "body": "Bonjour {{staffName}}, la demande « {{ticketTitle}} » vous a été assignée à {{propertyName}} · {{unitNumber}} :",
-    "cta": "Voir la demande",
-    "heading": "Une demande de maintenance vous a été assignée",
-    "subject": "Nouvelle demande assignée : {{ticketTitle}}"
+    "body": "Bonjour {{staffName}}, le ticket « {{ticketTitle}} » vous a été attribué à {{propertyName}} · {{unitNumber}} :",
+    "cta": "Voir le ticket",
+    "heading": "Un ticket de maintenance vous a été attribué",
+    "subject": "Nouveau ticket attribué : {{ticketTitle}}"
   },
   "staffMessage": {
     "body": "Bonjour {{staffName}}, votre gestionnaire immobilier vous a envoyé un message :",

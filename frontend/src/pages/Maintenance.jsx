@@ -10,6 +10,7 @@ import {
   addMaintenanceComment,
   getMaintenanceStaff,
   assignMaintenanceTicket,
+  proposeMaintenanceReschedule,
 } from '../api/client.js'
 import PageHeader from '../components/PageHeader.jsx'
 import Modal from '../components/Modal.jsx'
@@ -97,6 +98,9 @@ function Maintenance() {
   const [commentDraft, setCommentDraft] = useState('')
   const [commentFile, setCommentFile] = useState(null)
   const [sendingComment, setSendingComment] = useState(false)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleTimeWindow, setRescheduleTimeWindow] = useState('')
+  const [proposingReschedule, setProposingReschedule] = useState(false)
   const threadBodyRef = useRef(null)
 
   useEffect(() => {
@@ -182,6 +186,25 @@ function Maintenance() {
     setThreadData(null)
     setCommentDraft('')
     setCommentFile(null)
+    setRescheduleDate('')
+    setRescheduleTimeWindow('')
+  }
+
+  async function handleProposeReschedule(e) {
+    e.preventDefault()
+    if (!rescheduleDate) return
+    setProposingReschedule(true)
+    try {
+      await proposeMaintenanceReschedule(threadTicketId, {
+        proposed_date: rescheduleDate,
+        proposed_time_window: rescheduleTimeWindow.trim() || undefined,
+      })
+      setRescheduleDate('')
+      setRescheduleTimeWindow('')
+      setThreadData(await getMaintenanceRequest(threadTicketId))
+    } finally {
+      setProposingReschedule(false)
+    }
   }
 
   async function handleSendComment(e) {
@@ -258,6 +281,7 @@ function Maintenance() {
                         {t.tenant_name ? ` · ${t.tenant_name}` : ''}
                       </div>
                       {t.is_emergency && <div className="ticket-emergency-tag">{tr('emergency')}</div>}
+                      {t.sla_warning && <div className="ticket-sla-tag">{tr('slaBadge')}</div>}
                       {t.entry_permission != null && (
                         <div className={t.entry_permission ? 'ticket-entry-tag-granted' : 'ticket-entry-tag-denied'}>
                           {t.entry_permission
@@ -380,6 +404,55 @@ function Maintenance() {
                     reasoning: threadData.ai_reasoning,
                   })}
                 </p>
+              )}
+              {threadData.reschedules?.some((r) => r.status === 'approved' && r.entry_permission == null) && (
+                <p className="ticket-thread-entry-note-denied">{tr('reschedule.awaitingEntryPermission')}</p>
+              )}
+
+              {threadData.status !== 'resolved' && (
+                <form className="ticket-reschedule-form" onSubmit={handleProposeReschedule}>
+                  <div className="form-field">
+                    <label htmlFor="rescheduleDate">{tr('reschedule.dateLabel')}</label>
+                    <input
+                      id="rescheduleDate"
+                      type="date"
+                      value={rescheduleDate}
+                      onChange={(e) => setRescheduleDate(e.target.value)}
+                      disabled={proposingReschedule}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="rescheduleTimeWindow">{tr('reschedule.timeWindowLabel')}</label>
+                    <input
+                      id="rescheduleTimeWindow"
+                      type="text"
+                      placeholder={tr('reschedule.timeWindowPlaceholder')}
+                      value={rescheduleTimeWindow}
+                      onChange={(e) => setRescheduleTimeWindow(e.target.value)}
+                      disabled={proposingReschedule}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-ghost btn-sm" disabled={proposingReschedule || !rescheduleDate}>
+                    {tr('reschedule.submit')}
+                  </button>
+                </form>
+              )}
+
+              {threadData.reschedules?.length > 0 && (
+                <div className="ticket-reschedule-history">
+                  <h4>{tr('reschedule.historyTitle')}</h4>
+                  {threadData.reschedules.map((r) => (
+                    <div key={r.id} className="ticket-reschedule-row">
+                      <span>
+                        {tr('reschedule.proposedBy', {
+                          name: r.proposed_by === 'staff' ? `${r.staff_first_name} (${tr('reschedule.maintenanceLabel')})` : tr('reschedule.managerLabel'),
+                          date: formatEntryDate(r.proposed_date, i18n.language),
+                        })}
+                      </span>
+                      <span className={`reschedule-status-${r.status}`}>{tr(`reschedule.status${r.status.charAt(0).toUpperCase()}${r.status.slice(1)}`)}</span>
+                    </div>
+                  ))}
+                </div>
               )}
 
               <div className="ticket-thread-body" ref={threadBodyRef}>

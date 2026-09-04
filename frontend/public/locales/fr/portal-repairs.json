@@ -34,7 +34,7 @@
   "entryPermissionChoose": "Veuillez choisir…",
   "entryPermissionYes": "Oui",
   "entryPermissionNo": "Non",
-  "entryDateLabel": "Quand êtes-vous disponible ?",
+  "entryDateLabel": "Quelles sont vos disponibilités ?",
   "entryWindowNote": "L'intervention peut avoir lieu entre 9h et 17h.",
   "entryGranted": "🔑 Entrée autorisée — {{date}}",
   "entryNotGranted": "🔒 Entrée non autorisée",
@@ -46,7 +46,7 @@
   "newReplyTitle": "Nouvelle réponse",
   "flagging": "Signalement…",
   "flagAsEmergency": "🚨 Signaler comme urgence",
-  "confirmFlagEmergency": "Signaler comme urgence ? Un gestionnaire sera prévenu immédiatement.",
+  "confirmFlagEmergency": "Signaler ceci comme une urgence ? Un gestionnaire sera averti immédiatement.",
   "emergency": "🚨 Urgence",
   "submittedOn": "Envoyée le {{date}}",
   "hideConversation": "Masquer la conversation ▲",
@@ -55,8 +55,22 @@
   "noMessagesYet": "Aucun message pour l'instant — ajoutez ici des détails ou la description d'une photo.",
   "assistant": "Assistant",
   "attachTitle": "Joindre une photo, une vidéo ou un document",
-  "replyPlaceholder": "Écrivez une réponse…",
+  "replyPlaceholder": "Saisissez une réponse…",
   "send": "Envoyer",
   "downloadAttachment": "Télécharger la pièce jointe",
-  "attachmentAlt": "Pièce jointe"
+  "attachmentAlt": "Pièce jointe",
+  "reschedule": {
+    "proposedTitle": "Nouvelle date de visite proposée",
+    "proposedBy": "{{name}} a proposé le {{date}}",
+    "managerLabel": "Votre gestionnaire immobilier",
+    "maintenanceLabel": "Maintenance",
+    "approve": "Accepter",
+    "decline": "Refuser",
+    "responding": "Envoi…",
+    "entryPermissionIntro": "Cette date a été acceptée. Nous autorisez-vous à entrer ?",
+    "historyTitle": "Historique des reports",
+    "statusPending": "En attente de votre réponse",
+    "statusApproved": "Acceptée",
+    "statusDeclined": "Refusée"
+  }
 }

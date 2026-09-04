@@ -522,6 +522,44 @@ export function parsePortalRepairBody(body) {
   };
 }
 
+// Used by both the manager and staff "propose a reschedule" routes.
+// proposed_date is a plain 'YYYY-MM-DD' string (same as entry_date, from an
+// <input type="date">) — compared as a string against today's own
+// 'YYYY-MM-DD', which sorts identically to a real date comparison for ISO
+// dates without any Date-object timezone risk.
+export function parseRescheduleProposalBody(body) {
+  requireDate(body.proposed_date, "proposed_date");
+  const today = new Date().toISOString().slice(0, 10);
+  if (body.proposed_date < today) {
+    throw new ApiError(400, "proposed_date cannot be in the past");
+  }
+  return {
+    proposedDate: body.proposed_date,
+    proposedTimeWindow: optionalString(body.proposed_time_window),
+  };
+}
+
+// The tenant's approve/decline decision on the ticket's current pending
+// reschedule proposal.
+export function parseRescheduleResponseBody(body) {
+  if (body.decision !== "approved" && body.decision !== "declined") {
+    throw new ApiError(400, "decision must be 'approved' or 'declined'");
+  }
+  return { decision: body.decision };
+}
+
+// Identical shape to parsePortalRepairBody's entry-permission fields above
+// — same question, just re-askable per reschedule instead of only at
+// report time.
+export function parseRescheduleEntryPermissionBody(body) {
+  if (body.entry_permission !== "yes" && body.entry_permission !== "no") {
+    throw new ApiError(400, "entry_permission must be 'yes' or 'no'");
+  }
+  const entryPermission = body.entry_permission === "yes";
+  const entryDate = entryPermission ? requireString(body.entry_date, "entry_date") : null;
+  return { entryPermission, entryDate };
+}
+
 // requireBody is false only for maintenance chat comments that carry an
 // attachment — a message needs text or a file, never neither, so the route
 // itself decides which case it's in before calling this.

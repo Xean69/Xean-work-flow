@@ -58,5 +58,19 @@
   "replyPlaceholder": "Type a reply…",
   "send": "Send",
   "downloadAttachment": "Download attachment",
-  "attachmentAlt": "Attachment"
+  "attachmentAlt": "Attachment",
+  "reschedule": {
+    "proposedTitle": "New visit date proposed",
+    "proposedBy": "{{name}} proposed {{date}}",
+    "managerLabel": "Your property manager",
+    "maintenanceLabel": "Maintenance",
+    "approve": "Approve",
+    "decline": "Decline",
+    "responding": "Sending…",
+    "entryPermissionIntro": "This date has been approved. Do we have permission to enter?",
+    "historyTitle": "Reschedule history",
+    "statusPending": "Pending your response",
+    "statusApproved": "Approved",
+    "statusDeclined": "Declined"
+  }
 }

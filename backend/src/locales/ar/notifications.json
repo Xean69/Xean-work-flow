@@ -13,8 +13,8 @@
   },
   "maintenanceReply": {
     "body": "مرحبًا {{tenantName}}، هناك رد جديد على \"{{ticketTitle}}\":",
-    "cta": "عرض في الإصلاحات",
-    "heading": "رد مدير العقار",
+    "cta": "عرض في الصيانة",
+    "heading": "ردّ مدير العقار",
     "subject": "رد جديد على \"{{ticketTitle}}\""
   },
   "newDocument": {
@@ -32,15 +32,35 @@
   "passwordReset": {
     "cta": "إعادة تعيين كلمة المرور",
     "heading": "إعادة تعيين كلمة المرور",
-    "line1": "تلقينا طلبًا لإعادة تعيين كلمة مرور بوابة المستأجر الخاصة بك.",
+    "line1": "تلقّينا طلبًا لإعادة تعيين كلمة مرور بوابة المستأجرين الخاصة بك.",
     "line2": "تنتهي صلاحية هذا الرابط خلال ساعة واحدة ويمكن استخدامه مرة واحدة فقط. إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة بأمان.",
-    "subject": "إعادة تعيين كلمة مرور بوابة المستأجر"
+    "subject": "إعادة تعيين كلمة مرور بوابة المستأجرين"
+  },
+  "reschedule": {
+    "proposed": {
+      "body": "مرحبًا {{tenantName}}، تم اقتراح موعد زيارة جديد لـ \"{{ticketTitle}}\": {{proposedDate}}. يُرجى مراجعته وإخبارنا إن كان مناسبًا.",
+      "cta": "مراجعة في الصيانة",
+      "heading": "تم اقتراح موعد زيارة جديد",
+      "subject": "تم اقتراح موعد زيارة جديد لـ \"{{ticketTitle}}\""
+    },
+    "staffResponseApproved": {
+      "body": "مرحبًا {{staffName}}، وافق المستأجر على {{proposedDate}} لـ \"{{ticketTitle}}\".",
+      "cta": "عرض التذكرة",
+      "heading": "تمت الموافقة على الموعد الذي اقترحته",
+      "subject": "تمت الموافقة على الموعد: {{ticketTitle}}"
+    },
+    "staffResponseDeclined": {
+      "body": "مرحبًا {{staffName}}، رفض المستأجر {{proposedDate}} لـ \"{{ticketTitle}}\". يمكنك اقتراح موعد آخر.",
+      "cta": "عرض التذكرة",
+      "heading": "تم رفض الموعد الذي اقترحته",
+      "subject": "تم رفض الموعد: {{ticketTitle}}"
+    }
   },
   "staffAssignment": {
-    "body": "مرحبًا {{staffName}}، تم إسنادك إلى \"{{ticketTitle}}\" في {{propertyName}} · {{unitNumber}}:",
+    "body": "مرحبًا {{staffName}}، تم تعيينك لـ \"{{ticketTitle}}\" في {{propertyName}} · {{unitNumber}}:",
     "cta": "عرض التذكرة",
-    "heading": "تم إسناد تذكرة صيانة إليك",
-    "subject": "تذكرة جديدة مُسندة: {{ticketTitle}}"
+    "heading": "تم تعيينك لتذكرة صيانة",
+    "subject": "تذكرة جديدة معيّنة لك: {{ticketTitle}}"
   },
   "staffMessage": {
     "body": "مرحبًا {{staffName}}، أرسل إليك مدير العقار رسالة:",

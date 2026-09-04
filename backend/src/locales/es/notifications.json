@@ -12,40 +12,60 @@
     "other": "Documento"
   },
   "maintenanceReply": {
-    "body": "Hola {{tenantName}}: hay una nueva respuesta en «{{ticketTitle}}»:",
-    "cta": "Ver en Reparaciones",
+    "subject": "Nueva respuesta en «{{ticketTitle}}»",
     "heading": "Tu administrador de la propiedad respondió",
-    "subject": "Nueva respuesta en «{{ticketTitle}}»"
+    "body": "Hola {{tenantName}}: hay una nueva respuesta en «{{ticketTitle}}»:",
+    "cta": "Ver en Reparaciones"
   },
   "newDocument": {
-    "body": "Hola {{tenantName}}: tu administrador de la propiedad agregó un nuevo documento a tu cuenta:",
-    "cta": "Ver en el portal",
+    "subject": "Se agregó un nuevo documento: {{docTypeLabel}}",
     "heading": "Nuevo: {{docTypeLabel}}",
-    "subject": "Nuevo documento agregado a tu cuenta: {{docTypeLabel}}"
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad agregó un nuevo documento a tu cuenta:",
+    "cta": "Ver en el Portal"
   },
   "newMessage": {
-    "body": "Hola {{tenantName}}: tu administrador de la propiedad te envió un mensaje:",
-    "cta": "Ver en Mensajes",
+    "subject": "Nuevo mensaje de tu administrador de la propiedad",
     "heading": "Nuevo mensaje",
-    "subject": "Nuevo mensaje de tu administrador de la propiedad"
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad te envió un mensaje:",
+    "cta": "Ver en Mensajes"
   },
   "passwordReset": {
-    "cta": "Restablecer contraseña",
-    "heading": "Restablece tu contraseña",
+    "subject": "Restablece la contraseña de tu portal de inquilinos",
+    "heading": "Restablecer contraseña",
     "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal de inquilinos.",
-    "line2": "Este enlace vence en 1 hora y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo.",
-    "subject": "Restablece la contraseña de tu portal de inquilinos"
+    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez. Si no hiciste esta solicitud, puedes ignorar este correo.",
+    "cta": "Restablecer contraseña"
+  },
+  "reschedule": {
+    "proposed": {
+      "subject": "Nueva fecha de visita propuesta para «{{ticketTitle}}»",
+      "heading": "Se propuso una nueva fecha de visita",
+      "body": "Hola {{tenantName}}: se propuso una nueva fecha de visita para «{{ticketTitle}}»: {{proposedDate}}. Revísala y dinos si te viene bien.",
+      "cta": "Revisar en Reparaciones"
+    },
+    "staffResponseApproved": {
+      "subject": "Fecha aprobada: {{ticketTitle}}",
+      "heading": "Se aprobó la fecha que propusiste",
+      "body": "Hola {{staffName}}: el inquilino aprobó el {{proposedDate}} para «{{ticketTitle}}».",
+      "cta": "Ver ticket"
+    },
+    "staffResponseDeclined": {
+      "subject": "Fecha rechazada: {{ticketTitle}}",
+      "heading": "Se rechazó la fecha que propusiste",
+      "body": "Hola {{staffName}}: el inquilino rechazó el {{proposedDate}} para «{{ticketTitle}}». Puedes proponer otra fecha.",
+      "cta": "Ver ticket"
+    }
   },
   "staffAssignment": {
-    "body": "Hola {{staffName}}: se te asignó «{{ticketTitle}}» en {{propertyName}} · {{unitNumber}}:",
-    "cta": "Ver ticket",
-    "heading": "Se te asignó un ticket de mantenimiento",
-    "subject": "Nuevo ticket asignado: {{ticketTitle}}"
+    "subject": "Nuevo ticket asignado: {{ticketTitle}}",
+    "heading": "Te asignaron un ticket de mantenimiento",
+    "body": "Hola {{staffName}}: te asignaron a «{{ticketTitle}}» en {{propertyName}} · {{unitNumber}}:",
+    "cta": "Ver ticket"
   },
   "staffMessage": {
-    "body": "Hola {{staffName}}: tu administrador de la propiedad te envió un mensaje:",
-    "cta": "Ver en Mensajes",
+    "subject": "Nuevo mensaje de tu administrador de la propiedad",
     "heading": "Nuevo mensaje",
-    "subject": "Nuevo mensaje de tu administrador de la propiedad"
+    "body": "Hola {{staffName}}: tu administrador de la propiedad te envió un mensaje:",
+    "cta": "Ver en Mensajes"
   }
 }

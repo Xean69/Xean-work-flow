@@ -68,6 +68,10 @@ export function addTicketComment(id, formData) {
   return uploadRequest(`/maintenance/${id}/comments`, formData);
 }
 
+export function proposeTicketReschedule(id, data) {
+  return request(`/maintenance/${id}/reschedules`, { method: "POST", body: JSON.stringify(data) });
+}
+
 export function getMyMessages() {
   return request("/messages");
 }

@@ -210,6 +210,10 @@ export function addMaintenanceComment(id, formData) {
   return uploadRequest(`/maintenance/${id}/comments`, formData);
 }
 
+export function proposeMaintenanceReschedule(id, data) {
+  return request(`/maintenance/${id}/reschedules`, { method: "POST", body: JSON.stringify(data) });
+}
+
 export function getDocuments(tenantId) {
   return request(tenantId ? `/documents?tenant_id=${tenantId}` : "/documents");
 }

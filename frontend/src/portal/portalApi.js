@@ -85,6 +85,17 @@ export function flagPortalMaintenanceEmergency(id) {
   return request(`/maintenance/${id}/emergency`, { method: "POST" });
 }
 
+export function respondToPortalReschedule(id, decision) {
+  return request(`/maintenance/${id}/reschedule/respond`, { method: "POST", body: JSON.stringify({ decision }) });
+}
+
+export function answerPortalRescheduleEntryPermission(id, entryPermission, entryDate) {
+  return request(`/maintenance/${id}/reschedule/entry-permission`, {
+    method: "POST",
+    body: JSON.stringify({ entry_permission: entryPermission, entry_date: entryDate }),
+  });
+}
+
 export function getPortalMessages() {
   return request("/messages");
 }

@@ -1226,3 +1226,67 @@ CREATE INDEX IF NOT EXISTS idx_unit_listing_photos_unit_id ON unit_listing_photo
 -- ============================================================================
 ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS staff_id INTEGER REFERENCES maintenance_staff(id) ON DELETE SET NULL;
 ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS is_completion_note BOOLEAN NOT NULL DEFAULT true;
+
+-- ============================================================================
+-- Maintenance ticket rescheduling + 7-day SLA warning
+--
+-- Reschedule history lives in its own table rather than maintenance_comments
+-- — it needs real state (pending/approved/declined/cancelled), which doesn't
+-- fit a free-text comment row, and this mirrors how is_emergency/
+-- entry_permission/AI classification are already separate structured fields
+-- with their own UI treatment rather than everything funneling into the
+-- chat thread. staff_id attributes a staff-proposed row to a specific
+-- person, same ON DELETE SET NULL pattern as maintenance_comments.staff_id
+-- above. entry_permission/entry_date snapshot the tenant's answer for THIS
+-- specific reschedule, so re-asking the question per reschedule (see below)
+-- never loses the previous answer — only maintenance_requests' own
+-- entry_permission/entry_date (the "current" value every existing view
+-- already reads) gets overwritten, and only deliberately, by the app layer.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS maintenance_reschedules (
+  id SERIAL PRIMARY KEY,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  request_id INTEGER NOT NULL REFERENCES maintenance_requests(id) ON DELETE CASCADE,
+  proposed_by TEXT NOT NULL CHECK (proposed_by IN ('manager', 'staff')),
+  staff_id INTEGER REFERENCES maintenance_staff(id) ON DELETE SET NULL,
+  proposed_date DATE NOT NULL,
+  proposed_time_window TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'declined', 'cancelled')),
+  responded_at TIMESTAMPTZ,
+  entry_permission BOOLEAN,
+  entry_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK ((entry_permission IS true AND entry_date IS NOT NULL) OR (entry_permission IS NOT true AND entry_date IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_reschedules_request_id ON maintenance_reschedules(request_id);
+
+-- The actual source of truth for "at most one pending proposal per ticket"
+-- — the application layer also guards this (cancelling any existing
+-- pending row before inserting a new one), but a partial unique index is
+-- what makes a concurrent double-propose fail loudly instead of silently
+-- leaving two pending rows.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenance_reschedules_one_pending
+  ON maintenance_reschedules(request_id) WHERE status = 'pending';
+
+-- sla_clock_started_at: the timestamp the 7-day SLA warning counts from.
+-- Starts at ticket creation, and gets bumped to the newly-agreed visit date
+-- whenever a reschedule is approved (not on decline — nothing was actually
+-- agreed, so a declined ticket keeps escalating on its old clock; and to
+-- the *proposed date* itself, not the moment of approval, so a visit
+-- booked 10 days out doesn't start racking up warning days before the
+-- technician has even had a chance to show up). No stored "is this ticket
+-- over 6 days old" flag exists alongside it — that's computed live in every
+-- query that needs it (`sla_clock_started_at <= now() - interval '6 days'`
+-- AND status still open), since the only requirement is a visual badge/sort
+-- with no side effect (email, log) tied to the moment a ticket crosses that
+-- threshold — a live expression is simpler than a flag that would need
+-- resetting on resolve/reopen/reschedule and can never drift out of sync.
+--
+-- Not a bare `DEFAULT now()` add: that would stamp every existing open
+-- ticket with today's date, instead of each ticket's own history. Backfilled
+-- from created_at first, same two-step pattern business_id used above.
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS sla_clock_started_at TIMESTAMPTZ;
+UPDATE maintenance_requests SET sla_clock_started_at = created_at WHERE sla_clock_started_at IS NULL;
+ALTER TABLE maintenance_requests ALTER COLUMN sla_clock_started_at SET NOT NULL;
+ALTER TABLE maintenance_requests ALTER COLUMN sla_clock_started_at SET DEFAULT now();

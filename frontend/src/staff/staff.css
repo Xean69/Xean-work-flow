@@ -65,6 +65,67 @@
   border: 1px solid var(--amber);
 }
 
+/* Reschedule propose form + history — mirrors Maintenance.css's
+   .ticket-reschedule-form/-history/-row, same amber/green/slate status
+   colors as the entry-note pair above. */
+.staff-reschedule-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.staff-reschedule-form .form-field {
+  margin-bottom: 0;
+}
+.staff-reschedule-form input {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--parchment);
+  color: var(--ink);
+}
+.staff-reschedule-history {
+  margin-bottom: 10px;
+}
+.staff-reschedule-history h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--slate);
+  margin: 0 0 6px 0;
+}
+.staff-reschedule-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+}
+.staff-reschedule-row:last-child {
+  border-bottom: none;
+}
+.reschedule-status-pending {
+  color: var(--amber);
+  font-weight: 600;
+}
+.reschedule-status-approved {
+  color: var(--green);
+  font-weight: 600;
+}
+.reschedule-status-declined,
+.reschedule-status-cancelled {
+  color: var(--slate);
+  font-weight: 600;
+}
+
 /* Same rule duplicated per-page on the manager side (PropertyDetail.css,
    TenantProfile.css, TenantAnalytics.css) — defined once here since it's
    the one staff page (TicketDetail.jsx) that needs it. */

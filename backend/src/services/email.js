@@ -189,6 +189,87 @@ export async function notifyManagersOfTenantMessage({ businessId, tenantName, me
   }
 }
 
+// proposed_date arrives as a plain 'YYYY-MM-DD' string (cast from a DATE
+// column). Parsing with an explicit UTC time-of-day and formatting in UTC
+// sidesteps the same local-midnight rollback risk noted everywhere else
+// this app touches DATE columns, without needing a whole date library.
+function formatDate(dateStr) {
+  return new Date(`${dateStr}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+// Fires when a manager or staff member proposes a new visit date — the
+// tenant's cue to go approve or decline it in their portal.
+export async function notifyTenantOfRescheduleProposed({ tenantEmail, tenantName, ticketTitle, proposedDate, language }) {
+  try {
+    if (!tenantEmail) return;
+    const name = tenantName || tr(language, "defaultTenantName");
+    await sendEmail({
+      to: tenantEmail,
+      subject: tr(language, "reschedule.proposed.subject", { ticketTitle }),
+      html: renderEmail({
+        heading: tr(language, "reschedule.proposed.heading"),
+        lines: [tr(language, "reschedule.proposed.body", { tenantName: name, ticketTitle, proposedDate: formatDate(proposedDate) })],
+        ctaText: tr(language, "reschedule.proposed.cta"),
+        ctaUrl: `${APP_BASE_URL}/portal/repairs`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyTenantOfRescheduleProposed failed:", err);
+  }
+}
+
+// Only fires when the ticket's current reschedule was proposed by a staff
+// member — the manager broadcast below covers the manager-proposed case,
+// same "notify whoever actually proposed it" split the routes already make.
+export async function notifyStaffOfRescheduleResponse({ staffEmail, staffName, ticketTitle, decision, proposedDate, language }) {
+  try {
+    if (!staffEmail) return;
+    const key = decision === "approved" ? "reschedule.staffResponseApproved" : "reschedule.staffResponseDeclined";
+    const name = staffName || tr(language, "defaultTenantName");
+    await sendEmail({
+      to: staffEmail,
+      subject: tr(language, `${key}.subject`, { ticketTitle }),
+      html: renderEmail({
+        heading: tr(language, `${key}.heading`),
+        lines: [tr(language, `${key}.body`, { staffName: name, ticketTitle, proposedDate: formatDate(proposedDate) })],
+        ctaText: tr(language, `${key}.cta`),
+        ctaUrl: `${APP_BASE_URL}/staff/login`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyStaffOfRescheduleResponse failed:", err);
+  }
+}
+
+// Manager-facing, like notifyManagersOfLeaseSigned above — plain English,
+// no tr(), managers don't carry a language preference. Fires for every
+// tenant response regardless of who proposed the date, so managers stay
+// aware of scheduling activity on their own tickets even when staff are
+// the ones proposing dates.
+export async function notifyManagersOfRescheduleResponse({ businessId, ticketTitle, decision, proposedDate }) {
+  try {
+    const to = await getManagerRecipients(businessId);
+    const verb = decision === "approved" ? "approved" : "declined";
+    await sendEmail({
+      to,
+      subject: `Reschedule ${verb}: ${ticketTitle}`,
+      html: renderEmail({
+        heading: `Reschedule ${verb}`,
+        lines: [`The tenant ${verb} the proposed visit date (${formatDate(proposedDate)}) for <strong>${ticketTitle}</strong>.`],
+        ctaText: "View in Maintenance",
+        ctaUrl: `${APP_BASE_URL}/maintenance`,
+      }),
+    });
+  } catch (err) {
+    console.error("notifyManagersOfRescheduleResponse failed:", err);
+  }
+}
+
 export async function notifyTenantOfMaintenanceReply({ tenantEmail, tenantName, ticketTitle, commentBody, language }) {
   try {
     if (!tenantEmail) return; // no portal login / no email on file — nothing to send

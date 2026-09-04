@@ -56,5 +56,23 @@
   "commentPlaceholder": "Type a comment…",
   "send": "Send",
   "downloadAttachment": "Download attachment",
-  "attachmentAlt": "Attachment"
+  "attachmentAlt": "Attachment",
+  "slaBadge": "This work order is still pending",
+  "reschedule": {
+    "propose": "Propose reschedule",
+    "dateLabel": "New visit date",
+    "timeWindowLabel": "Time window (optional)",
+    "timeWindowPlaceholder": "e.g. 2:00 PM or morning",
+    "submit": "Propose",
+    "historyTitle": "Reschedule history",
+    "noHistory": "No reschedules proposed yet.",
+    "managerLabel": "Manager",
+    "maintenanceLabel": "Maintenance",
+    "statusPending": "Pending",
+    "statusApproved": "Approved",
+    "statusDeclined": "Declined",
+    "statusCancelled": "Cancelled",
+    "proposedBy": "{{name}} proposed {{date}}",
+    "awaitingEntryPermission": "Waiting on the tenant to confirm entry permission for this date"
+  }
 }
