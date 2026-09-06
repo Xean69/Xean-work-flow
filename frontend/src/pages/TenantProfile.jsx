@@ -6,6 +6,7 @@ import {
   getAddons,
   updateTenant,
   setTenantPassword,
+  resendTenantActivation,
   updateTenantNotes,
   getTenantLedger,
   createRentPayment,
@@ -117,6 +118,8 @@ function TenantProfile() {
 
   const [editingTenant, setEditingTenant] = useState(false)
   const [passwordModal, setPasswordModal] = useState(false)
+  // 'idle' | 'sending' | 'sent' | an error message
+  const [resendActivationState, setResendActivationState] = useState('idle')
   const [editingPayment, setEditingPayment] = useState(null) // null | 'new' | the payment being edited
   const [chargeModal, setChargeModal] = useState(null) // null | 'new' | the charge being edited
   const [downloadingPdf, setDownloadingPdf] = useState(false)
@@ -177,6 +180,16 @@ function TenantProfile() {
     await setTenantPassword(tenant.tenant_id, password)
     setPasswordModal(false)
     await load()
+  }
+
+  async function handleResendActivation() {
+    setResendActivationState('sending')
+    try {
+      await resendTenantActivation(tenant.tenant_id)
+      setResendActivationState('sent')
+    } catch (err) {
+      setResendActivationState(err.message)
+    }
   }
 
   async function handleSaveNotes() {
@@ -444,6 +457,23 @@ function TenantProfile() {
               >
                 {tenant.has_login ? 'Reset password' : 'Set password'}
               </button>
+              {!tenant.has_login && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleResendActivation}
+                  disabled={!tenant.email || resendActivationState === 'sending'}
+                  title={tenant.email ? undefined : 'Add an email first'}
+                >
+                  {resendActivationState === 'sending'
+                    ? 'Sending…'
+                    : resendActivationState === 'sent'
+                    ? 'Sent ✓'
+                    : 'Resend activation email'}
+                </button>
+              )}
+              {resendActivationState !== 'idle' &&
+                resendActivationState !== 'sending' &&
+                resendActivationState !== 'sent' && <span className="doc-resend-error">{resendActivationState}</span>}
             </div>
           </div>
         </div>

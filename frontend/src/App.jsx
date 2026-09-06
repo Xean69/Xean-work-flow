@@ -5,6 +5,7 @@ import PortalLayout from './portal/PortalLayout.jsx'
 import PortalLogin from './portal/pages/Login.jsx'
 import PortalForgotPassword from './portal/pages/ForgotPassword.jsx'
 import PortalResetPassword from './portal/pages/ResetPassword.jsx'
+import PortalActivate from './portal/pages/Activate.jsx'
 import PortalHome from './portal/pages/Home.jsx'
 import PortalLease from './portal/pages/Lease.jsx'
 import PortalRepairs from './portal/pages/Repairs.jsx'
@@ -106,6 +107,7 @@ function App() {
       <Route path="/portal/login" element={<PortalLogin />} />
       <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
       <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+      <Route path="/portal/activate" element={<PortalActivate />} />
       <Route element={<PortalLayout />}>
         <Route path="/portal/home" element={<PortalHome />} />
         <Route path="/portal/repairs" element={<PortalRepairs />} />

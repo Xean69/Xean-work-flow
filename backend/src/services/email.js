@@ -355,6 +355,32 @@ export async function sendTenantPasswordResetEmail({ email, token, language }) {
   }
 }
 
+// Sent automatically when a manager adds a new tenant (with an email on
+// file), and also re-sendable via a manager-clicked "Resend activation
+// email" button — same dual-use shape as notifyTenantOfNewDocument below,
+// so it returns whether the send succeeded rather than swallowing that
+// outcome. The link reuses the exact same reset-token mechanism as
+// passwordReset above (same table columns, same 1-hour TTL); only the
+// destination page and copy differ — landing on /portal/activate's
+// "Welcome" framing instead of /portal/reset-password's.
+export async function sendTenantActivationEmail({ email, token, language }) {
+  try {
+    return await sendEmail({
+      to: email,
+      subject: tr(language, "activation.subject"),
+      html: renderEmail({
+        heading: tr(language, "activation.heading"),
+        lines: [tr(language, "activation.line1"), tr(language, "activation.line2")],
+        ctaText: tr(language, "activation.cta"),
+        ctaUrl: `${APP_BASE_URL}/portal/activate?token=${token}`,
+      }),
+    });
+  } catch (err) {
+    console.error("sendTenantActivationEmail failed:", err);
+    return false;
+  }
+}
+
 // Unlike the other notify* functions, this one is also used for a manual
 // "Resend" action the manager deliberately clicks — so it returns whether
 // the send actually succeeded instead of swallowing that outcome. The

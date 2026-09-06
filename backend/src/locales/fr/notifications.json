@@ -1,71 +1,84 @@
 {
+  "maintenanceReply": {
+    "subject": "Nouvelle réponse concernant « {{ticketTitle}} »",
+    "heading": "Votre gestionnaire immobilier a répondu",
+    "body": "Bonjour {{tenantName}}, une nouvelle réponse a été ajoutée à « {{ticketTitle}} » :",
+    "cta": "Voir dans Réparations"
+  },
+  "newDocument": {
+    "subject": "Nouveau document ({{docTypeLabel}}) ajouté à votre compte",
+    "heading": "Nouveau : {{docTypeLabel}}",
+    "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier a ajouté un nouveau document à votre compte :",
+    "cta": "Voir dans le portail"
+  },
+  "newMessage": {
+    "subject": "Nouveau message de votre gestionnaire immobilier",
+    "heading": "Nouveau message",
+    "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier vous a envoyé un message :",
+    "cta": "Voir dans Messages"
+  },
   "announcement": {
     "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier a publié une annonce :",
     "cta": "Voir dans Messages"
   },
-  "defaultTenantName": "à vous",
-  "docType": {
-    "application": "Dossier de candidature",
-    "inspection": "État des lieux",
-    "invoice": "Facture",
-    "lease": "Bail",
-    "other": "Document"
+  "staffAssignment": {
+    "subject": "Nouveau ticket assigné : {{ticketTitle}}",
+    "heading": "Un ticket de maintenance vous a été assigné",
+    "body": "Bonjour {{staffName}}, le ticket « {{ticketTitle}} » vous a été assigné à {{propertyName}} · {{unitNumber}} :",
+    "cta": "Voir le ticket"
   },
-  "maintenanceReply": {
-    "body": "Bonjour {{tenantName}}, une nouvelle réponse a été ajoutée à « {{ticketTitle}} » :",
-    "cta": "Voir dans Réparations",
-    "heading": "Votre gestionnaire immobilier a répondu",
-    "subject": "Nouvelle réponse sur « {{ticketTitle}} »"
-  },
-  "newDocument": {
-    "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier a ajouté un nouveau document à votre compte :",
-    "cta": "Voir dans le portail",
-    "heading": "Nouveau {{docTypeLabel}}",
-    "subject": "Nouveau {{docTypeLabel}} ajouté à votre compte"
-  },
-  "newMessage": {
-    "body": "Bonjour {{tenantName}}, votre gestionnaire immobilier vous a envoyé un message :",
-    "cta": "Voir dans Messages",
+  "staffMessage": {
+    "subject": "Nouveau message de votre gestionnaire immobilier",
     "heading": "Nouveau message",
-    "subject": "Nouveau message de votre gestionnaire immobilier"
-  },
-  "passwordReset": {
-    "cta": "Réinitialiser le mot de passe",
-    "heading": "Réinitialisez votre mot de passe",
-    "line1": "Nous avons reçu une demande de réinitialisation du mot de passe de votre portail locataire.",
-    "line2": "Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois. Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.",
-    "subject": "Réinitialisez le mot de passe de votre portail locataire"
+    "body": "Bonjour {{staffName}}, votre gestionnaire immobilier vous a envoyé un message :",
+    "cta": "Voir dans Messages"
   },
   "reschedule": {
     "proposed": {
-      "body": "Bonjour {{tenantName}}, une nouvelle date de visite a été proposée pour « {{ticketTitle}} » : {{proposedDate}}. Merci de la vérifier et de nous dire si elle vous convient.",
-      "cta": "Vérifier dans Réparations",
+      "subject": "Nouvelle date de visite proposée pour « {{ticketTitle}} »",
       "heading": "Une nouvelle date de visite a été proposée",
-      "subject": "Nouvelle date de visite proposée pour « {{ticketTitle}} »"
+      "body": "Bonjour {{tenantName}}, une nouvelle date de visite a été proposée pour « {{ticketTitle}} » : {{proposedDate}}. Merci de la vérifier et de nous dire si elle vous convient.",
+      "cta": "Vérifier dans Réparations"
     },
     "staffResponseApproved": {
-      "body": "Bonjour {{staffName}}, le locataire a accepté la date du {{proposedDate}} pour « {{ticketTitle}} ».",
-      "cta": "Voir le ticket",
+      "subject": "Date acceptée : {{ticketTitle}}",
       "heading": "Votre date proposée a été acceptée",
-      "subject": "Date acceptée : {{ticketTitle}}"
+      "body": "Bonjour {{staffName}}, le locataire a accepté le {{proposedDate}} pour « {{ticketTitle}} ».",
+      "cta": "Voir le ticket"
     },
     "staffResponseDeclined": {
-      "body": "Bonjour {{staffName}}, le locataire a refusé la date du {{proposedDate}} pour « {{ticketTitle}} ». Vous pouvez proposer une autre date.",
-      "cta": "Voir le ticket",
+      "subject": "Date refusée : {{ticketTitle}}",
       "heading": "Votre date proposée a été refusée",
-      "subject": "Date refusée : {{ticketTitle}}"
+      "body": "Bonjour {{staffName}}, le locataire a refusé le {{proposedDate}} pour « {{ticketTitle}} ». Vous pouvez proposer une autre date.",
+      "cta": "Voir le ticket"
     }
   },
-  "staffAssignment": {
-    "body": "Bonjour {{staffName}}, le ticket « {{ticketTitle}} » vous a été attribué à {{propertyName}} · {{unitNumber}} :",
-    "cta": "Voir le ticket",
-    "heading": "Un ticket de maintenance vous a été attribué",
-    "subject": "Nouveau ticket attribué : {{ticketTitle}}"
+  "paymentReceived": {
+    "subject": "Paiement reçu — {{amount}}",
+    "heading": "Paiement reçu",
+    "body": "Bonjour {{tenantName}}, nous avons bien reçu votre paiement de {{amount}} le {{paymentDate}}. Merci !",
+    "cta": "Voir dans le portail"
   },
-  "staffMessage": {
-    "body": "Bonjour {{staffName}}, votre gestionnaire immobilier vous a envoyé un message :",
-    "cta": "Voir dans Messages",
-    "heading": "Nouveau message",
-    "subject": "Nouveau message de votre gestionnaire immobilier"
+  "passwordReset": {
+    "subject": "Réinitialisez le mot de passe de votre portail locataire",
+    "heading": "Réinitialiser votre mot de passe",
+    "line1": "Nous avons reçu une demande de réinitialisation du mot de passe de votre portail locataire.",
+    "line2": "Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.",
+    "cta": "Réinitialiser le mot de passe"
+  },
+  "activation": {
+    "subject": "Bienvenue sur votre portail locataire",
+    "heading": "Bienvenue sur votre portail locataire",
+    "line1": "Votre propriétaire a créé un compte sur le portail locataire pour vous. Utilisez le lien ci-dessous pour définir votre mot de passe et commencer.",
+    "line2": "Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois.",
+    "cta": "Activer votre compte"
+  },
+  "defaultTenantName": "à vous",
+  "docType": {
+    "lease": "Bail",
+    "invoice": "Facture",
+    "inspection": "Inspection",
+    "application": "Candidature",
+    "other": "Document"
   }
 }

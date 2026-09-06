@@ -128,6 +128,10 @@ export function setTenantPassword(id, password) {
   return request(`/tenants/${id}/password`, { method: "PUT", body: JSON.stringify({ password }) });
 }
 
+export function resendTenantActivation(id) {
+  return request(`/tenants/${id}/resend-activation`, { method: "POST" });
+}
+
 export function getTenant(id) {
   return request(`/tenants/${id}`);
 }

@@ -1,16 +1,4 @@
 {
-  "announcement": {
-    "body": "Hola {{tenantName}}: tu administrador de la propiedad envió un aviso:",
-    "cta": "Ver en Mensajes"
-  },
-  "defaultTenantName": "hola",
-  "docType": {
-    "application": "Solicitud",
-    "inspection": "Inspección",
-    "invoice": "Factura",
-    "lease": "Contrato de arrendamiento",
-    "other": "Documento"
-  },
   "maintenanceReply": {
     "subject": "Nueva respuesta en «{{ticketTitle}}»",
     "heading": "Tu administrador de la propiedad respondió",
@@ -18,10 +6,10 @@
     "cta": "Ver en Reparaciones"
   },
   "newDocument": {
-    "subject": "Se agregó un nuevo documento: {{docTypeLabel}}",
+    "subject": "Nuevo documento de tipo {{docTypeLabel}} en tu cuenta",
     "heading": "Nuevo: {{docTypeLabel}}",
-    "body": "Hola {{tenantName}}: tu administrador de la propiedad agregó un nuevo documento a tu cuenta:",
-    "cta": "Ver en el Portal"
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad añadió un nuevo documento a tu cuenta:",
+    "cta": "Ver en el portal"
   },
   "newMessage": {
     "subject": "Nuevo mensaje de tu administrador de la propiedad",
@@ -29,12 +17,21 @@
     "body": "Hola {{tenantName}}: tu administrador de la propiedad te envió un mensaje:",
     "cta": "Ver en Mensajes"
   },
-  "passwordReset": {
-    "subject": "Restablece la contraseña de tu portal de inquilinos",
-    "heading": "Restablecer contraseña",
-    "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal de inquilinos.",
-    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez. Si no hiciste esta solicitud, puedes ignorar este correo.",
-    "cta": "Restablecer contraseña"
+  "announcement": {
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad envió un anuncio:",
+    "cta": "Ver en Mensajes"
+  },
+  "staffAssignment": {
+    "subject": "Nueva incidencia asignada: {{ticketTitle}}",
+    "heading": "Se te asignó una incidencia de mantenimiento",
+    "body": "Hola {{staffName}}: se te asignó «{{ticketTitle}}» en {{propertyName}} · {{unitNumber}}:",
+    "cta": "Ver incidencia"
+  },
+  "staffMessage": {
+    "subject": "Nuevo mensaje de tu administrador de la propiedad",
+    "heading": "Nuevo mensaje",
+    "body": "Hola {{staffName}}: tu administrador de la propiedad te envió un mensaje:",
+    "cta": "Ver en Mensajes"
   },
   "reschedule": {
     "proposed": {
@@ -47,25 +44,41 @@
       "subject": "Fecha aprobada: {{ticketTitle}}",
       "heading": "Se aprobó la fecha que propusiste",
       "body": "Hola {{staffName}}: el inquilino aprobó el {{proposedDate}} para «{{ticketTitle}}».",
-      "cta": "Ver ticket"
+      "cta": "Ver incidencia"
     },
     "staffResponseDeclined": {
       "subject": "Fecha rechazada: {{ticketTitle}}",
       "heading": "Se rechazó la fecha que propusiste",
       "body": "Hola {{staffName}}: el inquilino rechazó el {{proposedDate}} para «{{ticketTitle}}». Puedes proponer otra fecha.",
-      "cta": "Ver ticket"
+      "cta": "Ver incidencia"
     }
   },
-  "staffAssignment": {
-    "subject": "Nuevo ticket asignado: {{ticketTitle}}",
-    "heading": "Te asignaron un ticket de mantenimiento",
-    "body": "Hola {{staffName}}: te asignaron a «{{ticketTitle}}» en {{propertyName}} · {{unitNumber}}:",
-    "cta": "Ver ticket"
+  "paymentReceived": {
+    "subject": "Pago recibido — {{amount}}",
+    "heading": "Pago recibido",
+    "body": "Hola {{tenantName}}: recibimos tu pago de {{amount}} el {{paymentDate}}. ¡Gracias!",
+    "cta": "Ver en el portal"
   },
-  "staffMessage": {
-    "subject": "Nuevo mensaje de tu administrador de la propiedad",
-    "heading": "Nuevo mensaje",
-    "body": "Hola {{staffName}}: tu administrador de la propiedad te envió un mensaje:",
-    "cta": "Ver en Mensajes"
+  "passwordReset": {
+    "subject": "Restablece la contraseña de tu portal del inquilino",
+    "heading": "Restablece tu contraseña",
+    "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal del inquilino.",
+    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo.",
+    "cta": "Restablecer contraseña"
+  },
+  "activation": {
+    "subject": "Te damos la bienvenida a tu portal del inquilino",
+    "heading": "Te damos la bienvenida a tu portal del inquilino",
+    "line1": "Tu arrendador creó una cuenta del portal del inquilino para ti. Usa el siguiente enlace para establecer tu contraseña y comenzar.",
+    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez.",
+    "cta": "Activar tu cuenta"
+  },
+  "defaultTenantName": "de nuevo",
+  "docType": {
+    "lease": "Contrato de arrendamiento",
+    "invoice": "Factura",
+    "inspection": "Inspección",
+    "application": "Solicitud",
+    "other": "Documento"
   }
 }

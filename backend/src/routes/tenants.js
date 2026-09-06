@@ -15,6 +15,8 @@ import { hashPassword } from "../utils/auth.js";
 import { currentPeriod } from "../utils/period.js";
 import { ensureChargesThroughPeriod, getBalanceDue, getOverallStatus, deriveChargeStatus, allocatePayment, getPortfolioBalances } from "../utils/ledger.js";
 import { upload, uploadToCloudinary } from "../utils/upload.js";
+import { generateResetToken } from "../utils/resetToken.js";
+import { sendTenantActivationEmail } from "../services/email.js";
 
 const router = Router();
 
@@ -568,7 +570,7 @@ router.post(
       const { rows } = await client.query(
         `INSERT INTO tenants (business_id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount, created_at`,
+         RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount, language, created_at`,
         [
           req.businessId,
           data.unit_id,
@@ -626,6 +628,25 @@ router.post(
     }
 
     await syncUnitStatus(data.unit_id);
+
+    // Automatic self-service activation, sent right after creation rather
+    // than left to the manager to trigger — the manual "Set password"
+    // button (PUT /:id/password) stays as a separate, always-available
+    // backup. Reuses the exact same reset-token mechanism/expiry as the
+    // tenant-facing "forgot password" flow (see routes/portal.js); only the
+    // destination page and copy differ. Skipped silently with no email on
+    // file — the manual button is the only option in that case, matching
+    // its own disabled-without-email state in the UI.
+    if (tenant.email) {
+      const { token, tokenHash, expiresAt } = generateResetToken();
+      await pool.query("UPDATE tenants SET reset_token_hash = $1, reset_token_expires_at = $2 WHERE id = $3", [
+        tokenHash,
+        expiresAt,
+        tenant.id,
+      ]);
+      await sendTenantActivationEmail({ email: tenant.email, token, language: tenant.language });
+    }
+
     res.status(201).json(tenant);
   })
 );
@@ -709,8 +730,10 @@ router.delete(
   })
 );
 
-// Lets the property manager set or reset a tenant's portal login. There's
-// no invite/self-signup flow yet — this is the manual stand-in for it.
+// Lets the property manager set or reset a tenant's portal login directly —
+// a manual backup alongside the automatic activation email sent at tenant
+// creation (see POST / above), for cases like a tenant who never gets the
+// email or a manager who'd rather just hand over a password in person.
 router.put(
   "/:id/password",
   asyncHandler(async (req, res) => {
@@ -721,6 +744,34 @@ router.put(
     );
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
     res.status(204).end();
+  })
+);
+
+// Manager-clicked resend of the activation email — same token mechanism as
+// the automatic send at creation (a fresh token replaces any unused one,
+// same as the tenant-facing forgot-password flow), reported back to the
+// manager rather than swallowed, same "resend" shape as
+// documents.js's POST /:id/resend.
+router.post(
+  "/:id/resend-activation",
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query("SELECT id, email, language FROM tenants WHERE id = $1 AND business_id = $2", [
+      req.params.id,
+      req.businessId,
+    ]);
+    const tenant = rows[0];
+    if (!tenant) throw new ApiError(404, "Tenant not found");
+    if (!tenant.email) throw new ApiError(400, "This tenant has no email to send to");
+
+    const { token, tokenHash, expiresAt } = generateResetToken();
+    await pool.query("UPDATE tenants SET reset_token_hash = $1, reset_token_expires_at = $2 WHERE id = $3", [
+      tokenHash,
+      expiresAt,
+      tenant.id,
+    ]);
+    const sent = await sendTenantActivationEmail({ email: tenant.email, token, language: tenant.language });
+    if (!sent) throw new ApiError(502, "Failed to send the email, please try again");
+    res.json({ sent: true });
   })
 );
 

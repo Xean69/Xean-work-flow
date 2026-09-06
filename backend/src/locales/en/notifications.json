@@ -66,6 +66,13 @@
     "line2": "This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.",
     "cta": "Reset password"
   },
+  "activation": {
+    "subject": "Welcome to your tenant portal",
+    "heading": "Welcome to your tenant portal",
+    "line1": "Your landlord has set up a tenant portal account for you. Use the link below to set your password and get started.",
+    "line2": "This link expires in 1 hour and can only be used once.",
+    "cta": "Activate your account"
+  },
   "defaultTenantName": "there",
   "docType": {
     "lease": "Lease",
