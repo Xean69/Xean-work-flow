@@ -24,9 +24,15 @@ const INSPECTION_STATUS_VARIANT = {
   signed: 'green',
 }
 
+// lease_end is a DATE column, returned as a UTC-midnight ISO string with no
+// meaningful time-of-day — a plain toLocaleDateString would render it in the
+// browser's local timezone, showing the calendar day before in any timezone
+// behind UTC (e.g. a Nov 30 lease_end reading as "Nov 29"). Reads the UTC
+// calendar fields instead, so the date shown always matches what's stored.
 function formatDate(value, locale) {
   if (!value) return '—'
-  return new Date(value).toLocaleDateString(locale, {
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
