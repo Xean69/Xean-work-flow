@@ -1,5 +1,5 @@
 import pool from "../db.js";
-import { ensureChargesForPeriod } from "../utils/ledger.js";
+import { ensureChargesForPeriod, ensureAllTenantsThroughPeriod } from "../utils/ledger.js";
 import { currentPeriod, nextPeriod } from "../utils/period.js";
 import { getDomainStatus } from "./vercelDomains.js";
 
@@ -7,9 +7,8 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly is plenty for a once-a-month
 
 // No cron dependency — a plain hourly re-check is simpler than it looks and
 // more robust than a single precisely-timed fire: it also catches up
-// automatically after any downtime or redeploy that happens to land on the
-// last day of the month. The (idempotent) charge generator itself only
-// actually runs once isLastDayOfMonth() is true, so most ticks are a no-op.
+// automatically after any downtime or redeploy, including one that happens
+// to land on the last day of the month.
 export function startLedgerScheduler() {
   runCheck();
   setInterval(runCheck, CHECK_INTERVAL_MS);
@@ -21,16 +20,31 @@ function isLastDayOfMonth(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getDate() === 1;
 }
 
-// Bills a period in advance, on the last day of the month before it starts
-// (e.g. October's rent is generated on Sept 30, not Oct 1) — a tenant's own
-// creation-time backfill (see ensureChargesThroughPeriod) covers everything
-// through today, so this only ever needs to reach one period ahead.
 async function runCheck() {
+  // Safety net, every tick: ensures every tenant's ledger has a charge for
+  // every period from their own lease_start through today. Runs
+  // unconditionally (not just on the last day of the month) so a gap from
+  // any cause — a tenant created with a backdated lease_start, a missed
+  // last-day trigger below, downtime, a future bug — never survives more
+  // than one hour before self-correcting. A real incident (a tenant created
+  // before this existed ended up missing a whole month) is exactly what
+  // this is for.
+  try {
+    await ensureAllTenantsThroughPeriod(currentPeriod());
+  } catch (err) {
+    console.error("Ledger safety-net check failed:", err);
+  }
+
+  // Bills the *next* period in advance, on the last day of the month before
+  // it starts (e.g. October's rent is generated on Sept 30, not Oct 1).
+  // Separate from the safety net above, which only ever reaches today —
+  // advance billing is the only thing responsible for reaching one period
+  // ahead of schedule.
   if (!isLastDayOfMonth()) return;
   try {
     await ensureChargesForPeriod(nextPeriod(currentPeriod()));
   } catch (err) {
-    console.error("Ledger charge generation failed:", err);
+    console.error("Ledger advance-billing generation failed:", err);
   }
 }
 

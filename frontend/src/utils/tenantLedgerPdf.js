@@ -29,6 +29,22 @@ function formatPlainDate(dateStr) {
   return new Date(year, month - 1, day).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+// Same rollback, different shape: a ledger entry's date is a DATE column
+// (due_date or payment_date) that arrives as a full UTC-midnight ISO
+// string, not a plain "YYYY-MM-DD". formatDate above would print the
+// calendar day before in any timezone behind UTC — this reads the UTC
+// fields instead of local ones so the printed statement always matches
+// what's actually on the ledger.
+function formatEntryDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 // jspdf/jspdf-autotable are dynamically imported from the click handler
 // (see TenantProfile.jsx) rather than at the top of that file, so they
 // never touch the page's initial bundle — only someone who actually clicks
@@ -89,7 +105,7 @@ export async function downloadTenantLedgerPdf(tenant, ledger, range = {}) {
     startY: y + 6,
     head: [['Date', 'Description', 'Type', 'Amount', 'Status', 'Balance']],
     body: filtered.map((entry) => [
-      formatDate(entry.date),
+      formatEntryDate(entry.date),
       entry.type === 'charge' ? entry.description : `Payment (${METHOD_LABEL[entry.method] || entry.method})`,
       entry.type === 'charge' ? CHARGE_TYPE_LABEL[entry.charge_type] || entry.charge_type : 'Payment',
       entry.type === 'charge' ? formatSignedMoney(entry.amount) : `-${formatMoney(entry.amount)}`,

@@ -125,6 +125,25 @@ export async function ensureChargesThroughPeriod(client, tenantId, throughPeriod
   }
 }
 
+// Safety net: runs ensureChargesThroughPeriod for every tenant in the
+// system, every time it's called — meant to be invoked on a frequent,
+// unconditional schedule (see scheduler.js), independent of the last-day-
+// of-month advance-billing sweep below. That sweep only ever fires once,
+// on one specific calendar day, and only ever reaches one period ahead; if
+// that exact trigger is ever missed (downtime, a deploy landing at the
+// wrong moment) there'd be nothing to catch the resulting gap afterward.
+// This closes that gap within one tick of whenever it's next able to run,
+// for any tenant, regardless of cause — the same backfill tenant creation
+// already gets, just re-applied continuously instead of once.
+export async function ensureAllTenantsThroughPeriod(throughPeriod) {
+  const { rows: tenants } = await pool.query(
+    "SELECT id, rent_amount, first_period_rent_amount, lease_start, lease_end FROM tenants"
+  );
+  for (const tenant of tenants) {
+    await ensureChargesThroughPeriod(pool, tenant.id, throughPeriod, tenant);
+  }
+}
+
 // Portfolio-wide sweep for one period, across every business — what the
 // scheduler calls. Scoped to tenants whose lease actually covers the
 // period, same "currently under lease" definition used elsewhere.

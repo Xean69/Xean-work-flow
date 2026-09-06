@@ -67,6 +67,25 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+// The backend's DATE columns (lease_start/lease_end, a ledger entry's due
+// date or payment date, an eviction event's date_issued) come back as a UTC
+// midnight ISO string with no meaningful time-of-day — formatDate's plain
+// toLocaleDateString would render that in the *browser's* local timezone,
+// showing the calendar day before in any timezone behind UTC (e.g. a July 1
+// due date reading as "Jun 30"). This reads the UTC calendar fields instead,
+// so the date shown always matches what's actually stored. Only use this for
+// genuine DATE columns — a real timestamp (uploaded_at, signed_at) should
+// still show in the viewer's own local time via formatDate above.
+function formatCalendarDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 function formatMoney(amount) {
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 }
@@ -399,11 +418,11 @@ function TenantProfile() {
           </div>
           <div className="tenant-info-item">
             <span className="tenant-info-label">Lease start</span>
-            <span className="tenant-info-value mono">{formatDate(tenant.lease_start)}</span>
+            <span className="tenant-info-value mono">{formatCalendarDate(tenant.lease_start)}</span>
           </div>
           <div className="tenant-info-item">
             <span className="tenant-info-label">Lease end</span>
-            <span className="tenant-info-value mono">{formatDate(tenant.lease_end)}</span>
+            <span className="tenant-info-value mono">{formatCalendarDate(tenant.lease_end)}</span>
           </div>
           <div className="tenant-info-item">
             <span className="tenant-info-label">Rent</span>
@@ -495,7 +514,7 @@ function TenantProfile() {
               <tbody>
                 {ledger.map((entry) => (
                   <tr key={`${entry.type}-${entry.id}`}>
-                    <td className="mono">{formatDate(entry.date)}</td>
+                    <td className="mono">{formatCalendarDate(entry.date)}</td>
                     <td>
                       {entry.type === 'charge' ? entry.description : `Payment (${METHOD_LABEL[entry.method]})`}
                     </td>
@@ -683,7 +702,7 @@ function TenantProfile() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <Badge variant={STAGE_VARIANT[e.stage]}>{STAGE_LABELS[e.stage]}</Badge>
                     <strong style={{ fontSize: 13.5 }}>{e.notice_type}</strong>
-                    <span style={{ fontSize: 12, color: 'var(--slate)' }}>{formatDate(e.date_issued)}</span>
+                    <span style={{ fontSize: 12, color: 'var(--slate)' }}>{formatCalendarDate(e.date_issued)}</span>
                   </div>
                   {e.notes && <p style={{ fontSize: 12.5, color: 'var(--slate)' }}>{e.notes}</p>}
                 </div>
