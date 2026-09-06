@@ -8,6 +8,16 @@ export function currentPeriod() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// "YYYY-MM" -> the following month's "YYYY-MM" — used to bill the upcoming
+// period a day in advance (see scheduler.js) and to walk forward one period
+// at a time when backfilling a tenant's charge history.
+export function nextPeriod(period) {
+  const [year, month] = period.split("-").map(Number);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+}
+
 // "YYYY-MM" -> the calendar-day range that month spans, for a date-overlap
 // or BETWEEN query.
 export function parsePeriod(value) {

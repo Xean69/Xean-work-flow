@@ -31,7 +31,7 @@ import {
 } from "../services/email.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
-import { getPeriodStatus } from "../utils/ledger.js";
+import { getOverallStatus } from "../utils/ledger.js";
 import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk, uploadSignature } from "../utils/upload.js";
 import { notifyManagersOfLeaseSigned } from "../services/email.js";
 import { respondToReschedule, answerRescheduleEntryPermission } from "../services/maintenanceReschedule.js";
@@ -153,15 +153,17 @@ router.get(
     );
     if (!rows[0]) throw new ApiError(404, "Tenant not found");
     const tenant = rows[0];
-    // Same period-scoped meaning the old rentAmount+addonTotal formula
-    // produced (see utils/ledger.js) — sourced from real ledger charge rows
-    // instead of live math, but unchanged in what it means to the tenant.
-    const periodStatus = await getPeriodStatus(tenant.id, currentPeriod());
+    // Deliberately the tenant's whole ledger, not just this calendar
+    // period — see getOverallStatus's comment in utils/ledger.js for why a
+    // period-scoped version of this once showed "Paid" for a brand new,
+    // entirely unpaid tenant. current_period is still today's period, kept
+    // for display purposes (e.g. labeling which month rent is due for).
+    const overallStatus = await getOverallStatus(tenant.id);
     res.json({
       ...tenant,
       addons: tenant.addons || [],
       current_period: currentPeriod(),
-      payment_status: periodStatus.status,
+      payment_status: overallStatus.status,
     });
   })
 );

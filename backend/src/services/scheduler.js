@@ -1,24 +1,34 @@
 import pool from "../db.js";
 import { ensureChargesForPeriod } from "../utils/ledger.js";
-import { currentPeriod } from "../utils/period.js";
+import { currentPeriod, nextPeriod } from "../utils/period.js";
 import { getDomainStatus } from "./vercelDomains.js";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly is plenty for a once-a-month job
 
-// No cron dependency — a plain hourly re-check of the (idempotent) charge
-// generator is simpler than it looks and more robust than a single
-// precisely-timed fire: it also catches up automatically after any
-// downtime or redeploy near the 1st, and the very first call at server
-// startup is what bootstraps the current period for free the day this
-// feature ships, with no separate backfill script needed.
+// No cron dependency — a plain hourly re-check is simpler than it looks and
+// more robust than a single precisely-timed fire: it also catches up
+// automatically after any downtime or redeploy that happens to land on the
+// last day of the month. The (idempotent) charge generator itself only
+// actually runs once isLastDayOfMonth() is true, so most ticks are a no-op.
 export function startLedgerScheduler() {
   runCheck();
   setInterval(runCheck, CHECK_INTERVAL_MS);
 }
 
+// True for any moment on the last calendar day of the month, regardless of
+// time of day — checked by seeing whether "tomorrow" rolls over into the 1st.
+function isLastDayOfMonth(date = new Date()) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getDate() === 1;
+}
+
+// Bills a period in advance, on the last day of the month before it starts
+// (e.g. October's rent is generated on Sept 30, not Oct 1) — a tenant's own
+// creation-time backfill (see ensureChargesThroughPeriod) covers everything
+// through today, so this only ever needs to reach one period ahead.
 async function runCheck() {
+  if (!isLastDayOfMonth()) return;
   try {
-    await ensureChargesForPeriod(currentPeriod());
+    await ensureChargesForPeriod(nextPeriod(currentPeriod()));
   } catch (err) {
     console.error("Ledger charge generation failed:", err);
   }

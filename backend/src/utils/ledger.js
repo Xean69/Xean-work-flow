@@ -1,5 +1,5 @@
 import pool from "../db.js";
-import { parsePeriod } from "./period.js";
+import { parsePeriod, nextPeriod } from "./period.js";
 
 // pg returns DATE columns as JS Date objects (UTC midnight) — read via
 // toISOString rather than local getters, same reasoning as tenants.js's
@@ -95,6 +95,36 @@ export async function ensureChargesForTenant(client, tenantId, period, tenantRow
   }
 }
 
+// Backfills every period from a tenant's own lease-start month through
+// throughPeriod (inclusive), never past their lease_end. Used at tenant-
+// creation time instead of a single ensureChargesForTenant call — a
+// backdated lease_start (a manager entering an existing tenant after the
+// fact) would otherwise get one charge for its own start period at
+// creation and then a *second*, different-period charge from the very next
+// scheduler tick, reading as "charged twice" for a brand new tenant. This
+// generates the tenant's full history up through today in one shot instead,
+// so nothing is left for the scheduler to newly add, and no month in
+// between ever gets silently skipped.
+export async function ensureChargesThroughPeriod(client, tenantId, throughPeriod, tenantRow = null) {
+  const tenant =
+    tenantRow ||
+    (
+      await client.query(
+        "SELECT id, rent_amount, first_period_rent_amount, lease_start, lease_end FROM tenants WHERE id = $1",
+        [tenantId]
+      )
+    ).rows[0];
+  if (!tenant) return;
+
+  const leaseEndPeriod = periodOf(tenant.lease_end);
+  let period = periodOf(tenant.lease_start);
+  while (period <= throughPeriod && period <= leaseEndPeriod) {
+    await ensureChargesForTenant(client, tenantId, period, tenant);
+    if (period === throughPeriod) break;
+    period = nextPeriod(period);
+  }
+}
+
 // Portfolio-wide sweep for one period, across every business — what the
 // scheduler calls. Scoped to tenants whose lease actually covers the
 // period, same "currently under lease" definition used elsewhere.
@@ -123,10 +153,18 @@ export function deriveChargeStatus(totalAmount, totalAllocated) {
   return "partial";
 }
 
-// This period's charges vs. what's been allocated against them — what
-// drives the Tenants list "This month" badge and the portal's own status,
-// same period-scoped meaning computePaymentStatus used to have.
-export async function getPeriodStatus(tenantId, period) {
+// Every charge ever vs. everything allocated against them — what drives the
+// Tenants list badge and the portal's own status. Deliberately NOT scoped to
+// the current calendar period: a period-scoped version of this once fed
+// "Paid" to a brand new tenant whenever their first charge happened to be
+// dated to a period other than the exact current month (any backdated or
+// future-dated lease_start — a completely normal case), since that query
+// would find zero rows for "this month" and deriveChargeStatus's "nothing
+// charged" fallback reads as trivially paid. Summing across every period
+// means "Paid" only ever means the tenant's ledger balance is genuinely
+// zero, matching the "only a manually recorded payment can mark this paid"
+// requirement.
+export async function getOverallStatus(tenantId) {
   const { rows } = await pool.query(
     `SELECT
        COALESCE(SUM(c.amount), 0) AS total_charged,
@@ -135,8 +173,8 @@ export async function getPeriodStatus(tenantId, period) {
      LEFT JOIN LATERAL (
        SELECT SUM(amount) AS allocated FROM payment_allocations WHERE charge_id = c.id
      ) alloc ON true
-     WHERE c.tenant_id = $1 AND c.period = $2`,
-    [tenantId, period]
+     WHERE c.tenant_id = $1`,
+    [tenantId]
   );
   const { total_charged, total_allocated } = rows[0];
   return {

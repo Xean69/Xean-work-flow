@@ -13,7 +13,7 @@ import {
 } from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
 import { currentPeriod } from "../utils/period.js";
-import { ensureChargesForTenant, getBalanceDue, getPeriodStatus, deriveChargeStatus, allocatePayment, getPortfolioBalances } from "../utils/ledger.js";
+import { ensureChargesThroughPeriod, getBalanceDue, getOverallStatus, deriveChargeStatus, allocatePayment, getPortfolioBalances } from "../utils/ledger.js";
 import { upload, uploadToCloudinary } from "../utils/upload.js";
 
 const router = Router();
@@ -166,10 +166,11 @@ router.get(
       [req.businessId]
     );
 
-    // One batch query for every tenant's current-period ledger status,
-    // rather than a query per row — same "This month" meaning the old
-    // rentAmount+addonTotal formula produced, now sourced from real charge
-    // rows instead of live math.
+    // One batch query for every tenant's overall ledger status, rather than
+    // a query per row. Deliberately not scoped to the current period — see
+    // getOverallStatus's comment in utils/ledger.js for why a period-scoped
+    // version of this once showed "Paid" for a brand new, entirely unpaid
+    // tenant.
     const { rows: statusRows } = await pool.query(
       `SELECT
          c.tenant_id,
@@ -180,9 +181,9 @@ router.get(
        LEFT JOIN LATERAL (
          SELECT SUM(amount) AS allocated FROM payment_allocations WHERE charge_id = c.id
        ) alloc ON true
-       WHERE t.business_id = $1 AND c.period = $2
+       WHERE t.business_id = $1
        GROUP BY c.tenant_id`,
-      [req.businessId, currentPeriod()]
+      [req.businessId]
     );
     const statusByTenant = new Map(statusRows.map((r) => [r.tenant_id, r]));
 
@@ -323,12 +324,12 @@ router.get(
     const row = rows[0];
     if (!row) throw new ApiError(404, "Tenant not found");
 
-    const [{ rows: occupants }, { rows: evictionEvents }, periodStatus, balanceDue] = await Promise.all([
+    const [{ rows: occupants }, { rows: evictionEvents }, overallStatus, balanceDue] = await Promise.all([
       pool.query("SELECT * FROM tenant_occupants WHERE tenant_id = $1 ORDER BY created_at", [row.tenant_id]),
       pool.query("SELECT * FROM eviction_events WHERE tenant_id = $1 ORDER BY date_issued DESC, created_at DESC", [
         row.tenant_id,
       ]),
-      getPeriodStatus(row.tenant_id, currentPeriod()),
+      getOverallStatus(row.tenant_id),
       getBalanceDue(row.tenant_id),
     ]);
 
@@ -342,7 +343,7 @@ router.get(
     res.json({
       ...rest,
       status: computeStatus(row.lease_end),
-      payment_status: periodStatus.status,
+      payment_status: overallStatus.status,
       balance_due: balanceDue,
       inspection_status: inspectionStatus,
       occupants,
@@ -585,10 +586,18 @@ router.post(
 
       await replaceTenantAddons(client, tenant.id, data.addons);
 
-      // Generates this tenant's own first-period rent + addon charges right
-      // now, in the same transaction — otherwise their ledger would sit
-      // empty until the next scheduled run generates everyone else's.
-      await ensureChargesForTenant(client, tenant.id, periodOf(data.lease_start), tenant);
+      // Generates this tenant's rent + addon charges for every period from
+      // their lease_start through today, right now, in the same
+      // transaction — otherwise their ledger would sit empty until the next
+      // scheduled run, and a backdated lease_start (entering an existing
+      // tenant after the fact) would leave every month before "now" ungenerated.
+      // A single-period call here used to create just the lease-start
+      // month's charge, leaving the scheduler's very next tick to
+      // separately add the current month's charge on top — two different
+      // new charges landing within the hour of each other, which read as
+      // "charged twice" for a brand new tenant. Backfilling the whole range
+      // up front means the scheduler finds nothing left to add.
+      await ensureChargesThroughPeriod(client, tenant.id, currentPeriod(), tenant);
 
       if (firstPayment) {
         const { rows: paymentRows } = await client.query(
