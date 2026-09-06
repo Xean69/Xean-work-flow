@@ -7,8 +7,18 @@ function formatMoney(amount) {
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 }
 
+// lease_end is a DATE column, returned as a UTC-midnight ISO string with no
+// meaningful time-of-day — a plain toLocaleDateString would render it in the
+// browser's local timezone, showing the calendar day before in any timezone
+// behind UTC. Reads the UTC calendar fields instead, so the date shown
+// always matches what's actually stored.
 function formatDate(value, locale) {
-  return new Date(value).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 // "2026-08" -> "August 2026" — parsed as separate year/month numbers rather

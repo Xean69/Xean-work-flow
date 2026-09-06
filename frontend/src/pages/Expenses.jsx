@@ -34,8 +34,17 @@ function formatMoney(amount) {
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
 }
 
+// expense_date is a DATE column, returned as a UTC-midnight ISO string with
+// no meaningful time-of-day — a plain toLocaleDateString would render it in
+// the browser's local timezone, showing the calendar day before in any
+// timezone behind UTC. Reads the UTC calendar fields instead, so the date
+// shown always matches what's actually stored.
 function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 function isImageReceipt(filePath) {

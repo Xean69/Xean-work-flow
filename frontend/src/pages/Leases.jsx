@@ -29,6 +29,23 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+// lease_start/lease_end and lease_start_snapshot/lease_end_snapshot are
+// DATE columns, returned as UTC-midnight ISO strings with no meaningful
+// time-of-day — formatDate's plain toLocaleDateString would render them in
+// the browser's local timezone, showing the calendar day before in any
+// timezone behind UTC. Reads the UTC calendar fields instead. Only for
+// genuine DATE columns — real timestamps (created_at, sent_at, signed_at)
+// still use formatDate above.
+function formatCalendarDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 function formatDateTime(value) {
   if (!value) return '—'
   return new Date(value).toLocaleString(undefined, {
@@ -185,7 +202,7 @@ function CreateLeaseForm({ admin, tenants, onCreated, onCancel, onAdminRefresh }
             <span className="lease-summary-label">Deposit</span> {formatMoney(tenant.deposit_amount)}
           </div>
           <div>
-            <span className="lease-summary-label">Term</span> {formatDate(tenant.lease_start)} – {formatDate(tenant.lease_end)}
+            <span className="lease-summary-label">Term</span> {formatCalendarDate(tenant.lease_start)} – {formatCalendarDate(tenant.lease_end)}
           </div>
         </div>
       )}
@@ -460,8 +477,8 @@ function LeaseDetail({ lease, onVoided, onClose }) {
           <span className="lease-summary-label">Deposit</span> {formatMoney(lease.deposit_amount_snapshot)}
         </div>
         <div>
-          <span className="lease-summary-label">Term</span> {formatDate(lease.lease_start_snapshot)} –{' '}
-          {formatDate(lease.lease_end_snapshot)}
+          <span className="lease-summary-label">Term</span> {formatCalendarDate(lease.lease_start_snapshot)} –{' '}
+          {formatCalendarDate(lease.lease_end_snapshot)}
         </div>
         <div>
           <span className="lease-summary-label">Sent</span> {formatDateTime(lease.sent_at)}

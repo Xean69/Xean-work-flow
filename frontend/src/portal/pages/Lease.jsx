@@ -18,6 +18,21 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+// lease_start/lease_end are DATE columns, returned as UTC-midnight ISO
+// strings with no meaningful time-of-day — formatDate's plain
+// toLocaleDateString would render them in the browser's local timezone,
+// showing the calendar day before in any timezone behind UTC. Reads the
+// UTC calendar fields instead. Only for genuine DATE columns — a real
+// timestamp (uploaded_at) still uses formatDate above.
+function formatCalendarDate(value) {
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
 const DOC_TYPE_LABELS = {
   lease: 'Lease',
   invoice: 'Invoice',
@@ -283,11 +298,11 @@ function Lease() {
           </div>
           <div className="portal-detail-row">
             <span className="portal-detail-label">Lease start</span>
-            <span className="portal-detail-value">{formatDate(tenant.lease_start)}</span>
+            <span className="portal-detail-value">{formatCalendarDate(tenant.lease_start)}</span>
           </div>
           <div className="portal-detail-row">
             <span className="portal-detail-label">Lease end</span>
-            <span className="portal-detail-value">{formatDate(tenant.lease_end)}</span>
+            <span className="portal-detail-value">{formatCalendarDate(tenant.lease_end)}</span>
           </div>
         </div>
 

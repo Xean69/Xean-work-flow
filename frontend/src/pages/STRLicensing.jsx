@@ -19,9 +19,19 @@ const STATUS_VARIANT = {
   unlicensed: 'slate',
 }
 
+// issued_date/expiry_date are DATE columns, returned as UTC-midnight ISO
+// strings with no meaningful time-of-day — a plain toLocaleDateString would
+// render them in the browser's local timezone, showing the calendar day
+// before in any timezone behind UTC. Reads the UTC calendar fields instead,
+// so the date shown always matches what's actually stored.
 function formatDate(value) {
   if (!value) return '—'
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 function STRLicensing() {
