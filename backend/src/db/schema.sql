@@ -897,6 +897,35 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- Timezone awareness
+--
+-- Two distinct concepts, deliberately not conflated: businesses.timezone
+-- governs shared, business-wide scheduling logic (the monthly rent-billing
+-- job, any other calendar-day-boundary business logic) — it's the "what
+-- timezone does this landlord's business operate in" answer, and every
+-- business needs a real value at all times since scheduled jobs run
+-- unattended with nobody logged in to detect one from. Defaulting existing
+-- businesses to UTC is a true no-op (this app's server already effectively
+-- runs on UTC), so nothing changes in behavior until a business explicitly
+-- sets its real timezone.
+--
+-- admins/tenants/maintenance_staff.timezone is a personal display
+-- preference, same per-account placement as `language` above, but
+-- deliberately nullable with no default and no CHECK constraint (unlike
+-- language's closed 6-value set, a timezone is one of ~400 real IANA
+-- names, validated server-side against Intl.supportedValuesOf('timeZone')
+-- on write rather than a hardcoded list here). NULL means "not detected
+-- yet" — every real-timestamp formatter treats that as "fall back to the
+-- viewer's own browser default", which is exactly today's existing
+-- behavior, so there's zero regression for any account before its first
+-- post-launch login.
+-- ============================================================================
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'UTC';
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS timezone TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS timezone TEXT;
+ALTER TABLE maintenance_staff ADD COLUMN IF NOT EXISTS timezone TEXT;
+
+-- ============================================================================
 -- Entry permission on repair reports
 --
 -- Asked once, at report time, in the tenant portal's "Report an issue" form
