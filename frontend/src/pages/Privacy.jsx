@@ -3,13 +3,20 @@ import LandingNav from '../components/LandingNav.jsx'
 import LandingFooter from '../components/LandingFooter.jsx'
 import './Landing.css'
 
-// Sourced from xean-intake-legal-draft.md. The draft's two "for your
-// reference, not to publish as-is" preamble notes (which law applies, and
-// the breach-notification summary) are deliberately left out of this page
-// — they were research notes for whoever finalizes this, not text meant
-// for a visitor, and the actual commitments they explain already appear
-// properly in sections 6 and 11 (Terms). [support email] is filled in as
-// support@xean.ca; [DATE] stays a visible TODO, same as Terms.jsx.
+// Verified against the actual codebase before writing, same as Terms.jsx:
+// no payment processor is integrated anywhere in the backend (billing is
+// a manual process, so Section 2 no longer claims to collect payment info
+// via a processor), Cloudinary and Resend (backend/package.json) are the
+// real third-party file-storage and email vendors named in Section 4 in
+// place of the earlier draft's phantom "payment processing," and
+// hrsupport@xean.ca (not the earlier draft's guessed support@xean.ca) is
+// the real inbox behind the contact form and every outbound notification
+// (see services/email.js's HR_EMAIL). Section 5 makes no data-retention
+// claim about the AI provider — Anthropic's specific terms haven't been
+// confirmed, same reasoning as Terms.jsx. If any of that changes (a
+// payment processor gets added, a new data-sharing vendor is introduced,
+// the Anthropic terms get confirmed), this needs a content review, not
+// just a date bump.
 function Privacy() {
   return (
     <div className="landing">
@@ -30,16 +37,7 @@ function Privacy() {
             Xean — Privacy <span>Policy</span>
           </h1>
 
-          <div className="lnd-doc-notice">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 9v4M12 17h.01" />
-              <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-            </svg>
-            <div>
-              <strong>Draft — pending legal review.</strong> Last updated: <span className="lnd-doc-todo">TODO: set date</span>. This
-              is a draft template and should be reviewed by a lawyer before it's relied on as binding.
-            </div>
-          </div>
+          <p className="lnd-doc-updated">Last updated: September 7, 2026</p>
 
           <h2>1. Who We Are</h2>
           <p>Xean is operated by Xean Telecom Inc., based in Edmonton, Alberta, Canada.</p>
@@ -50,7 +48,6 @@ function Privacy() {
           </p>
           <ul>
             <li>Name, email, business name, contact information</li>
-            <li>Payment/billing information (processed by a third-party payment processor; we do not store full card numbers)</li>
             <li>Property, tenant, lease, maintenance, expense, and document data entered into the Service</li>
           </ul>
           <p>
@@ -79,7 +76,7 @@ function Privacy() {
           <h2>4. Data Sharing</h2>
           <p>We do not sell personal information. We may share data with:</p>
           <ul>
-            <li>Third-party service providers necessary to operate the Service (e.g., cloud hosting, email delivery, AI processing, payment processing)</li>
+            <li>Third-party service providers necessary to operate the Service (e.g., cloud hosting, email delivery, document/file storage, and AI processing)</li>
             <li>Law enforcement or regulators, where legally required</li>
           </ul>
 
@@ -88,12 +85,6 @@ function Privacy() {
             Documents uploaded to the Service (such as leases and invoices) may be processed by third-party AI providers (e.g.,
             Anthropic, via its commercial API) to extract structured data.
           </p>
-          <div className="lnd-doc-todo-block">
-            <strong>TODO before publishing:</strong> Anthropic's standard commercial API terms state that API inputs/outputs are
-            not used to train their models by default and are retained only briefly for abuse monitoring — confirm the current
-            terms at the time of publishing, as policies can change, and link to Anthropic's own privacy/data usage terms here
-            once confirmed.
-          </div>
 
           <h2>6. Data Security &amp; Breach Notification</h2>
           <p>
@@ -117,7 +108,7 @@ function Privacy() {
           <h2>8. Your Rights</h2>
           <p>
             Depending on your jurisdiction, you may have the right to access, correct, or request deletion of your personal
-            information. Contact <a href="mailto:support@xean.ca">support@xean.ca</a> to make a request.
+            information. Contact <a href="mailto:hrsupport@xean.ca">hrsupport@xean.ca</a> to make a request.
           </p>
 
           <h2>9. Tenant Data Notice</h2>
@@ -135,7 +126,7 @@ function Privacy() {
 
           <h2>12. Contact</h2>
           <p>
-            Privacy questions: <a href="mailto:support@xean.ca">support@xean.ca</a>
+            Privacy questions: <a href="mailto:hrsupport@xean.ca">hrsupport@xean.ca</a>
           </p>
         </div>
       </div>
