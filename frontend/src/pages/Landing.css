@@ -1499,6 +1499,12 @@
 .landing .lnd-doc-card h1 span {
   color: var(--lnd-navy-accent);
 }
+.landing .lnd-doc-updated {
+  font-size: 13px;
+  color: var(--lnd-text-dimmer);
+  margin-top: 8px;
+  margin-bottom: 30px;
+}
 .landing .lnd-doc-card h2 {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 18px;

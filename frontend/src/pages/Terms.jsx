@@ -3,10 +3,16 @@ import LandingNav from '../components/LandingNav.jsx'
 import LandingFooter from '../components/LandingFooter.jsx'
 import './Landing.css'
 
-// Sourced from xean-intake-legal-draft.md. [support email] is filled in as
-// support@xean.ca per instruction; [DATE] and the refund policy are left
-// as visible TODOs (see .lnd-doc-notice/.lnd-doc-todo below) rather than
-// guessed at, since neither has actually been decided yet.
+// Verified against the actual codebase before writing, not just carried
+// over from the earlier draft: no payment processor is integrated
+// anywhere in the backend (billing is a manual, "Talk to Us" process), the
+// 14-day trial (utils/trial.js) is informational only — computeTrialStatus
+// is never checked by any route to gate access — and hrsupport@xean.ca
+// (not the earlier draft's guessed support@xean.ca) is the real inbox
+// behind the contact form and every outbound notification (see
+// services/email.js's HR_EMAIL). If any of that changes (a payment
+// processor gets added, the trial becomes enforced, refunds get offered),
+// Section 5 specifically needs a rewrite, not just a date bump.
 function Terms() {
   return (
     <div className="landing">
@@ -27,16 +33,7 @@ function Terms() {
             Xean — Terms of <span>Service</span>
           </h1>
 
-          <div className="lnd-doc-notice">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 9v4M12 17h.01" />
-              <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-            </svg>
-            <div>
-              <strong>Draft — pending legal review.</strong> Last updated: <span className="lnd-doc-todo">TODO: set date</span>. This
-              is a draft template and should be reviewed by a lawyer before it's relied on as binding terms.
-            </div>
-          </div>
+          <p className="lnd-doc-updated">Last updated: September 7, 2026</p>
 
           <h2>1. Acceptance of Terms</h2>
           <p>
@@ -56,23 +53,37 @@ function Terms() {
             <li>You must provide accurate information when creating an account.</li>
             <li>You are responsible for maintaining the confidentiality of your login credentials.</li>
             <li>Each Customer account is isolated — Customers cannot access another Customer's data.</li>
-            <li>Xean Telecom Inc. reserves the right to suspend accounts that violate these Terms.</li>
+            <li>Xean reserves the right to suspend accounts that violate these Terms.</li>
           </ul>
 
           <h2>4. Tenant Sub-Users</h2>
           <ul>
             <li>Customers may invite their tenants to use a limited "Tenant Portal" to view lease information and submit maintenance requests.</li>
             <li>Customers are responsible for obtaining any necessary consent from their tenants before entering tenant information into the Service.</li>
-            <li>Xean Telecom Inc. acts as a data processor on behalf of the Customer with respect to tenant data; the Customer remains the data controller.</li>
+            <li>Xean acts as a data processor on behalf of the Customer with respect to tenant data; the Customer remains the data controller.</li>
           </ul>
 
-          <h2>5. Subscription &amp; Billing</h2>
+          <h2>5. Subscription, Trial &amp; Billing</h2>
           <ul>
-            <li>Paid plans are billed monthly in advance, in Canadian dollars unless stated otherwise.</li>
-            <li>Prices are subject to change with 30 days' notice.</li>
-            <li>Failure to pay may result in suspension or downgrade of the account.</li>
             <li>
-              <span className="lnd-doc-todo">TODO: refund policy to be defined</span>
+              Xean is offered on a subscription basis. Billing is currently arranged directly between Xean and each
+              Customer — the Service does not have an automated, self-service payment system today; pricing, invoicing,
+              and payment collection are handled manually, in Canadian dollars unless otherwise agreed.
+            </li>
+            <li>
+              New accounts may display a 14-day trial period for reference. This trial is informational only: it does
+              not automatically restrict or suspend access to the Service when it ends, and no payment is ever charged
+              automatically. Moving onto a paid plan is arranged directly with Xean.
+            </li>
+            <li>Prices are subject to change with reasonable advance notice.</li>
+            <li>
+              <strong>All fees are final.</strong> Xean does not offer refunds on any sale or subscription payment,
+              regardless of usage.
+            </li>
+            <li>
+              If payment for a paid plan is not received, Xean may, at its discretion, suspend or terminate the account
+              after providing reasonable notice. There is no automated billing-suspension system — any such action is
+              taken manually.
             </li>
           </ul>
 
@@ -94,20 +105,20 @@ function Terms() {
 
           <h2>8. Data Ownership</h2>
           <p>
-            Customers own their data. Xean Telecom Inc. will not sell Customer or tenant data to third parties. Upon account
+            Customers own their data. Xean will not sell Customer or tenant data to third parties. Upon account
             termination, Customers may request an export of their data within 30 days before deletion.
           </p>
 
           <h2>9. Limitation of Liability</h2>
           <p>
-            To the maximum extent permitted by law, Xean Telecom Inc. is not liable for indirect, incidental, or consequential
+            To the maximum extent permitted by law, Xean is not liable for indirect, incidental, or consequential
             damages arising from use of the Service, including disputes between Customers and their tenants. The Service is
             provided "as is" without warranty of any kind.
           </p>
 
           <h2>10. Termination</h2>
           <p>
-            Either party may terminate the agreement at any time. Xean Telecom Inc. may suspend or terminate accounts that
+            Either party may terminate the agreement at any time. Xean may suspend or terminate accounts that
             violate these Terms or applicable law.
           </p>
 
@@ -124,7 +135,7 @@ function Terms() {
 
           <h2>13. Contact</h2>
           <p>
-            Questions about these Terms: <a href="mailto:support@xean.ca">support@xean.ca</a>
+            Questions about these Terms: <a href="mailto:hrsupport@xean.ca">hrsupport@xean.ca</a>
           </p>
         </div>
       </div>
