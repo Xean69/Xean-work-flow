@@ -46,6 +46,39 @@ CREATE INDEX IF NOT EXISTS idx_tenants_unit_id ON tenants(unit_id);
 -- optional (property managers won't always have it on file).
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email) WHERE email IS NOT NULL;
 
+-- Human-readable account number ("X" + 6 digits, e.g. X100001) — a single
+-- global sequence across every business (a support-friendly, always-unique
+-- id), never per-business. Starting at 100001 means every value through the
+-- sequence's max (999999) is naturally 6 digits already, so no zero-padding
+-- is ever needed. A real Postgres SEQUENCE, not an application-level
+-- MAX+1 read, is what actually makes this safe under concurrent tenant
+-- creation: nextval() is atomic and lock-free-for-callers by design, so two
+-- simultaneous inserts can never receive the same number. The column's own
+-- DEFAULT calls nextval() directly, so a new tenant gets its number for
+-- free with no application code ever setting (or able to edit) it.
+CREATE SEQUENCE IF NOT EXISTS tenant_account_number_seq START WITH 100001;
+
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS account_number TEXT;
+
+-- One-time backfill for tenants that existed before this column did —
+-- scoped to account_number IS NULL so this is a no-op on every subsequent
+-- replay of this file, and explicitly ordered by created_at (not whatever
+-- order ADD COLUMN happens to touch rows in, which is an implementation
+-- detail, not a guarantee) so existing tenants get their numbers in the
+-- same oldest-first order they were actually created.
+UPDATE tenants t SET account_number = 'X' || sub.num
+FROM (
+  SELECT id, nextval('tenant_account_number_seq') AS num
+  FROM tenants
+  WHERE account_number IS NULL
+  ORDER BY created_at ASC, id ASC
+) sub
+WHERE t.id = sub.id;
+
+ALTER TABLE tenants ALTER COLUMN account_number SET NOT NULL;
+ALTER TABLE tenants ALTER COLUMN account_number SET DEFAULT ('X' || nextval('tenant_account_number_seq')::text);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_account_number ON tenants(account_number);
+
 CREATE TABLE IF NOT EXISTS maintenance_requests (
   id SERIAL PRIMARY KEY,
   unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
