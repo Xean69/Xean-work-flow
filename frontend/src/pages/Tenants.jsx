@@ -134,11 +134,17 @@ function Tenants() {
   // that's already sitting in memory. Search and the property dropdown
   // apply together (AND), not as alternatives.
   const query = search.trim().toLowerCase()
+  // account_number is always stored with its "X" prefix (e.g. "x100001")
+  // — stripping a leading x from the typed query lets "100001" and
+  // "x100001" both match the same tenant.
+  const accountNumberQuery = query.replace(/^x/, '')
   const visibleRows = rows
     .filter((r) => !propertyFilter || String(r.property_id) === propertyFilter)
     .filter(
       (r) =>
-        !query || [r.full_name, r.email, r.phone].some((field) => field && field.toLowerCase().includes(query))
+        !query ||
+        [r.full_name, r.email, r.phone].some((field) => field && field.toLowerCase().includes(query)) ||
+        (r.account_number && r.account_number.toLowerCase().includes(accountNumberQuery))
     )
 
   return (
@@ -215,7 +221,12 @@ function Tenants() {
               <tbody>
                 {visibleRows.map((row) => (
                   <tr key={row.unit_id}>
-                    <td style={{ fontWeight: 600 }}>{row.full_name || '—'}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{row.full_name || '—'}</div>
+                      {row.account_number && (
+                        <div style={{ color: 'var(--slate)', fontSize: 12 }}>{row.account_number}</div>
+                      )}
+                    </td>
                     <td style={{ color: 'var(--slate)', fontSize: 12 }}>
                       {row.tenant_id ? (
                         <Link to={`/tenants/${row.tenant_id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>

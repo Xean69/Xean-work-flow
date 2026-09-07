@@ -7,7 +7,7 @@
   "addTenant": "+ Ajouter un locataire",
   "addTenantModalTitle": "Ajouter un locataire",
   "editTenant": "Modifier le locataire",
-  "searchPlaceholder": "Rechercher par nom, e-mail ou téléphone…",
+  "searchPlaceholder": "Rechercher par nom, e-mail, téléphone ou n° de compte…",
   "allProperties": "Tous les biens",
   "emptyNoUnitsTitle": "Aucun lot pour l'instant",
   "emptyNoUnitsBody": "Ajoutez d'abord un bien et des lots, puis revenez pour affecter des locataires.",
@@ -20,7 +20,7 @@
     "thisMonth": "Ce mois-ci",
     "leaseEnds": "Fin du bail",
     "status": "Statut",
-    "portalLogin": "Accès au portail",
+    "portalLogin": "Accès portail",
     "moveInInspection": "État des lieux d'entrée",
     "edit": "Modifier",
     "delete": "Supprimer"

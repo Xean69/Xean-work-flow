@@ -1,7 +1,8 @@
 {
   "greeting": "Hola, {{firstName}}",
-  "renewalNoticeWithDays": "Tu contrato vence el {{date}} — faltan {{count}} días. Contacta a tu administrador para renovarlo.",
-  "renewalNoticeOverdue": "Tu contrato vence el {{date}}. Contacta a tu administrador para renovarlo.",
+  "accountNumber": "Cuenta {{accountNumber}}",
+  "renewalNoticeWithDays": "Tu contrato finaliza el {{date}}, dentro de {{count}} días. Contacta con tu administrador de fincas para renovarlo.",
+  "renewalNoticeOverdue": "Tu contrato finaliza el {{date}}. Contacta con tu administrador de fincas para renovarlo.",
   "yourHome": "Tu vivienda",
   "unit": "Unidad {{unitNumber}}",
   "monthlyRent": "Alquiler mensual",
@@ -10,7 +11,7 @@
     "partial": "Parcial",
     "unpaid": "Pendiente"
   },
-  "paidInFull": "Pagado por completo el período {{period}}.",
-  "partiallyPaid": "Pago parcial del período {{period}} — contacta a tu administrador por el saldo pendiente.",
-  "notYetPaid": "Aún no figura como pagado el período {{period}}. Contacta a tu administrador para conocer cómo pagar."
+  "paidInFull": "Pagado en su totalidad para {{period}}.",
+  "partiallyPaid": "Pago parcial para {{period}}: contacta con tu administrador de fincas por el saldo pendiente.",
+  "notYetPaid": "Aún sin registrar el pago de {{period}}. Contacta con tu administrador de fincas para conocer las instrucciones de pago."
 }

@@ -1,5 +1,6 @@
 {
   "greeting": "Bonjour {{firstName}}",
+  "accountNumber": "Compte {{accountNumber}}",
   "renewalNoticeWithDays": "Votre bail se termine le {{date}} — dans {{count}} jours. Contactez votre gestionnaire immobilier pour le renouveler.",
   "renewalNoticeOverdue": "Votre bail se termine le {{date}}. Contactez votre gestionnaire immobilier pour le renouveler.",
   "yourHome": "Votre logement",

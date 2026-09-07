@@ -7,7 +7,7 @@
   "addTenant": "+ Añadir inquilino",
   "addTenantModalTitle": "Añadir inquilino",
   "editTenant": "Editar inquilino",
-  "searchPlaceholder": "Buscar por nombre, correo o teléfono…",
+  "searchPlaceholder": "Buscar por nombre, correo, teléfono o n.º de cuenta…",
   "allProperties": "Todas las propiedades",
   "emptyNoUnitsTitle": "Aún no hay unidades",
   "emptyNoUnitsBody": "Añade primero una propiedad y algunas unidades, y luego vuelve para asignar inquilinos.",
@@ -46,5 +46,5 @@
     "pending_signature": "Pendiente de firma",
     "signed": "Firmada"
   },
-  "confirmRemove": "¿Quitar a {{name}} de la unidad {{unit}}?"
+  "confirmRemove": "¿Eliminar a {{name}} de la unidad {{unit}}?"
 }

@@ -7,7 +7,7 @@
   "addTenant": "+ Add tenant",
   "addTenantModalTitle": "Add tenant",
   "editTenant": "Edit tenant",
-  "searchPlaceholder": "Search by name, email, or phone…",
+  "searchPlaceholder": "Search by name, email, phone, or account #…",
   "allProperties": "All properties",
   "emptyNoUnitsTitle": "No units yet",
   "emptyNoUnitsBody": "Add a property and some units first, then come back to assign tenants.",

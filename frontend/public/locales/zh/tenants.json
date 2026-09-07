@@ -1,16 +1,16 @@
 {
   "title": "租户",
   "subtitleLoading": "加载中…",
-  "subtitle_one": "您的资产组合中有 {{count}} 位在租租户",
-  "subtitle_other": "您的资产组合中有 {{count}} 位在租租户",
+  "subtitle_one": "全部房产共有 {{count}} 位在租租户",
+  "subtitle_other": "全部房产共有 {{count}} 位在租租户",
   "viewAnalytics": "查看分析",
   "addTenant": "+ 添加租户",
   "addTenantModalTitle": "添加租户",
   "editTenant": "编辑租户",
-  "searchPlaceholder": "按姓名、邮箱或电话搜索…",
+  "searchPlaceholder": "按姓名、邮箱、电话或账号搜索…",
   "allProperties": "全部房产",
   "emptyNoUnitsTitle": "暂无房源单元",
-  "emptyNoUnitsBody": "请先添加房产和单元，然后再回来分配租户。",
+  "emptyNoUnitsBody": "请先添加房产及房源单元，然后回到此处分配租户。",
   "emptyNoMatchesTitle": "无匹配结果",
   "emptyNoMatchesBody": "没有符合当前搜索和筛选条件的租户。",
   "table": {
@@ -41,10 +41,10 @@
     "notSet": "未设置"
   },
   "inspectionStatus": {
-    "none": "无验房",
+    "none": "未验房",
     "draft": "草稿",
-    "pending_signature": "待签字",
-    "signed": "已签字"
+    "pending_signature": "待签署",
+    "signed": "已签署"
   },
-  "confirmRemove": "确定将 {{name}} 从单元 {{unit}} 中移除吗？"
+  "confirmRemove": "确定将 {{name}} 从单元 {{unit}} 移除吗？"
 }

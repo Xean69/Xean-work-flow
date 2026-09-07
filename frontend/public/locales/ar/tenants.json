@@ -11,12 +11,12 @@
   "addTenant": "+ إضافة مستأجر",
   "addTenantModalTitle": "إضافة مستأجر",
   "editTenant": "تعديل المستأجر",
-  "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو الهاتف…",
+  "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو الهاتف أو رقم الحساب…",
   "allProperties": "جميع العقارات",
   "emptyNoUnitsTitle": "لا توجد وحدات بعد",
   "emptyNoUnitsBody": "أضف عقارًا وبعض الوحدات أولًا، ثم عد لتعيين المستأجرين.",
   "emptyNoMatchesTitle": "لا توجد نتائج",
-  "emptyNoMatchesBody": "لا يوجد مستأجر يطابق البحث والتصفية الحاليين.",
+  "emptyNoMatchesBody": "لا يوجد مستأجر مطابق للبحث والفلتر الحاليين.",
   "table": {
     "tenant": "المستأجر",
     "propertyUnit": "العقار / الوحدة",
@@ -24,7 +24,7 @@
     "thisMonth": "هذا الشهر",
     "leaseEnds": "انتهاء العقد",
     "status": "الحالة",
-    "portalLogin": "الدخول إلى البوابة",
+    "portalLogin": "دخول البوابة",
     "moveInInspection": "معاينة الاستلام",
     "edit": "تعديل",
     "delete": "حذف"
@@ -37,12 +37,12 @@
   },
   "paymentStatus": {
     "paid": "مدفوع",
-    "partial": "مدفوع جزئيًا",
+    "partial": "جزئي",
     "unpaid": "غير مدفوع"
   },
   "portalLoginStatus": {
     "active": "نشط",
-    "notSet": "غير مُفعّل"
+    "notSet": "غير مُعد"
   },
   "inspectionStatus": {
     "none": "لا توجد معاينة",
@@ -50,5 +50,5 @@
     "pending_signature": "بانتظار التوقيع",
     "signed": "موقّعة"
   },
-  "confirmRemove": "هل تريد إزالة {{name}} من الوحدة {{unit}}؟"
+  "confirmRemove": "إزالة {{name}} من الوحدة {{unit}}؟"
 }

@@ -1,5 +1,6 @@
 {
   "greeting": "Hi, {{firstName}}",
+  "accountNumber": "Account {{accountNumber}}",
   "renewalNoticeWithDays": "Your lease ends {{date}} — {{count}} days away. Reach out to your property manager about renewing.",
   "renewalNoticeOverdue": "Your lease ends {{date}}. Reach out to your property manager about renewing.",
   "yourHome": "Your home",

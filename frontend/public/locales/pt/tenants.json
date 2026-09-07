@@ -7,21 +7,21 @@
   "addTenant": "+ Adicionar inquilino",
   "addTenantModalTitle": "Adicionar inquilino",
   "editTenant": "Editar inquilino",
-  "searchPlaceholder": "Pesquisar por nome, e-mail ou telefone…",
+  "searchPlaceholder": "Pesquisar por nome, e-mail, telefone ou nº de conta…",
   "allProperties": "Todos os imóveis",
-  "emptyNoUnitsTitle": "Ainda sem frações",
-  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas frações e depois volte para atribuir inquilinos.",
+  "emptyNoUnitsTitle": "Ainda sem unidades",
+  "emptyNoUnitsBody": "Adicione primeiro um imóvel e algumas unidades e depois volte para atribuir inquilinos.",
   "emptyNoMatchesTitle": "Sem resultados",
   "emptyNoMatchesBody": "Nenhum inquilino corresponde à pesquisa e ao filtro atuais.",
   "table": {
     "tenant": "Inquilino",
-    "propertyUnit": "Imóvel / Fração",
+    "propertyUnit": "Imóvel / Unidade",
     "rent": "Renda",
     "thisMonth": "Este mês",
     "leaseEnds": "Fim do contrato",
     "status": "Estado",
     "portalLogin": "Acesso ao portal",
-    "moveInInspection": "Vistoria de entrada",
+    "moveInInspection": "Inspeção de entrada",
     "edit": "Editar",
     "delete": "Eliminar"
   },
@@ -29,22 +29,22 @@
     "active": "Ativo",
     "renewal_due": "Renovação prevista",
     "urgent_renewal": "Renovação urgente",
-    "vacant": "Devoluto"
+    "vacant": "Vago"
   },
   "paymentStatus": {
     "paid": "Pago",
     "partial": "Parcial",
-    "unpaid": "Por pagar"
+    "unpaid": "Não pago"
   },
   "portalLoginStatus": {
     "active": "Ativo",
-    "notSet": "Por definir"
+    "notSet": "Não definido"
   },
   "inspectionStatus": {
-    "none": "Sem vistoria",
+    "none": "Sem inspeção",
     "draft": "Rascunho",
-    "pending_signature": "Aguarda assinatura",
+    "pending_signature": "Assinatura pendente",
     "signed": "Assinada"
   },
-  "confirmRemove": "Remover {{name}} da fração {{unit}}?"
+  "confirmRemove": "Remover {{name}} da unidade {{unit}}?"
 }

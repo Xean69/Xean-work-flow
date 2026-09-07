@@ -366,6 +366,7 @@ function TenantProfile() {
             <h1 className="tenant-header-name">{tenant.full_name}</h1>
             <p className="tenant-header-sub">
               {tenant.property_name} · Unit {tenant.unit_number}
+              {tenant.account_number ? ` · ${tenant.account_number}` : ''}
             </p>
             <div className="tenant-header-badges">
               <Badge variant={STATUS_VARIANT[tenant.status]}>{STATUS_LABEL[tenant.status]}</Badge>

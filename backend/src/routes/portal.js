@@ -121,7 +121,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
-         t.id, t.full_name, t.email, t.language, t.push_notify_other, t.rent_amount, t.deposit_amount,
+         t.id, t.account_number, t.full_name, t.email, t.language, t.push_notify_other, t.rent_amount, t.deposit_amount,
          t.lease_start, t.lease_end, t.first_period_rent_amount,
          u.unit_number,
          p.name AS property_name, p.address, p.city, p.province, p.postal_code,

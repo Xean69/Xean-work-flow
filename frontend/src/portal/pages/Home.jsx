@@ -50,6 +50,11 @@ function Home() {
   return (
     <div>
       <p className="portal-greeting">{t('greeting', { firstName })}</p>
+      {tenant.account_number && (
+        <p style={{ color: 'var(--slate)', fontSize: 13, marginTop: -8, marginBottom: 16 }}>
+          {t('accountNumber', { accountNumber: tenant.account_number })}
+        </p>
+      )}
 
       {showRenewalNotice && (
         <div className="portal-notice">

@@ -121,6 +121,7 @@ router.get(
          p.id AS property_id,
          p.name AS property_name,
          t.id AS tenant_id,
+         t.account_number,
          t.full_name,
          t.email,
          t.phone,
@@ -278,6 +279,7 @@ router.get(
     const { rows } = await pool.query(
       `SELECT
          t.id AS tenant_id,
+         t.account_number,
          t.unit_id,
          t.full_name,
          t.email,
@@ -570,7 +572,7 @@ router.post(
       const { rows } = await client.query(
         `INSERT INTO tenants (business_id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount, language, created_at`,
+         RETURNING id, account_number, unit_id, full_name, email, phone, lease_start, lease_end, rent_amount, deposit_amount, first_period_rent_amount, language, created_at`,
         [
           req.businessId,
           data.unit_id,
