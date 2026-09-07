@@ -2,7 +2,7 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseAiLeaseGenerationBody } from "../utils/validate.js";
+import { parseAiLeaseGenerationBody, parseTimezoneBody } from "../utils/validate.js";
 import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
 
@@ -61,6 +61,24 @@ router.put(
       "UPDATE businesses SET ai_lease_generation_enabled = $1 WHERE id = $2 RETURNING id, ai_lease_generation_enabled",
       [data.enabled, req.businessId]
     );
+    res.json(rows[0]);
+  })
+);
+
+// The business's own timezone, not any one person's — governs shared
+// scheduling logic (the monthly rent-billing job) rather than a personal
+// display preference (see admin.js's PATCH /me/timezone for that). Owner
+// or manager can set it, same access level as the logo above — this is an
+// operational setting, not a risk-acceptance decision like AI lease
+// generation.
+router.put(
+  "/timezone",
+  asyncHandler(async (req, res) => {
+    const data = parseTimezoneBody(req.body);
+    const { rows } = await pool.query("UPDATE businesses SET timezone = $1 WHERE id = $2 RETURNING id, timezone", [
+      data.timezone,
+      req.businessId,
+    ]);
     res.json(rows[0]);
   })
 );

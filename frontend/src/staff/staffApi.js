@@ -30,8 +30,23 @@ async function uploadRequest(path, formData) {
   return data;
 }
 
+// Best-effort IANA zone name from the browser itself — used only to seed
+// this account's timezone the first time it's ever detected (see
+// staff.js's login route, which only fills this in when the staff member
+// doesn't already have one).
+function detectTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
 export function login(email, password) {
-  return request("/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  return request("/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password, timezone: detectTimezone() }),
+  });
 }
 
 export function logout() {
@@ -48,6 +63,10 @@ export function setMyStatus(away, awayNote) {
 
 export function updateStaffPushPreference(notifyOther) {
   return request("/me/push-preference", { method: "PATCH", body: JSON.stringify({ notify_other: notifyOther }) });
+}
+
+export function updateStaffTimezone(timezone) {
+  return request("/me/timezone", { method: "PATCH", body: JSON.stringify({ timezone }) });
 }
 
 export function subscribeStaffToPush(subscription) {

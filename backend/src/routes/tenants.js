@@ -12,7 +12,7 @@ import {
   parseChargeBody,
 } from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
-import { currentPeriod } from "../utils/period.js";
+import { currentPeriodInTimezone } from "../utils/period.js";
 import { ensureChargesThroughPeriod, getBalanceDue, getOverallStatus, deriveChargeStatus, allocatePayment, getPortfolioBalances } from "../utils/ledger.js";
 import { upload, uploadToCloudinary } from "../utils/upload.js";
 import { generateResetToken } from "../utils/resetToken.js";
@@ -25,12 +25,20 @@ const RENEWAL_DAYS = 60;
 
 // Status is never stored — it's derived from lease_end every time it's
 // requested, so it can't ever go stale the way a saved value would.
+//
+// lease_end is a DATE column, which pg returns as a JS Date at UTC
+// midnight — .setHours(0,0,0,0) re-snaps it to *server-local* midnight
+// instead, silently shifting the effective day depending on the server's
+// own OS timezone (dormant today only because this server happens to run
+// on UTC already). Compared in UTC terms on both sides instead, same
+// "UTC-midnight-to-UTC-midnight" approach this file's own daysBetween
+// (below) already uses for exactly this reason.
 function computeStatus(leaseEnd) {
   const end = new Date(leaseEnd);
-  end.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const daysLeft = Math.round((end - today) / 86400000);
+  const endUTC = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const daysLeft = Math.round((endUTC - todayUTC) / 86400000);
   if (daysLeft <= URGENT_DAYS) return "urgent_renewal";
   if (daysLeft <= RENEWAL_DAYS) return "renewal_due";
   return "active";
@@ -601,7 +609,17 @@ router.post(
       // new charges landing within the hour of each other, which read as
       // "charged twice" for a brand new tenant. Backfilling the whole range
       // up front means the scheduler finds nothing left to add.
-      await ensureChargesThroughPeriod(client, tenant.id, currentPeriod(), tenant);
+      // "Today" is resolved in this tenant's own business's timezone, not
+      // the server's — the same billing-period concept the scheduler uses.
+      const { rows: businessRows } = await client.query("SELECT timezone FROM businesses WHERE id = $1", [
+        req.businessId,
+      ]);
+      await ensureChargesThroughPeriod(
+        client,
+        tenant.id,
+        currentPeriodInTimezone(businessRows[0].timezone),
+        tenant
+      );
 
       if (firstPayment) {
         const { rows: paymentRows } = await client.query(

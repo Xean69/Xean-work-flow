@@ -47,6 +47,25 @@ export function parseLanguageBody(body) {
   return { language: body.language };
 }
 
+// One of ~400 real IANA names, not a small closed list like language above
+// — validated against the runtime's own supported set rather than a
+// hardcoded array here, so this needs no update when a new IANA release
+// adds/renames zones.
+export function parseTimezoneBody(body) {
+  if (typeof body.timezone !== "string" || !Intl.supportedValuesOf("timeZone").includes(body.timezone)) {
+    throw new ApiError(400, "timezone must be a valid IANA time zone name");
+  }
+  return { timezone: body.timezone };
+}
+
+// Best-effort variant for the auto-detected timezone a browser sends
+// alongside login/signup — this is never something a login should fail
+// over, so an absent or malformed value is just treated as "none detected"
+// rather than rejecting the request.
+export function safeTimezoneOrNull(value) {
+  return typeof value === "string" && Intl.supportedValuesOf("timeZone").includes(value) ? value : null;
+}
+
 // Controls only the OTHER-category push toggle (payments, messages,
 // leases, etc.) — mandatory maintenance pushes never consult this value.
 export function parsePushPreferenceBody(body) {

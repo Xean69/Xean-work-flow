@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import {
   getTenants,
   createInspection,
@@ -22,7 +22,9 @@ const NO_INSPECTION_MESSAGE = 'No inspection for this tenant yet'
 const CONDITION_LABEL = { good: 'Good', fair: 'Fair', poor: 'Poor', damaged: 'Damaged' }
 const CONDITION_VARIANT = { good: 'green', fair: 'slate', poor: 'amber', damaged: 'red' }
 
-function formatDateTime(value) {
+// timeZone undefined (admin.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatDateTime(value, timezone) {
   if (!value) return null
   return new Date(value).toLocaleString(undefined, {
     year: 'numeric',
@@ -30,6 +32,7 @@ function formatDateTime(value) {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
@@ -228,6 +231,7 @@ function RoomSection({ inspectionId, room, editable, onChanged }) {
 }
 
 function TenantInspection() {
+  const { admin } = useOutletContext()
   const { tenantId } = useParams()
   const navigate = useNavigate()
   const [tenantRow, setTenantRow] = useState(null)
@@ -335,7 +339,7 @@ function TenantInspection() {
                 {inspection.status === 'draft' ? (
                   <Badge variant="slate">Draft</Badge>
                 ) : inspection.signed_at ? (
-                  <Badge variant="green">Signed by {inspection.signed_name} on {formatDateTime(inspection.signed_at)}</Badge>
+                  <Badge variant="green">Signed by {inspection.signed_name} on {formatDateTime(inspection.signed_at, admin.timezone)}</Badge>
                 ) : (
                   <Badge variant="amber">Finalized · Awaiting tenant signature</Badge>
                 )}

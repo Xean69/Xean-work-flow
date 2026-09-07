@@ -46,7 +46,9 @@ function formatCalendarDate(value) {
   })
 }
 
-function formatDateTime(value) {
+// timeZone undefined (admin.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatDateTime(value, timezone) {
   if (!value) return '—'
   return new Date(value).toLocaleString(undefined, {
     year: 'numeric',
@@ -54,6 +56,7 @@ function formatDateTime(value) {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
@@ -441,6 +444,7 @@ function ReviewLease({ lease, admin, onChange, onSent, onDeleted, onClose }) {
 }
 
 function LeaseDetail({ lease, onVoided, onClose }) {
+  const { admin } = useOutletContext()
   const [voiding, setVoiding] = useState(false)
   const [error, setError] = useState('')
 
@@ -481,12 +485,12 @@ function LeaseDetail({ lease, onVoided, onClose }) {
           {formatCalendarDate(lease.lease_end_snapshot)}
         </div>
         <div>
-          <span className="lease-summary-label">Sent</span> {formatDateTime(lease.sent_at)}
+          <span className="lease-summary-label">Sent</span> {formatDateTime(lease.sent_at, admin.timezone)}
         </div>
         {lease.signed_at && (
           <div>
             <span className="lease-summary-label">Signed</span> by {lease.signed_name} on{' '}
-            {formatDateTime(lease.signed_at)}
+            {formatDateTime(lease.signed_at, admin.timezone)}
           </div>
         )}
         {lease.status === 'void' && (

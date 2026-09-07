@@ -9,6 +9,8 @@ import {
   parseForgotPasswordBody,
   parseTenantResetPasswordBody,
   parseLanguageBody,
+  parseTimezoneBody,
+  safeTimezoneOrNull,
   parseLeaseSignBody,
   parseRescheduleResponseBody,
   parseRescheduleEntryPermissionBody,
@@ -19,7 +21,7 @@ import {
 } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply, generatePendingChatReply } from "../services/maintenanceChat.js";
-import { currentPeriod } from "../utils/period.js";
+import { currentPeriodInTimezone } from "../utils/period.js";
 import {
   notifyManagersOfMaintenanceRequest,
   notifyManagersOfResolvedMaintenanceRequest,
@@ -49,7 +51,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      "SELECT id, full_name, email, password_hash FROM tenants WHERE lower(email) = lower($1)",
+      "SELECT id, full_name, email, password_hash, timezone FROM tenants WHERE lower(email) = lower($1)",
       [email]
     );
     const tenant = rows[0];
@@ -60,8 +62,17 @@ router.post(
       throw new ApiError(401, "Invalid email or password");
     }
 
+    // Only ever fills in a timezone this account has never had — a
+    // deliberate manual choice made later in Settings must never be
+    // silently overwritten by a subsequent login's fresh detection.
+    const detectedTimezone = safeTimezoneOrNull(req.body.timezone);
+    if (!tenant.timezone && detectedTimezone) {
+      await pool.query("UPDATE tenants SET timezone = $1 WHERE id = $2", [detectedTimezone, tenant.id]);
+      tenant.timezone = detectedTimezone;
+    }
+
     req.session.tenantId = tenant.id;
-    res.json({ id: tenant.id, full_name: tenant.full_name, email: tenant.email });
+    res.json({ id: tenant.id, full_name: tenant.full_name, email: tenant.email, timezone: tenant.timezone });
   })
 );
 
@@ -121,15 +132,17 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
-         t.id, t.account_number, t.full_name, t.email, t.language, t.push_notify_other, t.rent_amount, t.deposit_amount,
+         t.id, t.account_number, t.full_name, t.email, t.language, t.timezone, t.push_notify_other, t.rent_amount, t.deposit_amount,
          t.lease_start, t.lease_end, t.first_period_rent_amount,
          u.unit_number,
          p.name AS property_name, p.address, p.city, p.province, p.postal_code,
          COALESCE(ta.addon_total, 0) AS addon_total,
-         ta.addons
+         ta.addons,
+         b.timezone AS business_timezone
        FROM tenants t
        JOIN units u ON u.id = t.unit_id
        JOIN properties p ON p.id = u.property_id
+       JOIN businesses b ON b.id = t.business_id
        LEFT JOIN LATERAL (
          SELECT
            SUM(ta2.quantity * pa.monthly_price) AS addon_total,
@@ -162,7 +175,11 @@ router.get(
     res.json({
       ...tenant,
       addons: tenant.addons || [],
-      current_period: currentPeriod(),
+      // The business's own timezone, deliberately — this labels which
+      // month the billing job (also business-timezone-scoped) currently
+      // considers current, not a personal-preference calculation, so it
+      // can never disagree with what's actually on the tenant's ledger.
+      current_period: currentPeriodInTimezone(tenant.business_timezone),
       payment_status: overallStatus.status,
     });
   })
@@ -178,6 +195,19 @@ router.patch(
     const { rows } = await pool.query(
       "UPDATE tenants SET language = $1 WHERE id = $2 RETURNING id, language",
       [data.language, req.tenantId]
+    );
+    res.json(rows[0]);
+  })
+);
+
+router.patch(
+  "/me/timezone",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseTimezoneBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE tenants SET timezone = $1 WHERE id = $2 RETURNING id, timezone",
+      [data.timezone, req.tenantId]
     );
     res.json(rows[0]);
   })

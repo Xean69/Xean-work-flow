@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   getPortalMaintenance,
@@ -31,12 +31,15 @@ function formatEntryDate(value, locale) {
   return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
-function formatTime(value, locale) {
+// timeZone undefined (tenant.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatTime(value, locale, timezone) {
   return new Date(value).toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
@@ -65,6 +68,7 @@ function AttachmentPreview({ url, resourceType, fileName }) {
 const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.pdf,.mp4,.mov,.webm'
 
 function Repairs() {
+  const { tenant } = useOutletContext()
   const { t, i18n } = useTranslation('portal-repairs')
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -572,7 +576,7 @@ function Repairs() {
                                     fileName={c.attachment_file_name}
                                   />
                                 )}
-                                <div className="portal-bubble-time">{formatTime(c.created_at, i18n.language)}</div>
+                                <div className="portal-bubble-time">{formatTime(c.created_at, i18n.language, tenant.timezone)}</div>
                               </div>
                             </Fragment>
                           )

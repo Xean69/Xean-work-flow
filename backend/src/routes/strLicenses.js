@@ -12,12 +12,19 @@ const EXPIRING_SOON_DAYS = 60;
 // requested, same reasoning as tenants' lease status (see tenants.js):
 // a stored value could silently go stale the moment today's date crosses
 // a boundary, with nothing ever writing to the row to catch it.
+//
+// expiry_date is a DATE column, which pg returns as a JS Date at UTC
+// midnight — .setHours(0,0,0,0) re-snaps it to *server-local* midnight
+// instead, silently shifting the effective day depending on the server's
+// own OS timezone (dormant today only because this server happens to run
+// on UTC already). Compared in UTC terms on both sides instead, same fix
+// as tenants.js's computeStatus/daysBetween.
 function computeStatus(expiryDate) {
   const expiry = new Date(expiryDate);
-  expiry.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const daysLeft = Math.round((expiry - today) / 86400000);
+  const expiryUTC = Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth(), expiry.getUTCDate());
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const daysLeft = Math.round((expiryUTC - todayUTC) / 86400000);
   if (daysLeft < 0) return "expired";
   if (daysLeft <= EXPIRING_SOON_DAYS) return "expiring_soon";
   return "active";

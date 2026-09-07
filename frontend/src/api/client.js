@@ -20,14 +20,31 @@ async function request(path, options = {}) {
   return data;
 }
 
+// Best-effort IANA zone name from the browser itself — used only to seed an
+// account's timezone the first time it's ever detected (see admin.js's
+// login/signup routes, which only fill this in when the account doesn't
+// already have one). Never throws: an ancient/unusual environment without
+// this API just means "nothing detected," same as if the field were
+// omitted entirely.
+function detectTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
 export function login(email, password) {
-  return request("/admin/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  return request("/admin/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password, timezone: detectTimezone() }),
+  });
 }
 
 export function signup(businessName, email, password) {
   return request("/admin/signup", {
     method: "POST",
-    body: JSON.stringify({ business_name: businessName, email, password }),
+    body: JSON.stringify({ business_name: businessName, email, password, timezone: detectTimezone() }),
   });
 }
 
@@ -49,6 +66,14 @@ export function getMe() {
 
 export function updateAdminLanguage(language) {
   return request("/admin/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
+}
+
+export function updateAdminTimezone(timezone) {
+  return request("/admin/me/timezone", { method: "PATCH", body: JSON.stringify({ timezone }) });
+}
+
+export function updateBusinessTimezone(timezone) {
+  return request("/business/timezone", { method: "PUT", body: JSON.stringify({ timezone }) });
 }
 
 export function updateAdminPushPreference(notifyOther) {

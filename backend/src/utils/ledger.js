@@ -1,5 +1,5 @@
 import pool from "../db.js";
-import { parsePeriod, nextPeriod } from "./period.js";
+import { parsePeriod, nextPeriod, currentPeriodInTimezone, isLastDayOfMonthInTimezone } from "./period.js";
 
 // pg returns DATE columns as JS Date objects (UTC midnight) — read via
 // toISOString rather than local getters, same reasoning as tenants.js's
@@ -125,38 +125,35 @@ export async function ensureChargesThroughPeriod(client, tenantId, throughPeriod
   }
 }
 
-// Safety net: runs ensureChargesThroughPeriod for every tenant in the
-// system, every time it's called — meant to be invoked on a frequent,
-// unconditional schedule (see scheduler.js), independent of the last-day-
-// of-month advance-billing sweep below. That sweep only ever fires once,
-// on one specific calendar day, and only ever reaches one period ahead; if
-// that exact trigger is ever missed (downtime, a deploy landing at the
-// wrong moment) there'd be nothing to catch the resulting gap afterward.
-// This closes that gap within one tick of whenever it's next able to run,
-// for any tenant, regardless of cause — the same backfill tenant creation
-// already gets, just re-applied continuously instead of once.
-export async function ensureAllTenantsThroughPeriod(throughPeriod) {
+// The scheduler's one and only sweep, run every hour, unconditionally, for
+// every tenant across every business — and the single place both of this
+// system's two jobs live, because as soon as "today" depends on each
+// tenant's own business's timezone, neither job can be computed once,
+// globally, for the whole portfolio the way they used to be:
+//
+// 1. Safety net: backfills each tenant's ledger through "today" in their
+//    own business's timezone. Runs unconditionally so a gap from any cause
+//    (a missed advance-billing trigger below, downtime, a future bug)
+//    never survives more than one tick before self-correcting.
+// 2. Advance billing: on the last calendar day of the month *as observed
+//    in that tenant's own business's timezone* (which can be true for one
+//    business and false for another at the exact same real-world instant),
+//    also reaches one period further — billing next month's rent a day
+//    early. ensureChargesThroughPeriod's own lease_end bound already keeps
+//    this from ever charging a tenant whose lease won't cover next month,
+//    so no separate lease-window filter is needed here.
+export async function ensureAllTenantsLedgers() {
   const { rows: tenants } = await pool.query(
-    "SELECT id, rent_amount, first_period_rent_amount, lease_start, lease_end FROM tenants"
+    `SELECT t.id, t.rent_amount, t.first_period_rent_amount, t.lease_start, t.lease_end, b.timezone AS business_timezone
+     FROM tenants t
+     JOIN businesses b ON b.id = t.business_id`
   );
   for (const tenant of tenants) {
+    const throughPeriod = currentPeriodInTimezone(tenant.business_timezone);
     await ensureChargesThroughPeriod(pool, tenant.id, throughPeriod, tenant);
-  }
-}
-
-// Portfolio-wide sweep for one period, across every business — what the
-// scheduler calls. Scoped to tenants whose lease actually covers the
-// period, same "currently under lease" definition used elsewhere.
-export async function ensureChargesForPeriod(period) {
-  const { start, end } = parsePeriod(period);
-  const { rows: tenants } = await pool.query(
-    `SELECT id, rent_amount, first_period_rent_amount, lease_start
-     FROM tenants
-     WHERE lease_start <= $2 AND lease_end >= $1`,
-    [start, end]
-  );
-  for (const tenant of tenants) {
-    await ensureChargesForTenant(pool, tenant.id, period, tenant);
+    if (isLastDayOfMonthInTimezone(tenant.business_timezone)) {
+      await ensureChargesThroughPeriod(pool, tenant.id, nextPeriod(throughPeriod), tenant);
+    }
   }
 }
 

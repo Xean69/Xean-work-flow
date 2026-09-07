@@ -1,7 +1,7 @@
 import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { currentPeriod, parsePeriod } from "../utils/period.js";
+import { currentPeriodInTimezone, parsePeriod } from "../utils/period.js";
 
 const router = Router();
 
@@ -18,7 +18,16 @@ const router = Router();
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const month = parsePeriod(req.query.month || currentPeriod());
+    // "This month" (when the caller doesn't pick one) is resolved in the
+    // viewing business's own timezone, not the server's.
+    let defaultMonth = req.query.month;
+    if (!defaultMonth) {
+      const { rows: businessRows } = await pool.query("SELECT timezone FROM businesses WHERE id = $1", [
+        req.businessId,
+      ]);
+      defaultMonth = currentPeriodInTimezone(businessRows[0].timezone);
+    }
+    const month = parsePeriod(defaultMonth);
 
     const { rows: properties } = await pool.query(
       "SELECT id, name FROM properties WHERE business_id = $1 ORDER BY name",

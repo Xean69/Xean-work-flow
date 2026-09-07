@@ -3,15 +3,21 @@ import { useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import PageHeader from '../components/PageHeader.jsx'
 import Badge from '../components/Badge.jsx'
-import { updateAdminLanguage, updateAdminPushPreference } from '../api/client.js'
+import { updateAdminLanguage, updateAdminPushPreference, updateAdminTimezone, updateBusinessTimezone } from '../api/client.js'
 import { SUPPORTED_LANGUAGES } from '../i18n/languages.js'
 import './LanguageSettings.css'
+
+// The full real IANA list, from the runtime itself — no hardcoded list to
+// keep in sync (unlike the small closed set of SUPPORTED_LANGUAGES above).
+const TIMEZONES = Intl.supportedValuesOf('timeZone')
 
 function LanguageSettings() {
   const { admin, refreshAdmin } = useOutletContext()
   const { t } = useTranslation('language')
   const [saving, setSaving] = useState(null) // language code currently being saved, or null
   const [savingPushPref, setSavingPushPref] = useState(false)
+  const [savingTimezone, setSavingTimezone] = useState(false)
+  const [savingBusinessTimezone, setSavingBusinessTimezone] = useState(false)
 
   async function handleSelect(code) {
     if (code === admin.language || saving) return
@@ -31,6 +37,26 @@ function LanguageSettings() {
       await refreshAdmin()
     } finally {
       setSavingPushPref(false)
+    }
+  }
+
+  async function handleTimezoneChange(e) {
+    setSavingTimezone(true)
+    try {
+      await updateAdminTimezone(e.target.value)
+      await refreshAdmin()
+    } finally {
+      setSavingTimezone(false)
+    }
+  }
+
+  async function handleBusinessTimezoneChange(e) {
+    setSavingBusinessTimezone(true)
+    try {
+      await updateBusinessTimezone(e.target.value)
+      await refreshAdmin()
+    } finally {
+      setSavingBusinessTimezone(false)
     }
   }
 
@@ -71,6 +97,37 @@ function LanguageSettings() {
         <p style={{ fontSize: 12.5, color: 'var(--slate)', marginTop: 6, maxWidth: 480 }}>
           {t('notifications.otherNote')}
         </p>
+
+        <h3 style={{ marginTop: 32, marginBottom: 4 }}>Your timezone</h3>
+        <p style={{ fontSize: 12.5, color: 'var(--slate)', marginTop: 0, marginBottom: 10, maxWidth: 480 }}>
+          Controls how message and activity timestamps are displayed for you — detected automatically the first
+          time you logged in, editable anytime.
+        </p>
+        <select value={admin.timezone || ''} onChange={handleTimezoneChange} disabled={savingTimezone}>
+          {!admin.timezone && <option value="">Not yet detected — using your browser's current timezone</option>}
+          {TIMEZONES.map((tz) => (
+            <option key={tz} value={tz}>
+              {tz}
+            </option>
+          ))}
+        </select>
+
+        <h3 style={{ marginTop: 32, marginBottom: 4 }}>Business timezone</h3>
+        <p style={{ fontSize: 12.5, color: 'var(--slate)', marginTop: 0, marginBottom: 10, maxWidth: 480 }}>
+          Governs the monthly rent-billing job and other business-wide scheduling — not a personal display
+          preference, so this is shared by everyone on your team.
+        </p>
+        <select
+          value={admin.business_timezone}
+          onChange={handleBusinessTimezoneChange}
+          disabled={savingBusinessTimezone}
+        >
+          {TIMEZONES.map((tz) => (
+            <option key={tz} value={tz}>
+              {tz}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   )

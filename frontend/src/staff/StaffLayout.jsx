@@ -143,7 +143,7 @@ function StaffLayout() {
       </div>
 
       <main className="portal-main">
-        <Outlet context={{ staff }} />
+        <Outlet context={{ staff, refreshStaff: () => getMe().then(setStaff) }} />
       </main>
 
       <nav className="portal-tabbar">

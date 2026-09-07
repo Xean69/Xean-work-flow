@@ -11,6 +11,8 @@ import {
   parsePushPreferenceBody,
   parsePushSubscriptionBody,
   parsePushUnsubscribeBody,
+  parseTimezoneBody,
+  safeTimezoneOrNull,
 } from "../utils/validate.js";
 import {
   notifyManagersOfStaffMessage,
@@ -33,7 +35,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      "SELECT id, first_name, last_name, email, business_id, password_hash FROM maintenance_staff WHERE lower(email) = lower($1)",
+      "SELECT id, first_name, last_name, email, business_id, password_hash, timezone FROM maintenance_staff WHERE lower(email) = lower($1)",
       [email]
     );
     const staff = rows[0];
@@ -44,9 +46,24 @@ router.post(
       throw new ApiError(401, "Invalid email or password");
     }
 
+    // Only ever fills in a timezone this account has never had — a
+    // deliberate manual choice made later in Settings must never be
+    // silently overwritten by a subsequent login's fresh detection.
+    const detectedTimezone = safeTimezoneOrNull(req.body.timezone);
+    if (!staff.timezone && detectedTimezone) {
+      await pool.query("UPDATE maintenance_staff SET timezone = $1 WHERE id = $2", [detectedTimezone, staff.id]);
+      staff.timezone = detectedTimezone;
+    }
+
     req.session.staffId = staff.id;
     req.session.businessId = staff.business_id;
-    res.json({ id: staff.id, first_name: staff.first_name, last_name: staff.last_name, email: staff.email });
+    res.json({
+      id: staff.id,
+      first_name: staff.first_name,
+      last_name: staff.last_name,
+      email: staff.email,
+      timezone: staff.timezone,
+    });
   })
 );
 
@@ -61,10 +78,23 @@ router.get(
   requireStaffAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      "SELECT id, first_name, last_name, email, phone, language, away, away_note, push_notify_other FROM maintenance_staff WHERE id = $1",
+      "SELECT id, first_name, last_name, email, phone, language, timezone, away, away_note, push_notify_other FROM maintenance_staff WHERE id = $1",
       [req.staffId]
     );
     if (!rows[0]) throw new ApiError(404, "Not found");
+    res.json(rows[0]);
+  })
+);
+
+router.patch(
+  "/me/timezone",
+  requireStaffAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseTimezoneBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE maintenance_staff SET timezone = $1 WHERE id = $2 RETURNING id, timezone",
+      [data.timezone, req.staffId]
+    );
     res.json(rows[0]);
   })
 );

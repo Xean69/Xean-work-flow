@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { getMyMessages, sendStaffMessage } from '../staffApi.js'
 import { linkify } from '../../utils/linkify.jsx'
 
-function formatTime(value) {
+// timeZone undefined (staff.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatTime(value, timezone) {
   return new Date(value).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
@@ -34,6 +38,7 @@ function AttachmentPreview({ url, resourceType, fileName }) {
 const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.pdf,.mp4,.mov,.webm'
 
 function Messages() {
+  const { staff } = useOutletContext()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState('')
@@ -99,7 +104,7 @@ function Messages() {
                   fileName={m.attachment_file_name}
                 />
               )}
-              <div className="portal-bubble-time">{formatTime(m.created_at)}</div>
+              <div className="portal-bubble-time">{formatTime(m.created_at, staff.timezone)}</div>
             </div>
           ))}
         </div>

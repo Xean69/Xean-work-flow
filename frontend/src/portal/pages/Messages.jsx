@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { getPortalMessages, sendPortalMessage } from '../portalApi.js'
 
-function formatTime(value) {
+// timeZone undefined (tenant.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatTime(value, timezone) {
   return new Date(value).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
 function Messages() {
+  const { tenant } = useOutletContext()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState('')
@@ -64,7 +69,7 @@ function Messages() {
             <div key={m.id} className={`portal-bubble ${m.sender === 'tenant' ? 'out' : 'in'}`}>
               {m.subject && <div className="portal-bubble-announce-subject">📢 {m.subject}</div>}
               {m.body}
-              <div className="portal-bubble-time">{formatTime(m.created_at)}</div>
+              <div className="portal-bubble-time">{formatTime(m.created_at, tenant.timezone)}</div>
             </div>
           ))}
         </div>

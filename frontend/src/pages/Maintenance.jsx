@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   getMaintenanceRequests,
@@ -42,12 +42,15 @@ function AiTag({ ticket }) {
   )
 }
 
-function formatTime(value, locale) {
+// timeZone undefined (admin.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatTime(value, locale, timezone) {
   return new Date(value).toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
@@ -85,6 +88,7 @@ function AttachmentPreview({ url, resourceType, fileName }) {
 }
 
 function Maintenance() {
+  const { admin } = useOutletContext()
   const { t: tr, i18n } = useTranslation('maintenance')
   const [tickets, setTickets] = useState([])
   const [unitRows, setUnitRows] = useState([])
@@ -512,7 +516,7 @@ function Maintenance() {
                             />
                           )}
                           <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>
-                            {formatTime(c.created_at, i18n.language)}
+                            {formatTime(c.created_at, i18n.language, admin.timezone)}
                           </div>
                         </div>
                       </Fragment>

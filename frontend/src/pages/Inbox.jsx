@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   getMessageThreads,
   getMessageThread,
@@ -30,12 +31,15 @@ function initials(name) {
 // column to pull from.
 const STAFF_ROLE_LABEL = 'Maintenance'
 
-function formatTime(value) {
+// timeZone undefined (admin.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatTime(value, timezone) {
   return new Date(value).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
@@ -96,6 +100,7 @@ function buildCombinedThreads(tenantRows, staffRows) {
 }
 
 function Inbox() {
+  const { admin } = useOutletContext()
   const [threads, setThreads] = useState([])
   const [staffThreads, setStaffThreads] = useState([])
   const [loading, setLoading] = useState(true)
@@ -255,7 +260,7 @@ function Inbox() {
                             fileName={m.attachment_file_name}
                           />
                         )}
-                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(m.created_at)}</div>
+                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4 }}>{formatTime(m.created_at, admin.timezone)}</div>
                       </div>
                     ))}
                   </div>

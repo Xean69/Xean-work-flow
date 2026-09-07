@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useOutletContext } from 'react-router-dom'
 import { getTicketDetail, updateTicketStatus, addTicketComment, proposeTicketReschedule } from '../staffApi.js'
 import { linkify } from '../../utils/linkify.jsx'
 import PrintableTicket from '../../components/PrintableTicket.jsx'
@@ -13,12 +13,15 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatTime(value) {
+// timeZone undefined (staff.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatTime(value, timezone) {
   return new Date(value).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
@@ -51,6 +54,7 @@ function AttachmentPreview({ url, resourceType, fileName }) {
 }
 
 function TicketDetail() {
+  const { staff } = useOutletContext()
   const { id } = useParams()
   const [ticket, setTicket] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -356,7 +360,7 @@ function TicketDetail() {
                         fileName={c.attachment_file_name}
                       />
                     )}
-                    <div className="portal-bubble-time">{formatTime(c.created_at)}</div>
+                    <div className="portal-bubble-time">{formatTime(c.created_at, staff.timezone)}</div>
                   </div>
                 </Fragment>
               )

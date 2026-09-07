@@ -43,17 +43,21 @@ const DOC_TYPE_LABELS = {
 
 const CONDITION_LABEL = { good: 'Good', fair: 'Fair', poor: 'Poor', damaged: 'Damaged' }
 
-function formatDateTime(value) {
+// timeZone undefined (tenant.timezone not yet detected) falls back to the
+// viewing browser's own local zone — today's existing behavior, unchanged.
+function formatDateTime(value, timezone) {
   return new Date(value).toLocaleString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   })
 }
 
 function MoveInInspection({ inspection, onSigned }) {
+  const { tenant } = useOutletContext()
   const [signedName, setSignedName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -110,7 +114,7 @@ function MoveInInspection({ inspection, onSigned }) {
 
       {inspection.signed_at ? (
         <p style={{ marginTop: 16, fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>
-          Signed by {inspection.signed_name} on {formatDateTime(inspection.signed_at)}
+          Signed by {inspection.signed_name} on {formatDateTime(inspection.signed_at, tenant.timezone)}
         </p>
       ) : (
         <form onSubmit={handleSign} style={{ marginTop: 16 }}>
@@ -143,6 +147,7 @@ function MoveInInspection({ inspection, onSigned }) {
 // not a replacement: signed_name is always required even when a drawn
 // image is also submitted.
 function LeaseESign({ lease, onSigned }) {
+  const { tenant } = useOutletContext()
   const [signMethod, setSignMethod] = useState('type')
   const [signedName, setSignedName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -192,7 +197,7 @@ function LeaseESign({ lease, onSigned }) {
       {lease.signed_at ? (
         <div style={{ marginTop: 14 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>
-            Signed by {lease.signed_name} on {formatDateTime(lease.signed_at)}
+            Signed by {lease.signed_name} on {formatDateTime(lease.signed_at, tenant.timezone)}
           </p>
           {lease.signature_image_url && (
             <img src={lease.signature_image_url} alt="Your signature" className="portal-signature-image" />

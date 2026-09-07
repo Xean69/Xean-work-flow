@@ -8,6 +8,8 @@ import {
   parseForgotPasswordBody,
   parseAdminResetPasswordBody,
   parseLanguageBody,
+  parseTimezoneBody,
+  safeTimezoneOrNull,
   parsePushPreferenceBody,
   parsePushSubscriptionBody,
   parsePushUnsubscribeBody,
@@ -35,7 +37,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.password_hash, a.role, a.business_id, b.business_name, b.created_at AS trial_started_at
+      `SELECT a.id, a.email, a.password_hash, a.role, a.business_id, a.timezone, b.business_name, b.created_at AS trial_started_at
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE lower(a.email) = lower($1)`,
@@ -49,6 +51,15 @@ router.post(
       throw new ApiError(401, "Invalid email or password");
     }
 
+    // Only ever fills in a timezone this account has never had — a
+    // deliberate manual choice made later in Settings must never be
+    // silently overwritten by a subsequent login's fresh detection.
+    const detectedTimezone = safeTimezoneOrNull(req.body.timezone);
+    if (!admin.timezone && detectedTimezone) {
+      await pool.query("UPDATE admins SET timezone = $1 WHERE id = $2", [detectedTimezone, admin.id]);
+      admin.timezone = detectedTimezone;
+    }
+
     req.session.adminId = admin.id;
     req.session.businessId = admin.business_id;
     res.json({
@@ -56,6 +67,7 @@ router.post(
       email: admin.email,
       role: admin.role,
       business_id: admin.business_id,
+      timezone: admin.timezone,
       business_name: admin.business_name,
       trial_started_at: admin.trial_started_at,
       trial_status: computeTrialStatus(admin.trial_started_at),
@@ -125,8 +137,8 @@ router.get(
   requireAdminAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.role, a.language, a.push_notify_other, a.business_id, b.business_name,
-              b.created_at AS trial_started_at, b.logo_url, b.ai_lease_generation_enabled
+      `SELECT a.id, a.email, a.role, a.language, a.timezone, a.push_notify_other, a.business_id, b.business_name,
+              b.created_at AS trial_started_at, b.logo_url, b.ai_lease_generation_enabled, b.timezone AS business_timezone
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,
@@ -148,6 +160,22 @@ router.patch(
     const { rows } = await pool.query(
       "UPDATE admins SET language = $1 WHERE id = $2 RETURNING id, language",
       [data.language, req.adminId]
+    );
+    res.json(rows[0]);
+  })
+);
+
+// This admin's own personal display timezone — distinct from the
+// business's own timezone (see businessRouter's PATCH /timezone), which
+// governs shared scheduling logic instead of one person's preference.
+router.patch(
+  "/me/timezone",
+  requireAdminAuth,
+  asyncHandler(async (req, res) => {
+    const data = parseTimezoneBody(req.body);
+    const { rows } = await pool.query(
+      "UPDATE admins SET timezone = $1 WHERE id = $2 RETURNING id, timezone",
+      [data.timezone, req.adminId]
     );
     res.json(rows[0]);
   })
@@ -203,20 +231,29 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = parseSignupBody(req.body);
     const passwordHash = await hashPassword(data.password);
+    // The founding owner's own browser is genuinely present at this exact
+    // moment — the one signup-time opportunity to seed both their personal
+    // display timezone and the brand-new business's own timezone (which
+    // governs the billing job) from a real detection instead of a guess.
+    // Falls back to each column's own schema default (NULL / 'UTC') when
+    // absent or invalid, exactly as if this field didn't exist at all.
+    const detectedTimezone = safeTimezoneOrNull(req.body.timezone);
 
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
       const { rows: businessRows } = await client.query(
-        "INSERT INTO businesses (business_name, contact_email) VALUES ($1, $2) RETURNING id, business_name, created_at",
-        [data.business_name, data.email]
+        `INSERT INTO businesses (business_name, contact_email, timezone)
+         VALUES ($1, $2, COALESCE($3, 'UTC'))
+         RETURNING id, business_name, created_at`,
+        [data.business_name, data.email, detectedTimezone]
       );
       const business = businessRows[0];
 
       const { rows: adminRows } = await client.query(
-        "INSERT INTO admins (email, password_hash, business_id, role) VALUES ($1, $2, $3, 'owner') RETURNING id, email, role",
-        [data.email, passwordHash, business.id]
+        "INSERT INTO admins (email, password_hash, business_id, role, timezone) VALUES ($1, $2, $3, 'owner', $4) RETURNING id, email, role, timezone",
+        [data.email, passwordHash, business.id, detectedTimezone]
       );
       const admin = adminRows[0];
 
@@ -236,6 +273,7 @@ router.post(
         email: admin.email,
         role: admin.role,
         business_id: business.id,
+        timezone: admin.timezone,
         business_name: business.business_name,
         trial_started_at: business.created_at,
         trial_status: computeTrialStatus(business.created_at),

@@ -21,8 +21,23 @@ async function request(path, options = {}) {
   return data;
 }
 
+// Best-effort IANA zone name from the browser itself — used only to seed
+// this account's timezone the first time it's ever detected (see
+// portal.js's login route, which only fills this in when the tenant
+// doesn't already have one).
+function detectTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
 export function login(email, password) {
-  return request("/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  return request("/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password, timezone: detectTimezone() }),
+  });
 }
 
 export function logout() {
@@ -43,6 +58,10 @@ export function getMe() {
 
 export function updateTenantLanguage(language) {
   return request("/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
+}
+
+export function updateTenantTimezone(timezone) {
+  return request("/me/timezone", { method: "PATCH", body: JSON.stringify({ timezone }) });
 }
 
 export function updateTenantPushPreference(notifyOther) {
