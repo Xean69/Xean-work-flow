@@ -686,6 +686,106 @@
   line-height: 1.65;
 }
 
+/* MIGRATION SOURCES GRID — "Bring your data with you" */
+.landing .lnd-migrate-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+}
+.landing .lnd-migrate-card {
+  background: var(--lnd-card);
+  border: 1px solid var(--lnd-card-border);
+  border-radius: 16px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.landing .lnd-migrate-card span {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--lnd-text);
+}
+.landing .lnd-migrate-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Each source gets a distinct tinted background + matching icon color —
+   purely decorative variety for a grid of otherwise-identical cards, not
+   meant to evoke any platform's actual brand colors. */
+.landing .lnd-migrate-card-blue .lnd-migrate-icon {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+.landing .lnd-migrate-card-violet .lnd-migrate-icon {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+.landing .lnd-migrate-card-green .lnd-migrate-icon {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+}
+.landing .lnd-migrate-card-orange .lnd-migrate-icon {
+  background: rgba(234, 88, 12, 0.12);
+  color: #ea580c;
+}
+.landing .lnd-migrate-card-pink .lnd-migrate-icon {
+  background: rgba(219, 39, 119, 0.12);
+  color: #db2777;
+}
+.landing .lnd-migrate-card-teal .lnd-migrate-icon {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0d9488;
+}
+.landing .lnd-migrate-card-yellow .lnd-migrate-icon {
+  background: rgba(202, 138, 4, 0.14);
+  color: #a16207;
+}
+.landing .lnd-migrate-card-red .lnd-migrate-icon {
+  background: rgba(225, 29, 72, 0.12);
+  color: #e11d48;
+}
+
+.landing .lnd-migrate-checklist {
+  margin-top: 28px;
+  background: rgba(61, 109, 156, 0.07);
+  border: 1px solid rgba(61, 109, 156, 0.18);
+  border-radius: 16px;
+  padding: 28px 32px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.landing .lnd-migrate-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.landing .lnd-migrate-check-icon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--lnd-navy-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.landing .lnd-migrate-check-item p {
+  font-size: 13.5px;
+  color: var(--lnd-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* AI MESSAGING AD BLOCK */
 .landing .lnd-ai-card {
   background: var(--lnd-bg-alt);
@@ -1501,7 +1601,8 @@
   .landing .lnd-feat-grid,
   .landing .lnd-steps,
   .landing .lnd-price-grid,
-  .landing .lnd-contact-grid {
+  .landing .lnd-contact-grid,
+  .landing .lnd-migrate-grid {
     grid-template-columns: 1fr 1fr;
   }
   .landing .lnd-hero-h1 {
@@ -1551,8 +1652,12 @@
   .landing .lnd-feat-grid,
   .landing .lnd-steps,
   .landing .lnd-price-grid,
-  .landing .lnd-contact-grid {
+  .landing .lnd-contact-grid,
+  .landing .lnd-migrate-checklist {
     grid-template-columns: 1fr;
+  }
+  .landing .lnd-migrate-checklist {
+    padding: 22px 20px;
   }
   .landing .lnd-chat-row {
     flex-direction: column;

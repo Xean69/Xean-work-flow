@@ -25,6 +25,109 @@ function Chevron() {
   )
 }
 
+// Neutral, hand-drawn icons for the migration-source grid below —
+// deliberately generic building/document shapes, never an actual
+// competitor's logo or wordmark, so this reads as "we support importing
+// from platforms like these" without implying any partnership or
+// endorsement.
+function SkyscraperIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="7" y="2" width="10" height="20" rx="1" />
+      <path
+        d="M10 6h1M13 6h1M10 9h1M13 9h1M10 12h1M13 12h1M10 15h1M13 15h1M10 18h1M13 18h1"
+        strokeLinecap="round"
+      />
+      <path d="M3 22h18" />
+    </svg>
+  )
+}
+function CommunityIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 21V10l6-4 6 4v11" />
+      <path d="M15 21v-7l6-3v10" />
+      <path d="M7 13h1M10 13h1M7 17h1M10 17h1M18 14h1M18 17h1" strokeLinecap="round" />
+      <path d="M2 21h20" />
+    </svg>
+  )
+}
+function EstateIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 21V9l8-5 8 5v12" />
+      <path d="M9 21v-6h6v6" />
+      <path d="M7 12v3M17 12v3" strokeLinecap="round" />
+      <path d="M2 21h20" />
+    </svg>
+  )
+}
+function CottageIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 11 12 4l8 7" />
+      <path d="M6 10v10h12V10" />
+      <path d="M15 5.5V3h2.5v4.7" />
+      <rect x="10" y="13.5" width="4" height="4" />
+    </svg>
+  )
+}
+function HomeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 11 12 3l9 8" />
+      <path d="M5 10v11h14V10" />
+      <path d="M10 21v-6h4v6" />
+    </svg>
+  )
+}
+function DoorIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="6" y="3" width="12" height="18" rx="1" />
+      <path d="M14 12v.01" strokeLinecap="round" strokeWidth="2.6" />
+      <path d="M3 21h18" />
+    </svg>
+  )
+}
+function CloudIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 9.2 4 4 0 0 1 16.5 18H7z" />
+    </svg>
+  )
+}
+function FileSpreadsheetIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+      <path d="M14 3v5h5" />
+      <path d="M8 13h8M8 16.5h8M11.3 13v6" />
+    </svg>
+  )
+}
+
+// Deliberately generic shapes above, not real logos — see each icon's own
+// comment. `tint` selects one of Landing.css's .lnd-migrate-card-* color
+// variants; the actual source-platform name is just a label, not a claim
+// of partnership.
+const MIGRATION_SOURCES = [
+  { name: 'Yardi', tint: 'blue', icon: <SkyscraperIcon /> },
+  { name: 'AppFolio', tint: 'violet', icon: <CommunityIcon /> },
+  { name: 'Buildium', tint: 'green', icon: <EstateIcon /> },
+  { name: 'RentManager', tint: 'orange', icon: <CottageIcon /> },
+  { name: 'Propertyware', tint: 'pink', icon: <HomeIcon /> },
+  { name: 'DoorLoop', tint: 'teal', icon: <DoorIcon /> },
+  { name: 'TenantCloud', tint: 'yellow', icon: <CloudIcon /> },
+  { name: 'Any spreadsheet', tint: 'red', icon: <FileSpreadsheetIcon /> },
+]
+
+const MIGRATION_STEPS = [
+  'Upload your export — AI reads and maps every column automatically',
+  'Review the match before anything is created',
+  'Confirm, and your full portfolio is live in Xean in minutes',
+]
+
 // Answers are deliberately conservative — see the FAQ section's own note
 // below on why (trial/cancellation/billing claims are scoped to what the
 // app actually does today, not the pricing page's sales-forward tone).
@@ -366,6 +469,39 @@ function Landing() {
                 </svg>
               }
             />
+          </div>
+        </div>
+      </section>
+
+      <section className="lnd-section lnd-section-tight" id="migration">
+        <div className="lnd-wrap">
+          <div className="lnd-section-tag">Switch without the headache</div>
+          <div className="lnd-section-head">
+            <h2>Bring your data with you</h2>
+            <p>
+              Coming from any property management platform? Export your data as a spreadsheet and Xean's AI reads
+              and maps it automatically — no manual re-entry.
+            </p>
+          </div>
+
+          <div className="lnd-migrate-grid">
+            {MIGRATION_SOURCES.map((source) => (
+              <div key={source.name} className={`lnd-migrate-card lnd-migrate-card-${source.tint}`}>
+                <div className="lnd-migrate-icon">{source.icon}</div>
+                <span>{source.name}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="lnd-migrate-checklist">
+            {MIGRATION_STEPS.map((step, i) => (
+              <div className="lnd-migrate-check-item" key={i}>
+                <span className="lnd-migrate-check-icon">
+                  <Check />
+                </span>
+                <p>{step}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
