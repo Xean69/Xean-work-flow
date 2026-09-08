@@ -6,8 +6,20 @@ import { useDocumentMeta } from '../utils/useDocumentMeta.js'
 import '../pages/Landing.css'
 import './Blog.css'
 
+// post.date is a plain "YYYY-MM-DD" string from markdown frontmatter, no
+// time component — new Date(value) parses it as UTC midnight, and a plain
+// toLocaleDateString would render that in the browser's local timezone,
+// showing the calendar day before in any timezone behind UTC (the same
+// bug already fixed across the ledger/Tenants/dashboard date displays).
+// Reading the UTC calendar fields instead guarantees the date shown always
+// matches what's actually in the post's frontmatter.
 function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  const d = new Date(value)
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 // Same shell as Blog.jsx/Landing.jsx. Accepts an optional `post` prop so
