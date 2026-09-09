@@ -83,4 +83,24 @@ router.put(
   })
 );
 
+// Owner-only, same reasoning as ai-lease-generation above — backup health
+// is an infrastructure/ops concern tied to the whole business's data, not
+// something day-to-day manager access needs to see. Not tenant-scoped:
+// backups are the entire database (every business), so this row set is
+// identical for whichever business happens to be looking at it, and that's
+// fine — it's status information, not another business's actual data.
+router.get(
+  "/backups",
+  requireRole("owner"),
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query(
+      `SELECT id, started_at, finished_at, status, file_key, file_size_bytes, error_message
+       FROM backup_runs
+       ORDER BY started_at DESC
+       LIMIT 14`
+    );
+    res.json(rows);
+  })
+);
+
 export default router;

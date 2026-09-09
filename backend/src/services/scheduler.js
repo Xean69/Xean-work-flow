@@ -1,6 +1,7 @@
 import pool from "../db.js";
 import { ensureAllTenantsLedgers } from "../utils/ledger.js";
 import { getDomainStatus } from "./vercelDomains.js";
+import { runDatabaseBackup } from "./backup.js";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly is plenty for a once-a-month job
 
@@ -21,6 +22,34 @@ async function runCheck() {
     await ensureAllTenantsLedgers();
   } catch (err) {
     console.error("Ledger sweep failed:", err);
+  }
+}
+
+const BACKUP_CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly re-check, same reasoning as the ledger scheduler above
+const BACKUP_FRESHNESS_HOURS = 20; // "has today's backup already happened" -- see runBackupCheck
+
+// Same hourly-re-check shape as startLedgerScheduler: rather than a single
+// timer fired once a day (which drifts or gets skipped entirely across a
+// redeploy that happens to land at exactly the wrong moment), this checks
+// every hour whether a successful backup has landed recently and only
+// actually runs one if not. Backed by backup_runs (a real DB row, not
+// in-memory state), so it survives restarts and never double-runs or
+// silently stops after a deploy.
+export function startBackupScheduler() {
+  runBackupCheck();
+  setInterval(runBackupCheck, BACKUP_CHECK_INTERVAL_MS);
+}
+
+async function runBackupCheck() {
+  try {
+    const { rows } = await pool.query(
+      "SELECT 1 FROM backup_runs WHERE status = 'success' AND finished_at > now() - ($1 || ' hours')::interval",
+      [BACKUP_FRESHNESS_HOURS]
+    );
+    if (rows.length > 0) return; // already backed up recently -- nothing to do this tick
+    await runDatabaseBackup();
+  } catch (err) {
+    console.error("Backup check failed:", err);
   }
 }
 

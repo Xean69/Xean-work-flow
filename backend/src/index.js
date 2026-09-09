@@ -36,7 +36,7 @@ import contactRouter from "./routes/contact.js";
 import websitesRouter from "./routes/websites.js";
 import publicListingsRouter from "./routes/publicListings.js";
 import pushRouter from "./routes/push.js";
-import { startLedgerScheduler, startSubdomainVerificationScheduler } from "./services/scheduler.js";
+import { startLedgerScheduler, startSubdomainVerificationScheduler, startBackupScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
 
@@ -201,3 +201,4 @@ app.listen(PORT, () => {
 
 startLedgerScheduler();
 startSubdomainVerificationScheduler();
+startBackupScheduler();

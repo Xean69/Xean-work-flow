@@ -1,0 +1,11 @@
+# Adds the PostgreSQL client tools (pg_dump, psql) to the build image.
+# Nixpacks' auto-detected Node provider doesn't include them by default —
+# services/backup.js (daily DB backups) and scripts/restore-backup.js both
+# shell out to pg_dump/psql rather than reimplementing a dump/restore in
+# JS. The "..." entry is Nixpacks' documented extend-not-replace syntax
+# (https://nixpacks.com/docs/configuration/file) — it preserves whatever
+# packages the Node provider would normally install (nodejs, npm, etc.)
+# and appends postgresql alongside them, rather than overwriting the
+# whole setup phase and silently breaking the Node build.
+[phases.setup]
+nixPkgs = ["...", "postgresql"]

@@ -76,6 +76,10 @@ export function updateBusinessTimezone(timezone) {
   return request("/business/timezone", { method: "PUT", body: JSON.stringify({ timezone }) });
 }
 
+export function getBackupRuns() {
+  return request("/business/backups");
+}
+
 export function updateAdminPushPreference(notifyOther) {
   return request("/admin/me/push-preference", { method: "PATCH", body: JSON.stringify({ notify_other: notifyOther }) });
 }
