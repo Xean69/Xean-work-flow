@@ -56,11 +56,21 @@ const RETAIN_COUNT = 7;
 // This uses PostgreSQL's own official bootstrap script
 // (/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh, already
 // present in the base image, read directly from the container before
-// relying on it), with flags confirmed from its own source: -y (no
-// prompts), -i -v <version> (install the matching client). It never
-// passes -p (purge existing packages) -- the existing older client is
-// left in place, untouched; this only ever adds one new apt source file
-// and installs new packages. Runs once per container lifetime (the
+// relying on it) to add the repo, then installs the versioned client
+// package with a plain `apt-get install` rather than the script's own
+// `-i -v <version>` install step -- that combination additionally enables
+// a "trixie-pgdg-snapshot" suite and pins an APT::Default-Release that
+// isn't valid on Debian trixie's PGDG setup as of this writing (Debian 13
+// is new enough that this is a rough edge in PGDG's own tooling, not a
+// mistake in these flags: confirmed by hitting the exact failure against
+// production and reading the script's own source). Splitting repo-setup
+// from install sidesteps that entirely -- once the plain trixie-pgdg
+// suite is registered, `apt-get install` resolves the right package on
+// its own with no special pinning needed.
+//
+// Never passes -p (purge existing packages) -- the existing older client
+// is left in place, untouched; this only ever adds one new apt source
+// file and installs new packages. Runs once per container lifetime (the
 // versioned binary check below short-circuits every call after the
 // first), not on every backup.
 async function ensureCompatiblePgDump() {
@@ -78,9 +88,12 @@ async function ensureCompatiblePgDump() {
   console.log(`No pg_dump for server major version ${serverMajor} found -- bootstrapping via PGDG...`);
   await execFileAsync("bash", ["-c", "apt-get update -qq"]);
   await execFileAsync("bash", ["-c", "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql-common"]);
+  // -y only (no -i/-v): just registers the repo, doesn't attempt the install itself.
+  await execFileAsync("bash", ["-c", "/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y"]);
+  await execFileAsync("bash", ["-c", "apt-get update -qq"]);
   await execFileAsync("bash", [
     "-c",
-    `/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y -i -v ${serverMajor}`,
+    `DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql-client-${serverMajor}`,
   ]);
 
   await stat(versionedPgDump); // throws (and fails the backup run) if the bootstrap didn't actually produce it
