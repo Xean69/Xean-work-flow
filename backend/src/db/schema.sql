@@ -1408,3 +1408,26 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_business_id ON push_subscripti
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_admin_id ON push_subscriptions(admin_id);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_tenant_id ON push_subscriptions(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_staff_id ON push_subscriptions(staff_id);
+
+-- ============================================================================
+-- Database backups (see services/backup.js, scheduler.js's
+-- startBackupScheduler, and BACKUPS.md for the full mechanism)
+--
+-- One row per attempt, not just a single "last backup" pointer — a history
+-- of failures is exactly what makes a silent-failure backup job visible
+-- instead of invisible, which is the whole point of tracking this at all.
+-- 'running' rows are transient (set on start, updated to success/failed on
+-- completion); a stuck 'running' row with no matching finish is itself a
+-- signal something went wrong (e.g. the process was killed mid-backup).
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS backup_runs (
+  id SERIAL PRIMARY KEY,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'failed')),
+  file_key TEXT,
+  file_size_bytes BIGINT,
+  error_message TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_backup_runs_finished_at ON backup_runs(finished_at DESC);
