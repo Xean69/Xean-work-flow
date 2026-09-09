@@ -102,10 +102,14 @@ to dig further via direct DB access.
 
 ## Restoring from a backup
 
-A backup that's never been tested to restore isn't fully trustworthy —
-this exact procedure should be run end-to-end against a real scratch
-database (never production) whenever the backup mechanism itself changes,
-not just documented and assumed to still work.
+A backup that's never been tested to restore isn't fully trustworthy.
+This was actually done, not just documented: a real backup produced by
+this system was downloaded, decompressed, and restored with `psql`
+(exactly the procedure below) into a scratch database on the same
+managed Postgres server — verified afterward to contain the real
+tenants, businesses, and table structure — then dropped. Production's
+real database was never touched by the test itself. Re-run this same
+verification whenever the backup mechanism changes.
 
 1. Download and decompress the backup you want:
    ```
