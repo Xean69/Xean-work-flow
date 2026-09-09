@@ -34,6 +34,59 @@ const BUCKET = process.env.R2_BUCKET_NAME;
 const BACKUP_PREFIX = "backups/";
 const RETAIN_COUNT = 7;
 
+// The base image's default apt repo only ships one fixed PostgreSQL client
+// major version (verified directly: Debian trixie's default repo has only
+// postgresql-client-17). pg_dump refuses to dump a server NEWER than
+// itself as a real safety check (confirmed by hitting exactly this error
+// against Railway's managed Postgres, which runs 18.x) -- it's not
+// optional to work around, so this ensures a matching client exists before
+// ever trying to dump.
+//
+// Self-healing at runtime rather than baked into the build image: this
+// project builds with Railway's Railpack (confirmed directly -- no
+// /nix/store, but /mise, on the container), which has no verified,
+// low-risk way to pin a specific PostgreSQL client version at build time
+// (nixpkgs has version-pinned packages, but that's the wrong builder
+// entirely; Railpack's own mise-based equivalent compiles Postgres from
+// source, an unverified and much heavier dependency). A manual one-off
+// fix via SSH was also ruled out -- Railway rebuilds the container from
+// scratch on every deploy, so anything installed by hand on a running
+// container is discarded the moment the next deploy replaces it.
+//
+// This uses PostgreSQL's own official bootstrap script
+// (/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh, already
+// present in the base image, read directly from the container before
+// relying on it), with flags confirmed from its own source: -y (no
+// prompts), -i -v <version> (install the matching client). It never
+// passes -p (purge existing packages) -- the existing older client is
+// left in place, untouched; this only ever adds one new apt source file
+// and installs new packages. Runs once per container lifetime (the
+// versioned binary check below short-circuits every call after the
+// first), not on every backup.
+async function ensureCompatiblePgDump() {
+  const { rows } = await pool.query("SHOW server_version_num");
+  const serverMajor = Math.floor(Number(rows[0].server_version_num) / 10000);
+  const versionedPgDump = `/usr/lib/postgresql/${serverMajor}/bin/pg_dump`;
+
+  try {
+    await stat(versionedPgDump);
+    return versionedPgDump; // already bootstrapped this container
+  } catch {
+    // not present yet -- fall through to install it
+  }
+
+  console.log(`No pg_dump for server major version ${serverMajor} found -- bootstrapping via PGDG...`);
+  await execFileAsync("bash", ["-c", "apt-get update -qq"]);
+  await execFileAsync("bash", ["-c", "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql-common"]);
+  await execFileAsync("bash", [
+    "-c",
+    `/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y -i -v ${serverMajor}`,
+  ]);
+
+  await stat(versionedPgDump); // throws (and fails the backup run) if the bootstrap didn't actually produce it
+  return versionedPgDump;
+}
+
 // Runs one full backup: pg_dump -> gzip -> upload to R2 -> prune anything
 // beyond the most recent RETAIN_COUNT -> record the outcome in
 // backup_runs. Every failure path still records a 'failed' row (never lets
@@ -49,6 +102,8 @@ export async function runDatabaseBackup() {
   const fileKey = `${BACKUP_PREFIX}xean-${dateLabel}.sql.gz`;
 
   try {
+    const pgDumpBin = await ensureCompatiblePgDump();
+
     // --clean --if-exists: the dump includes DROP statements before each
     // CREATE, so it restores cleanly onto either an empty database or one
     // that already has data -- the safer default for a file whose whole
@@ -57,7 +112,7 @@ export async function runDatabaseBackup() {
     // match production's exactly (e.g. a local scratch DB during a
     // restore test); omitting ownership/grant statements avoids restore
     // failures over a role that doesn't exist there.
-    await execFileAsync("pg_dump", [
+    await execFileAsync(pgDumpBin, [
       process.env.DATABASE_URL,
       "--no-owner",
       "--no-privileges",

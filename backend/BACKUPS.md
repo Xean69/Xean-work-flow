@@ -12,13 +12,54 @@ until managed backups are actually in budget.
   wrong moment, and it can never silently stop running after a deploy the
   way a one-shot `cron`-style timer could.
 - Each run (`src/services/backup.js`):
-  1. `pg_dump $DATABASE_URL --no-owner --no-privileges --clean --if-exists`
-  2. gzips the result
-  3. uploads it to Cloudflare R2 as `backups/xean-YYYY-MM-DD.sql.gz`
-  4. deletes any backup beyond the most recent 7
-  5. records the outcome — success or failure — as a row in `backup_runs`
+  1. ensures a `pg_dump` matching the *live server's* major version exists (see
+     "Why a self-healing pg_dump bootstrap" below) — cheap no-op after the
+     first run on a given container
+  2. `pg_dump $DATABASE_URL --no-owner --no-privileges --clean --if-exists`
+  3. gzips the result
+  4. uploads it to Cloudflare R2 as `backups/xean-YYYY-MM-DD.sql.gz`
+  5. deletes any backup beyond the most recent 7
+  6. records the outcome — success or failure — as a row in `backup_runs`
 - **Backups are never a silent process.** Every attempt, including
   failures, gets its own row. See "Checking backup health" below.
+
+## Why a self-healing pg_dump bootstrap
+
+Railway's managed Postgres runs a newer major version than the base
+image's default apt repo ships a client for (confirmed directly: Debian
+trixie's default repo only has `postgresql-client-17`; the production
+server runs 18.x). `pg_dump` correctly refuses to dump a server *newer*
+than itself — this isn't optional to work around.
+
+Three ways to fix this were considered:
+
+1. **Pin a version-specific package at build time.** nixpkgs has
+   version-pinned PostgreSQL packages (`postgresql_18`, etc.), but this
+   project builds with Railway's **Railpack**, not Nixpacks — confirmed
+   directly (no `/nix/store` on the container, but `/mise`) — so a
+   `nixpacks.toml` is silently ignored regardless of what it names.
+   Railpack's own mise-based equivalent (`mise use postgres@18`) compiles
+   PostgreSQL from source — an unverified, much heavier dependency with
+   its own build-toolchain risk, not something to take on without testing
+   it as thoroughly as everything else here.
+2. **A one-off manual fix via SSH.** Ruled out: Railway rebuilds the
+   container from scratch on every deploy, so anything installed by hand
+   on a running container is discarded the moment the next deploy replaces
+   it — not durable at all.
+3. **Self-healing at runtime (what's implemented).** `ensureCompatiblePgDump()`
+   checks the live server's actual major version (`SHOW server_version_num`),
+   and if a matching versioned binary
+   (`/usr/lib/postgresql/<major>/bin/pg_dump`) doesn't exist yet, installs
+   it using PostgreSQL's own official bootstrap script
+   (`/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh`, already
+   present in the base image — read directly before relying on its flags).
+   It only ever adds one new apt source file and installs new packages —
+   the existing older client is never removed (the script's own `-p`
+   purge flag is deliberately not passed) — and runs once per container
+   lifetime, not on every backup, since the versioned-binary check
+   short-circuits every call after the first. This also means the backup
+   job self-adjusts automatically if Railway ever upgrades their managed
+   Postgres again, with no code change needed.
 
 ## Why R2, not Cloudinary (already used elsewhere in this app)
 
