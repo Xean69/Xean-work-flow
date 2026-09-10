@@ -46,6 +46,7 @@ import Team from './pages/Team.jsx'
 import Upgrade from './pages/Upgrade.jsx'
 import TenantInspection from './pages/TenantInspection.jsx'
 import LanguageSettings from './pages/LanguageSettings.jsx'
+import AppPicker from './pages/AppPicker.jsx'
 import StaffLayout from './staff/StaffLayout.jsx'
 import StaffLogin from './staff/pages/Login.jsx'
 import StaffTickets from './staff/pages/Tickets.jsx'
@@ -127,6 +128,14 @@ function App() {
         <Route path="/staff/messages" element={<StaffMessages />} />
         <Route path="/staff/settings" element={<StaffSettings />} />
       </Route>
+
+      {/* The "Xean" iOS app's actual entry screen (see
+          frontend/capacitor.config.ts's server.url) — that one native app
+          serves both managers and maintenance staff, so it opens here to
+          ask which portal to load rather than assuming one. Also reachable
+          as a normal page on the live site; that's harmless, it's just two
+          links to already-public login flows. */}
+      <Route path="/app-picker" element={<AppPicker />} />
 
       {/* Public marketing site — its own design system entirely (dark
           navy/champagne), unrelated to the dashboard's or portal's. */}

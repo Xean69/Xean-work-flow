@@ -1,0 +1,175 @@
+workflows:
+  ios-xean-app:
+    # "Xean" — the manager + maintenance-staff app (bundle ID
+    # ca.xean.manager, the original App Store Connect entry, just renamed).
+    # Opens to /app-picker (see frontend/capacitor.config.ts) so one app can
+    # serve both roles. Not to be confused with ios-tenant-app below, the
+    # separate tenant-facing app under its own bundle ID.
+    name: Xean - iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: frontend
+
+    # No `triggering:` block on purpose — this repo also hosts the backend
+    # and two other frontend portals, which change constantly. Without an
+    # explicit trigger, Codemagic only runs this workflow when started by
+    # hand (UI or API), so an unrelated backend commit never burns a paid
+    # iOS build.
+
+    integrations:
+      # Set this up once in Codemagic's UI: Team settings > Integrations >
+      # App Store Connect > add key, using:
+      #   Key ID:      3LVHXR893J
+      #   Issuer ID:   23d670a4-311f-431e-8c72-8783d3be1ab7
+      #   .p8 file:    (upload it directly — Codemagic stores it encrypted)
+      # Name the integration exactly "xean_manager_appstore" (or update the
+      # reference below to match whatever name you actually give it). The
+      # key itself is never pasted into this file or committed anywhere —
+      # Codemagic injects it into the build environment at run time.
+      app_store_connect: xean_manager_appstore
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: ca.xean.manager
+      vars:
+        BUNDLE_ID: ca.xean.manager
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+      node: 24
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Build web assets
+        script: npm run build
+
+      - name: Sync Capacitor iOS project
+        script: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Set up code signing settings on Xcode project
+        # Automatic signing: because environment.ios_signing (above) and
+        # the app_store_connect integration are both set, Codemagic fetches
+        # (or creates, first run only) a matching distribution certificate
+        # and provisioning profile for ca.xean.manager behind the scenes —
+        # this just applies them to the Xcode project. No manual cert/
+        # profile management, no secrets checked into the repo.
+        script: xcode-project use-profiles
+
+      - name: Increment build number
+        # App Store Connect rejects a re-upload with a build number it's
+        # already seen, which a from-scratch checkout's CURRENT_PROJECT_VERSION
+        # (always 1, see Info.plist) would trip on every build after the
+        # first. Reading the last TestFlight build number and incrementing
+        # keeps every upload valid without hand-tracking a counter.
+        script: |
+          cd ios/App
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID")
+          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+
+      - name: Build ipa for distribution
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Not submit_to_app_store — that starts an actual App Store review
+        # submission, which needs review metadata (description, screenshots,
+        # etc.) prepared in App Store Connect first. TestFlight is the right
+        # first target: it puts a real, installable build in front of real
+        # testers without committing to a public release.
+
+  ios-tenant-app:
+    # "Xean Resident" — the tenant-facing app, a completely separate
+    # Capacitor project (frontend/mobile-tenant) under its own bundle ID
+    # (ca.xean.tenant) and its own App Store Connect app entry. Opens
+    # straight to the tenant portal — one audience, no picker needed (see
+    # ios-xean-app above for the app that does need one).
+    name: Xean Resident - iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: frontend/mobile-tenant
+
+    # No `triggering:` block, same reasoning as ios-xean-app: manual-only,
+    # so this repo's constant backend/other-portal commits never burn a
+    # paid build on this workflow either.
+
+    integrations:
+      # Reuses the same integration as ios-xean-app on purpose: the App
+      # Store Connect API key behind "xean_manager_appstore" already showed
+      # team-wide bundle-ID visibility (not scoped to ca.xean.manager alone)
+      # when it was checked while registering ca.xean.tenant, so it's very
+      # likely already authorized for this app too. If the very first build
+      # here fails on the signing step with a permissions error, that key
+      # was scoped narrower than it looked — add a second App Store Connect
+      # integration in Codemagic (same Key ID/Issuer ID/.p8, new name) and
+      # point this line at it instead.
+      app_store_connect: xean_manager_appstore
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: ca.xean.tenant
+      vars:
+        BUNDLE_ID: ca.xean.tenant
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+      node: 24
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Sync Capacitor iOS project
+        # No separate "build web assets" step — unlike ios-xean-app, this
+        # project's webDir (./www) is a static placeholder, never actually
+        # shown (server.url takes the WebView straight to the live site).
+        # There's nothing to build.
+        script: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+
+      - name: Increment build number
+        script: |
+          cd ios/App
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID")
+          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+
+      - name: Build ipa for distribution
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

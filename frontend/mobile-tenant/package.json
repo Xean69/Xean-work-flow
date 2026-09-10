@@ -1,0 +1,15 @@
+{
+  "name": "xean-resident-ios",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Capacitor iOS shell for the Xean Resident (tenant) app. This is a separate, standalone Capacitor project from ../.. (the Xean manager/staff app) on purpose — a native app's bundle ID, display name, and WebView start URL are all fixed per Capacitor project, and this app needs its own of all three (ca.xean.tenant / Xean Resident / xean.ca/portal/home). It has no build step and no dependency on the parent frontend package: server.url mode means the WebView navigates straight to the live site, so the local webDir (./www) is only ever a placeholder Capacitor needs at sync time, never actually shown.",
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1"
+  }
+}
