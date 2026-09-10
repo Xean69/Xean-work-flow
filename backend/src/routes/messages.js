@@ -5,6 +5,8 @@ import { ApiError } from "../utils/errors.js";
 import { parseMessageBody, parseAnnouncementBody } from "../utils/validate.js";
 import { notifyTenantOfNewMessage, notifyTenantOfAnnouncement, notifyStaffOfNewMessage } from "../services/email.js";
 import { pushToTenant, pushToStaff } from "../services/webPush.js";
+import { uploadToCloudinary } from "../utils/upload.js";
+import { generateAnnouncementPdfBuffer } from "../services/announcementPdf.js";
 
 const router = Router();
 
@@ -159,6 +161,31 @@ router.post(
     const sendable = tenantRows.filter((t) => t.email);
     const skipped = tenantRows.filter((t) => !t.email).map((t) => ({ tenant_id: t.id, full_name: t.full_name }));
 
+    // Rendered once for the whole send, not once per recipient — the
+    // letterhead, subject, body, and sent time are identical for everyone;
+    // only the Cloudinary upload and documents row below are per-tenant, so
+    // each recipient still ends up with their own independent file (see
+    // announcementPdf.js). A failure here (a bad business_name/timezone
+    // lookup, or jsPDF itself throwing) shouldn't block the announcement
+    // itself from sending — it just means no PDF gets attached this time.
+    let pdfBuffer = null;
+    try {
+      const { rows: businessRows } = await pool.query(
+        "SELECT business_name, timezone FROM businesses WHERE id = $1",
+        [req.businessId]
+      );
+      const business = businessRows[0];
+      pdfBuffer = generateAnnouncementPdfBuffer({
+        businessName: business?.business_name || "Xean",
+        subject: data.subject || "Announcement",
+        body: data.body,
+        sentAt: new Date(),
+        timezone: business?.timezone,
+      });
+    } catch (err) {
+      console.error("Failed to generate announcement PDF:", err);
+    }
+
     await Promise.all(
       sendable.map(async (t) => {
         await pool.query(
@@ -174,6 +201,36 @@ router.post(
           language: t.language,
         });
         await pushToTenant(t.id, { title: data.subject || "Announcement", body: data.body, url: "/portal/messages" }, { mandatory: false });
+
+        // A separate document row + Cloudinary asset per tenant, not one
+        // shared file, so deleting one recipient's copy later can never
+        // take another recipient's copy down with it. Deliberately no
+        // notifyTenantOfNewDocument/pushToTenant("New document") here —
+        // the announcement email/push above already told this tenant about
+        // this exact thing; a second notification just for the PDF copy
+        // sitting in their Documents section would be redundant. doc_type
+        // 'other' skips AI extraction (see extraction.js's TOOLS map),
+        // which a plain announcement letter has no use for.
+        if (pdfBuffer) {
+          try {
+            const uploaded = await uploadToCloudinary(pdfBuffer, "xean/documents");
+            await pool.query(
+              `INSERT INTO documents
+                 (business_id, tenant_id, file_name, file_url, cloudinary_public_id, cloudinary_resource_type, doc_type, extraction_status)
+               VALUES ($1, $2, $3, $4, $5, $6, 'other', 'unsupported')`,
+              [
+                req.businessId,
+                t.id,
+                `${data.subject || "Announcement"}.pdf`,
+                uploaded.url,
+                uploaded.publicId,
+                uploaded.resourceType,
+              ]
+            );
+          } catch (err) {
+            console.error(`Failed to attach announcement PDF for tenant ${t.id}:`, err);
+          }
+        }
       })
     );
 
