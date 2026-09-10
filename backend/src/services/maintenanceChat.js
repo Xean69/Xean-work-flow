@@ -2,6 +2,17 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic();
 
+// The SDK's own default (10 min timeout x 3 attempts) means a stalled call
+// here — e.g. Anthropic's own fetch of a tenant's attached photo URL taking
+// unusually long — can hold the tenant's HTTP request open for the better
+// part of half an hour with the Submit button stuck on "Sending...". Both
+// callers below already have a full try/catch with a graceful fallback (a
+// real ticket still gets created either way), so cutting this down just
+// makes that fallback path resolve fast instead of after a near-indefinite
+// wait. maxRetries: 1 (not the default 2) keeps the worst case bounded at
+// roughly 2x this timeout rather than 3x.
+const AI_REQUEST_OPTIONS = { timeout: 15_000, maxRetries: 1 };
+
 const TRADE_LABEL = {
   plumbing: "plumbing",
   electrical: "electrical",
@@ -153,13 +164,16 @@ export async function generateMaintenanceChatReply({ title, description, trade, 
       ...(conversationBlocks.length ? [{ type: "text", text: "Write your next reply to the tenant." }] : []),
     ];
 
-    const response = await anthropic.messages.create({
-      model: "claude-opus-5",
-      max_tokens: 300,
-      output_config: { effort: "low" },
-      system: SYSTEM_PROMPT + languageInstruction(language),
-      messages: [{ role: "user", content }],
-    });
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 300,
+        output_config: { effort: "low" },
+        system: SYSTEM_PROMPT + languageInstruction(language),
+        messages: [{ role: "user", content }],
+      },
+      AI_REQUEST_OPTIONS
+    );
 
     const textBlock = response.content.find((block) => block.type === "text");
     const reply = textBlock?.text?.trim();
@@ -248,15 +262,18 @@ export async function generatePendingChatReply({ title, description, priority, c
         : []),
     ];
 
-    const response = await anthropic.messages.create({
-      model: "claude-opus-5",
-      max_tokens: 400,
-      output_config: { effort: "low" },
-      system: PENDING_SYSTEM_PROMPT + languageInstruction(language),
-      tools: [PENDING_TOOL],
-      tool_choice: { type: "tool", name: PENDING_TOOL.name },
-      messages: [{ role: "user", content }],
-    });
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 400,
+        output_config: { effort: "low" },
+        system: PENDING_SYSTEM_PROMPT + languageInstruction(language),
+        tools: [PENDING_TOOL],
+        tool_choice: { type: "tool", name: PENDING_TOOL.name },
+        messages: [{ role: "user", content }],
+      },
+      AI_REQUEST_OPTIONS
+    );
 
     const toolUse = response.content.find((block) => block.type === "tool_use");
     if (!toolUse) return FALLBACK_RESULT;

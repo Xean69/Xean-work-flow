@@ -21,8 +21,41 @@ async function request(path, options = {}) {
 
 // No Content-Type header here — the browser sets the multipart boundary
 // itself for FormData, same reasoning as portalApi.js's own uploadRequest.
+//
+// Maintenance comment uploads can sit behind a slow AI reply (see
+// backend/src/services/maintenanceChat.js) — without a client-side abort, a
+// slow-but-not-officially-hung backend call left the UI stuck with no error
+// surfaced.
+//
+// 90s, not a smaller number: when a tenant's first AI reply itself times
+// out, its fallback outcome is "escalate", which immediately triggers a
+// SECOND, independent classification call (maintenanceTriage.js) in the
+// same request — confirmed by actually forcing both to stall in testing.
+// Worst case is upload (~5s) + two sequential 30s AI ceilings (15s timeout x
+// 1 retry each) + email/push/DB overhead (~15s) = ~80s. This has to sit
+// above that real worst case, or a slow-but-recovering backend gets aborted
+// client-side right before it would have succeeded on its own.
+const UPLOAD_TIMEOUT_MS = 90_000;
+
 async function uploadRequest(path, formData) {
-  const res = await fetch(`${BASE_URL}${path}`, { method: "POST", body: formData, credentials: "same-origin" });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error("This is taking longer than expected. Please try again.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     throw new Error(data?.error || `Request failed with status ${res.status}`);

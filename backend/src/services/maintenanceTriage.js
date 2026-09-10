@@ -2,6 +2,15 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic();
 
+// See the identical constant in maintenanceChat.js: this call runs
+// synchronously in the same tenant-facing request (portal.js's
+// classifyAndPromote fires immediately after the pending-chat reply above,
+// for any outcome other than "continue" -- including the timeout fallback
+// itself). Without this, a stalled call here would add another ~10-30
+// minutes on top of that one, even after the first timeout already kicked
+// in.
+const AI_REQUEST_OPTIONS = { timeout: 15_000, maxRetries: 1 };
+
 const TRADES = ["plumbing", "electrical", "hvac", "appliance", "structural", "pest_control", "locksmith", "general"];
 
 const TOOL = {
@@ -38,19 +47,22 @@ const TOOL = {
 // degrades to status: "failed" instead of blocking ticket creation.
 export async function classifyMaintenanceRequest(title, description) {
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-5",
-      max_tokens: 512,
-      output_config: { effort: "low" },
-      tools: [TOOL],
-      tool_choice: { type: "tool", name: TOOL.name },
-      messages: [
-        {
-          role: "user",
-          content: `Classify this tenant maintenance request using the ${TOOL.name} tool.\n\nTitle: ${title}\nDescription: ${description || "(no description provided)"}`,
-        },
-      ],
-    });
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 512,
+        output_config: { effort: "low" },
+        tools: [TOOL],
+        tool_choice: { type: "tool", name: TOOL.name },
+        messages: [
+          {
+            role: "user",
+            content: `Classify this tenant maintenance request using the ${TOOL.name} tool.\n\nTitle: ${title}\nDescription: ${description || "(no description provided)"}`,
+          },
+        ],
+      },
+      AI_REQUEST_OPTIONS
+    );
 
     const toolUse = response.content.find((block) => block.type === "tool_use");
     if (!toolUse) return { status: "failed", urgency: null, trade: null, reasoning: null };

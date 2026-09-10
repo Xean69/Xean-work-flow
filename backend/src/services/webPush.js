@@ -26,9 +26,14 @@ async function sendPushToSubscriptions(rows, payload) {
       .filter((row) => row.platform === "web_push")
       .map(async (row) => {
         try {
+          // Explicit timeout — web-push's underlying https.request has none
+          // by default, so a stalled push service would otherwise hang this
+          // (synchronously-awaited, same as the Anthropic call above)
+          // indefinitely instead of just failing this one send.
           await webpush.sendNotification(
             { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
-            body
+            body,
+            { timeout: 8_000 }
           );
         } catch (err) {
           if (err.statusCode === 404 || err.statusCode === 410) {
