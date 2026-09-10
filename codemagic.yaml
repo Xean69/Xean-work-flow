@@ -50,11 +50,6 @@ workflows:
       - name: Sync Capacitor iOS project
         script: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App
-          pod install
-
       - name: Fetch signing files
         # environment.ios_signing above is just metadata — it doesn't fetch
         # or create anything by itself. This is the step that actually asks
@@ -159,11 +154,6 @@ workflows:
         # shown (server.url takes the WebView straight to the live site).
         # There's nothing to build.
         script: npx cap sync ios
-
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App
-          pod install
 
       - name: Fetch signing files
         # Same gap as ios-xean-app had: environment.ios_signing is metadata
