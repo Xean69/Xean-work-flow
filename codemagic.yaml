@@ -55,13 +55,28 @@ workflows:
           cd ios/App
           pod install
 
+      - name: Fetch signing files
+        # environment.ios_signing above is just metadata — it doesn't fetch
+        # or create anything by itself. This is the step that actually asks
+        # Apple (via the app_store_connect integration) for a distribution
+        # certificate + provisioning profile matching ca.xean.manager,
+        # creating them on the first run if none exist yet. Skipping this
+        # is exactly what produced "No matching profiles found" — nothing
+        # had ever put a profile on the build machine for use-profiles to
+        # find.
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Set up signing certificate
+        script: keychain initialize
+
       - name: Set up code signing settings on Xcode project
-        # Automatic signing: because environment.ios_signing (above) and
-        # the app_store_connect integration are both set, Codemagic fetches
-        # (or creates, first run only) a matching distribution certificate
-        # and provisioning profile for ca.xean.manager behind the scenes —
-        # this just applies them to the Xcode project. No manual cert/
-        # profile management, no secrets checked into the repo.
+        # Now that the certificate + profile fetched above actually exist
+        # on disk, this just wires them into the Xcode project's build
+        # settings. No manual cert/profile management, no secrets checked
+        # into the repo.
         script: xcode-project use-profiles
 
       - name: Increment build number
@@ -149,6 +164,19 @@ workflows:
         script: |
           cd ios/App
           pod install
+
+      - name: Fetch signing files
+        # Same gap as ios-xean-app had: environment.ios_signing is metadata
+        # only, it doesn't fetch or create anything. This step actually
+        # gets (or creates, first run) a distribution cert + provisioning
+        # profile for ca.xean.tenant via the app_store_connect integration.
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Set up signing certificate
+        script: keychain initialize
 
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
