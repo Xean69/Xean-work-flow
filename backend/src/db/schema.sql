@@ -1431,38 +1431,3 @@ CREATE TABLE IF NOT EXISTS backup_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_backup_runs_finished_at ON backup_runs(finished_at DESC);
-
--- ============================================================================
--- Two-factor authentication (admins only — dashboard accounts, not the
--- tenant or staff portals) — see services/twoFactor.js and
--- routes/admin.js's /2fa/* routes.
---
--- totp_secret_encrypted holds the raw TOTP secret encrypted at rest
--- (AES-256-GCM, see utils/totpEncryption.js) — a stolen database dump alone
--- is never enough to generate valid codes, unlike storing the secret in
--- plaintext. totp_enabled is the only thing that actually gates login (see
--- admin.js's /login) — a row can hold a secret mid-setup (generated, QR
--- shown, not yet confirmed with a real code) without that secret being
--- live yet; only a confirmed setup flips this to true.
---
--- Backup codes are a real one-row-per-code table, not a JSON array column,
--- for the same reason push_subscriptions and backup_runs are real tables
--- elsewhere in this schema: each code needs its own independent used_at
--- flag, and verifying one means comparing against several bcrypt hashes
--- one at a time (bcrypt salts differ per hash, so there's no way to look
--- one up by value directly) — a real table is what that naturally wants,
--- not a workaround around a single column.
--- ============================================================================
-ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_secret_encrypted TEXT;
-ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
-
-CREATE TABLE IF NOT EXISTS admin_backup_codes (
-  id SERIAL PRIMARY KEY,
-  admin_id INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
-  code_hash TEXT NOT NULL,
-  used_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_admin_backup_codes_admin_id ON admin_backup_codes(admin_id);
