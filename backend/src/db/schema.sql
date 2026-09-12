@@ -715,7 +715,7 @@ CREATE INDEX IF NOT EXISTS idx_eviction_events_tenant_id ON eviction_events(tena
 -- and recreate it under that name so this is safe to re-run.
 ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_doc_type_check;
 ALTER TABLE documents ADD CONSTRAINT documents_doc_type_check
-  CHECK (doc_type IN ('lease', 'invoice', 'inspection', 'application', 'other', 'id'));
+  CHECK (doc_type IN ('lease', 'invoice', 'inspection', 'application', 'other', 'id', 'insurance', 'electricity', 'lease_addendum'));
 
 -- ============================================================================
 -- Rent ledger

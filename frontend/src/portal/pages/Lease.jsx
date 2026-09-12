@@ -38,6 +38,9 @@ const DOC_TYPE_LABELS = {
   invoice: 'Invoice',
   inspection: 'Inspection',
   application: 'Application',
+  insurance: 'Insurance',
+  electricity: 'Electricity',
+  lease_addendum: 'Lease Addendum',
   other: 'Document',
 }
 

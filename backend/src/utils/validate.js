@@ -398,7 +398,17 @@ export function parseStaffBody(body) {
   };
 }
 
-const DOC_TYPES = ["lease", "invoice", "inspection", "application", "other", "id"];
+const DOC_TYPES = [
+  "lease",
+  "invoice",
+  "inspection",
+  "application",
+  "other",
+  "id",
+  "insurance",
+  "electricity",
+  "lease_addendum",
+];
 
 // Required file metadata a browser reports back after uploading directly
 // to Cloudinary (see utils/upload.js's generateUploadSignature) — field

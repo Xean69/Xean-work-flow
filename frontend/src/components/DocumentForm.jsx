@@ -6,6 +6,9 @@ const DOC_TYPE_LABELS = {
   inspection: 'Inspection',
   application: 'Application',
   id: 'ID',
+  insurance: 'Insurance',
+  electricity: 'Electricity',
+  lease_addendum: 'Lease Addendum',
   other: 'Other',
 }
 
