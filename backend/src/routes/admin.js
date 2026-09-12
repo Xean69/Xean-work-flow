@@ -2,7 +2,13 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { verifyPassword, hashPassword, requireAdminAuth } from "../utils/auth.js";
+import {
+  verifyPassword,
+  hashPassword,
+  requireAdminAuth,
+  requirePending2fa,
+  requireTwoFactorSetupAuth,
+} from "../utils/auth.js";
 import {
   parseSignupBody,
   parseForgotPasswordBody,
@@ -18,6 +24,16 @@ import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { sendAdminPasswordResetEmail } from "../services/email.js";
 import { computeTrialStatus } from "../utils/trial.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
+import { encryptTotpSecret, decryptTotpSecret } from "../utils/totpEncryption.js";
+import {
+  generateTotpSecret,
+  totpKeyUri,
+  generateQrCodeDataUrl,
+  verifyTotpCode,
+  issueBackupCodes,
+  tryConsumeBackupCode,
+} from "../services/twoFactor.js";
+import { rateLimit } from "../utils/publicRateLimit.js";
 
 const router = Router();
 
@@ -28,6 +44,41 @@ const DEFAULT_SCHEDULED_MESSAGES = [
   ["review_request", "2h_after_checkout", false],
 ];
 
+// Shared by every route that completes a login (2fa/verify, 2fa/setup/
+// confirm) — queried fresh rather than threaded through from an earlier
+// query in the same request, same reasoning as requireAdminAuth's own
+// re-query-every-request shape: this is the one place the response shape
+// is defined, so it can never quietly drift between the three ways a login
+// can finish (no 2FA existed pre-this-feature is no longer possible, but
+// setup-completion and normal-verify still both funnel through here).
+async function loadAdminSummary(adminId) {
+  const { rows } = await pool.query(
+    `SELECT a.id, a.email, a.role, a.business_id, a.timezone, b.business_name, b.created_at AS trial_started_at
+     FROM admins a
+     JOIN businesses b ON b.id = a.business_id
+     WHERE a.id = $1`,
+    [adminId]
+  );
+  const admin = rows[0];
+  return {
+    id: admin.id,
+    email: admin.email,
+    role: admin.role,
+    business_id: admin.business_id,
+    timezone: admin.timezone,
+    business_name: admin.business_name,
+    trial_started_at: admin.trial_started_at,
+    trial_status: computeTrialStatus(admin.trial_started_at),
+  };
+}
+
+// Two-factor authentication is mandatory for every dashboard account
+// (owner/manager/accountant alike — this is a security boundary around the
+// whole dashboard, not a per-role notification target like
+// getManagerRecipients elsewhere). Password alone never creates a session
+// past this point: req.session.adminId is set only in /2fa/verify or
+// /2fa/setup/confirm, once the second factor (or a fresh setup) is
+// actually satisfied.
 router.post(
   "/login",
   asyncHandler(async (req, res) => {
@@ -37,9 +88,8 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.password_hash, a.role, a.business_id, a.timezone, b.business_name, b.created_at AS trial_started_at
+      `SELECT a.id, a.email, a.password_hash, a.timezone, a.totp_enabled
        FROM admins a
-       JOIN businesses b ON b.id = a.business_id
        WHERE lower(a.email) = lower($1)`,
       [email]
     );
@@ -57,21 +107,154 @@ router.post(
     const detectedTimezone = safeTimezoneOrNull(req.body.timezone);
     if (!admin.timezone && detectedTimezone) {
       await pool.query("UPDATE admins SET timezone = $1 WHERE id = $2", [detectedTimezone, admin.id]);
-      admin.timezone = detectedTimezone;
     }
 
-    req.session.adminId = admin.id;
+    // Not yet set up — route into the mandatory setup flow rather than
+    // blocking the account out entirely. Every account that predates this
+    // feature is in exactly this state on its next login, by design (see
+    // schema.sql: totp_enabled defaults to false, never assumed true).
+    if (!admin.totp_enabled) {
+      req.session.pendingSetup2faAdminId = admin.id;
+      return res.json({ requires_2fa_setup: true });
+    }
+
+    req.session.pending2faAdminId = admin.id;
+    res.json({ requires_2fa: true });
+  })
+);
+
+router.post(
+  "/2fa/setup/init",
+  requireTwoFactorSetupAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await pool.query("SELECT email FROM admins WHERE id = $1", [req.adminId]);
+    if (!rows[0]) throw new ApiError(404, "Account not found");
+
+    // Overwrites any prior secret unconditionally, including a confirmed
+    // one — reaching this route at all means either this account has never
+    // completed setup, or it's a deliberate reset (see /2fa/reset, which
+    // requires re-entering a password first and is the only other way a
+    // fully-authenticated admin ends up back here). totp_enabled is set
+    // false here too so a reset takes effect immediately rather than
+    // leaving the old secret live until setup is actually confirmed.
+    const secret = generateTotpSecret();
+    await pool.query("UPDATE admins SET totp_secret_encrypted = $1, totp_enabled = false WHERE id = $2", [
+      encryptTotpSecret(secret),
+      req.adminId,
+    ]);
+
+    const qrCodeDataUrl = await generateQrCodeDataUrl(totpKeyUri(secret, rows[0].email));
+    res.json({ qr_code_data_url: qrCodeDataUrl, secret });
+  })
+);
+
+router.post(
+  "/2fa/setup/confirm",
+  requireTwoFactorSetupAuth,
+  asyncHandler(async (req, res) => {
+    const { code } = req.body;
+    if (typeof code !== "string" || !code) throw new ApiError(400, "code is required");
+
+    const { rows } = await pool.query("SELECT totp_secret_encrypted FROM admins WHERE id = $1", [req.adminId]);
+    const secretEncrypted = rows[0]?.totp_secret_encrypted;
+    if (!secretEncrypted) throw new ApiError(400, "No 2FA setup in progress — call /2fa/setup/init first");
+
+    if (!(await verifyTotpCode(decryptTotpSecret(secretEncrypted), code))) {
+      throw new ApiError(401, "Invalid code");
+    }
+
+    await pool.query("UPDATE admins SET totp_enabled = true, totp_enabled_at = now() WHERE id = $1", [req.adminId]);
+    const backupCodes = await issueBackupCodes(req.adminId);
+
+    // Completes the login when this was the mandatory-setup-during-login
+    // path (no adminId session existed yet); a harmless no-op re-assignment
+    // when this was a voluntary mid-session reset from Settings (adminId
+    // was already set to this same value).
+    const admin = await loadAdminSummary(req.adminId);
+    req.session.adminId = req.adminId;
     req.session.businessId = admin.business_id;
-    res.json({
-      id: admin.id,
-      email: admin.email,
-      role: admin.role,
-      business_id: admin.business_id,
-      timezone: admin.timezone,
-      business_name: admin.business_name,
-      trial_started_at: admin.trial_started_at,
-      trial_status: computeTrialStatus(admin.trial_started_at),
-    });
+    delete req.session.pendingSetup2faAdminId;
+
+    res.json({ ...admin, backup_codes: backupCodes });
+  })
+);
+
+// The one brute-forceable step in this whole flow — a 6-digit code is a
+// 1-in-a-million guess, not a password, so unlike /login itself (a
+// pre-existing gap, out of scope here) this genuinely needs a limiter, not
+// just optional hardening. 10 attempts per 15 minutes per IP still allows
+// for a mistyped code or two without meaningfully narrowing a real
+// brute-force attempt's odds.
+router.post(
+  "/2fa/verify",
+  rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }),
+  requirePending2fa,
+  asyncHandler(async (req, res) => {
+    const { code, backup_code } = req.body;
+    const { rows } = await pool.query("SELECT totp_secret_encrypted FROM admins WHERE id = $1", [req.adminId]);
+    const secretEncrypted = rows[0]?.totp_secret_encrypted;
+    if (!secretEncrypted) throw new ApiError(401, "Not logged in");
+
+    const ok = backup_code
+      ? await tryConsumeBackupCode(req.adminId, backup_code)
+      : await verifyTotpCode(decryptTotpSecret(secretEncrypted), code);
+    if (!ok) throw new ApiError(401, "Invalid code");
+
+    const admin = await loadAdminSummary(req.adminId);
+    req.session.adminId = req.adminId;
+    req.session.businessId = admin.business_id;
+    delete req.session.pending2faAdminId;
+
+    res.json(admin);
+  })
+);
+
+// Deliberately requires the full, already-authenticated session
+// (requireAdminAuth), not the setup-flow's dual-mode auth — resetting 2FA
+// is only ever a voluntary action an already-logged-in admin takes on
+// their own account, and re-entering the password here (not just a click)
+// is what stops someone who's grabbed an unlocked, unattended session from
+// silently disarming 2FA for a device they don't actually control.
+router.post(
+  "/2fa/reset",
+  requireAdminAuth,
+  asyncHandler(async (req, res) => {
+    const { password } = req.body;
+    if (typeof password !== "string" || !password) throw new ApiError(400, "password is required");
+
+    const { rows } = await pool.query("SELECT password_hash FROM admins WHERE id = $1", [req.adminId]);
+    if (!rows[0] || !(await verifyPassword(password, rows[0].password_hash))) {
+      throw new ApiError(401, "Incorrect password");
+    }
+
+    await pool.query(
+      "UPDATE admins SET totp_enabled = false, totp_enabled_at = NULL, totp_secret_encrypted = NULL WHERE id = $1",
+      [req.adminId]
+    );
+    await pool.query("DELETE FROM admin_backup_codes WHERE admin_id = $1", [req.adminId]);
+
+    res.status(204).end();
+  })
+);
+
+// Same password re-entry gate as /2fa/reset, and for the same reason —
+// this invalidates every code a manager may have already written down, so
+// a bare click isn't enough to trigger it.
+router.post(
+  "/2fa/backup-codes/regenerate",
+  requireAdminAuth,
+  asyncHandler(async (req, res) => {
+    const { password } = req.body;
+    if (typeof password !== "string" || !password) throw new ApiError(400, "password is required");
+
+    const { rows } = await pool.query("SELECT password_hash, totp_enabled FROM admins WHERE id = $1", [req.adminId]);
+    if (!rows[0] || !(await verifyPassword(password, rows[0].password_hash))) {
+      throw new ApiError(401, "Incorrect password");
+    }
+    if (!rows[0].totp_enabled) throw new ApiError(400, "Two-factor authentication isn't enabled");
+
+    const backupCodes = await issueBackupCodes(req.adminId);
+    res.json({ backup_codes: backupCodes });
   })
 );
 
@@ -137,8 +320,9 @@ router.get(
   requireAdminAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT a.id, a.email, a.role, a.language, a.timezone, a.push_notify_other, a.business_id, b.business_name,
-              b.created_at AS trial_started_at, b.logo_url, b.ai_lease_generation_enabled, b.timezone AS business_timezone
+      `SELECT a.id, a.email, a.role, a.language, a.timezone, a.push_notify_other, a.totp_enabled, a.totp_enabled_at,
+              a.business_id, b.business_name, b.created_at AS trial_started_at, b.logo_url,
+              b.ai_lease_generation_enabled, b.timezone AS business_timezone
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,
@@ -266,18 +450,13 @@ router.post(
 
       await client.query("COMMIT");
 
-      req.session.adminId = admin.id;
-      req.session.businessId = business.id;
-      res.status(201).json({
-        id: admin.id,
-        email: admin.email,
-        role: admin.role,
-        business_id: business.id,
-        timezone: admin.timezone,
-        business_name: business.business_name,
-        trial_started_at: business.created_at,
-        trial_status: computeTrialStatus(business.created_at),
-      });
+      // Same rule as /login: no full session until 2FA is actually set up.
+      // A brand-new signup is the one case with zero existing-account
+      // history to consider — there's no "predates this requirement"
+      // grandfathering argument here at all, so this goes straight into
+      // setup rather than ever holding a real adminId session first.
+      req.session.pendingSetup2faAdminId = admin.id;
+      res.status(201).json({ requires_2fa_setup: true });
     } catch (err) {
       await client.query("ROLLBACK");
       // unique_violation — either the business contact email or the admin

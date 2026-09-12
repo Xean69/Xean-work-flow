@@ -64,6 +64,35 @@ export function getMe() {
   return request("/admin/me");
 }
 
+// Mandatory-2FA login flow (see backend/src/routes/admin.js):
+// login() itself now only ever returns { requires_2fa_setup: true } or
+// { requires_2fa: true } — never a full profile — since a session isn't
+// created until one of these two follow-ups also succeeds.
+export function initTotpSetup() {
+  return request("/admin/2fa/setup/init", { method: "POST" });
+}
+
+export function confirmTotpSetup(code) {
+  return request("/admin/2fa/setup/confirm", { method: "POST", body: JSON.stringify({ code }) });
+}
+
+// Exactly one of code/backupCode should be set — the backend accepts
+// either in the same body shape.
+export function verifyTotpLogin({ code, backupCode }) {
+  return request("/admin/2fa/verify", {
+    method: "POST",
+    body: JSON.stringify({ code, backup_code: backupCode }),
+  });
+}
+
+export function resetTwoFactor(password) {
+  return request("/admin/2fa/reset", { method: "POST", body: JSON.stringify({ password }) });
+}
+
+export function regenerateBackupCodes(password) {
+  return request("/admin/2fa/backup-codes/regenerate", { method: "POST", body: JSON.stringify({ password }) });
+}
+
 export function updateAdminLanguage(language) {
   return request("/admin/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
 }

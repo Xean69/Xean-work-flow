@@ -61,6 +61,41 @@ export const requireAdminAuth = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// Guards /2fa/verify — the second step of a login for an account that
+// already has 2FA enabled. Deliberately separate from requireAdminAuth:
+// pendingAdminId is set by /login only after a correct password, but
+// req.session.adminId itself is never set until this step also passes, so
+// nothing else this session could reach (any requireAdminAuth-guarded
+// route) is reachable on password alone.
+export function requirePending2fa(req, res, next) {
+  if (!req.session?.pending2faAdminId) {
+    throw new ApiError(401, "No pending two-factor verification");
+  }
+  req.adminId = req.session.pending2faAdminId;
+  next();
+}
+
+// Guards /2fa/setup/init and /2fa/setup/confirm — the one pair of routes
+// that has to work in two otherwise-unrelated situations: (1) an account
+// with 2FA not yet enabled, mid-login, past password but with no full
+// session yet (pendingSetup2faAdminId, set by /login), and (2) an already
+// fully-authenticated admin voluntarily resetting their 2FA from account
+// settings (a normal adminId session, only reachable after re-entering
+// their password on /2fa/reset first). Whichever applies, this resolves
+// the same req.adminId either way, so the two route handlers don't need to
+// know or care which case is live.
+export function requireTwoFactorSetupAuth(req, res, next) {
+  if (req.session?.adminId) {
+    req.adminId = req.session.adminId;
+    return next();
+  }
+  if (req.session?.pendingSetup2faAdminId) {
+    req.adminId = req.session.pendingSetup2faAdminId;
+    return next();
+  }
+  throw new ApiError(401, "Not logged in");
+}
+
 // Guards routes/actions restricted to specific roles, e.g.
 // requireRole("owner") for team management, or requireRole("owner",
 // "manager") for anything an accountant shouldn't reach. Always used after
