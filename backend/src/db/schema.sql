@@ -1431,3 +1431,47 @@ CREATE TABLE IF NOT EXISTS backup_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_backup_runs_finished_at ON backup_runs(finished_at DESC);
+
+-- ============================================================================
+-- Recurring-charge / addon start-period floor (see utils/ledger.js's
+-- ensureChargesForTenant). The monthly job used to regenerate every active
+-- recurring charge and addon for every period from a tenant's lease_start
+-- through today with no lower bound — so adding either one to a tenant
+-- whose lease already started got it silently backdated to every past
+-- period back to lease_start on the very next scheduler tick. Confirmed in
+-- production on two separate real businesses before this fix. These two
+-- columns give the generator a floor it must never charge before,
+-- regardless of how far back the backfill loop reaches.
+-- ============================================================================
+ALTER TABLE recurring_charges ADD COLUMN IF NOT EXISTS start_period TEXT
+  CHECK (start_period ~ '^\d{4}-(0[1-9]|1[0-2])$');
+
+-- Existing rows predate this column — backfilled from the earliest period
+-- each has actually generated a charge for (its real first instance,
+-- created synchronously with the recurring charge itself), falling back to
+-- its own creation month for the rare row whose original instance was
+-- since deleted.
+UPDATE recurring_charges rc
+SET start_period = COALESCE(
+  (SELECT MIN(lc.period) FROM ledger_charges lc WHERE lc.source_recurring_charge_id = rc.id),
+  to_char(rc.created_at, 'YYYY-MM')
+)
+WHERE start_period IS NULL;
+
+ALTER TABLE tenant_addons ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+-- Existing rows default to now() above (their true add-date was never
+-- tracked) — backfilled here to the first day of the earliest period each
+-- has actually generated a charge for, so an addon that's been correctly
+-- billed for months doesn't suddenly look "added today" to the guard
+-- above. An addon with no charge yet (assigned the same day as this
+-- migration runs) is left at now(), which is exactly correct for it.
+UPDATE tenant_addons ta
+SET created_at = existing.period_start
+FROM (
+  SELECT lc.tenant_id, lc.source_addon_id, to_date(MIN(lc.period) || '-01', 'YYYY-MM-DD') AS period_start
+  FROM ledger_charges lc
+  WHERE lc.source_addon_id IS NOT NULL AND lc.period IS NOT NULL
+  GROUP BY lc.tenant_id, lc.source_addon_id
+) existing
+WHERE ta.tenant_id = existing.tenant_id AND ta.addon_id = existing.source_addon_id;

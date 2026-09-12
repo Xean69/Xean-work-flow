@@ -102,17 +102,43 @@ async function assertAddonsInProperty(addonIds, unitId, businessId) {
   }
 }
 
-// Replaces a tenant's full addon set — simpler and safer than diffing
-// against what's already there, since the manager always submits the
-// complete intended selection (checkboxes + quantities), not a delta.
-async function replaceTenantAddons(client, tenantId, addons) {
-  await client.query("DELETE FROM tenant_addons WHERE tenant_id = $1", [tenantId]);
+// Replaces a tenant's full addon set. Diffs against what's already there
+// (rather than delete-all-then-recreate) specifically to preserve each
+// surviving addon's own tenant_addons.created_at — ensureChargesForTenant
+// uses that as the floor before which it will never generate a charge for
+// this addon, so blowing it away on every unrelated tenant edit used to
+// mean an addon that had been correctly billed for months could look
+// "brand new" to the scheduler the next time anything on the tenant was
+// saved, silently losing its real start date.
+//
+// effectiveDate backdates newly-added rows to a specific date instead of
+// "now" — used only at tenant creation (see below), where the addons
+// picked at signup are logically part of the lease from lease_start, not
+// something added mid-tenancy. Left undefined for a later tenant edit, so
+// an addon actually added today gets billed from today forward, not
+// retroactively — the exact bug this whole mechanism exists to prevent.
+async function replaceTenantAddons(client, tenantId, addons, effectiveDate = undefined) {
+  const addonIds = addons.map((a) => a.addon_id);
+  await client.query("DELETE FROM tenant_addons WHERE tenant_id = $1 AND NOT (addon_id = ANY($2::int[]))", [
+    tenantId,
+    addonIds,
+  ]);
   for (const addon of addons) {
-    await client.query("INSERT INTO tenant_addons (tenant_id, addon_id, quantity) VALUES ($1, $2, $3)", [
-      tenantId,
-      addon.addon_id,
-      addon.quantity,
-    ]);
+    if (effectiveDate) {
+      await client.query(
+        `INSERT INTO tenant_addons (tenant_id, addon_id, quantity, created_at)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (tenant_id, addon_id) DO UPDATE SET quantity = EXCLUDED.quantity`,
+        [tenantId, addon.addon_id, addon.quantity, effectiveDate]
+      );
+    } else {
+      await client.query(
+        `INSERT INTO tenant_addons (tenant_id, addon_id, quantity)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (tenant_id, addon_id) DO UPDATE SET quantity = EXCLUDED.quantity`,
+        [tenantId, addon.addon_id, addon.quantity]
+      );
+    }
   }
 }
 
@@ -452,14 +478,20 @@ router.post(
     let sourceRecurringChargeId = null;
     let period = null;
     if (data.recurring) {
+      period = periodOf(data.due_date);
+      // start_period is this recurring charge's own floor — the monthly
+      // job in ensureChargesForTenant will never generate an instance for
+      // a period before it, no matter how far back a tenant's lease_start
+      // reaches. Without it, a recurring charge added mid-tenancy got
+      // silently backdated to every past period back to lease_start on the
+      // very next scheduler tick (confirmed in production).
       const { rows: rcRows } = await pool.query(
-        `INSERT INTO recurring_charges (tenant_id, description, amount, charge_type)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO recurring_charges (tenant_id, description, amount, charge_type, start_period)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
-        [req.params.id, data.description, data.amount, data.charge_type]
+        [req.params.id, data.description, data.amount, data.charge_type, period]
       );
       sourceRecurringChargeId = rcRows[0].id;
-      period = periodOf(data.due_date);
     }
 
     // A credit is stored as a negative amount — the manager types a plain
@@ -596,7 +628,7 @@ router.post(
       );
       tenant = rows[0];
 
-      await replaceTenantAddons(client, tenant.id, data.addons);
+      await replaceTenantAddons(client, tenant.id, data.addons, data.lease_start);
 
       // Generates this tenant's rent + addon charges for every period from
       // their lease_start through today, right now, in the same

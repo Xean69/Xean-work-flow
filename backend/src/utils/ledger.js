@@ -61,12 +61,19 @@ export async function ensureChargesForTenant(client, tenantId, period, tenantRow
   });
 
   const { rows: addons } = await client.query(
-    `SELECT pa.id AS addon_id, pa.name, ta.quantity, pa.monthly_price
+    `SELECT pa.id AS addon_id, pa.name, ta.quantity, pa.monthly_price, ta.created_at
      FROM tenant_addons ta JOIN property_addons pa ON pa.id = ta.addon_id
      WHERE ta.tenant_id = $1`,
     [tenantId]
   );
   for (const addon of addons) {
+    // Never generate a charge for a period before this specific addon was
+    // actually added to this tenant — tenant_addons.created_at is that
+    // floor (backdated to lease_start only when the addon was picked at
+    // tenant creation itself; see replaceTenantAddons). Without this, an
+    // addon added mid-tenancy got backfilled all the way to lease_start on
+    // the very next scheduler tick (confirmed in production).
+    if (periodOf(addon.created_at) > period) continue;
     await insertChargeIfMissing(client, {
       tenantId,
       chargeType: "addon",
@@ -79,10 +86,14 @@ export async function ensureChargesForTenant(client, tenantId, period, tenantRow
   }
 
   const { rows: recurring } = await client.query(
-    "SELECT id, description, amount, charge_type FROM recurring_charges WHERE tenant_id = $1 AND active = true",
+    "SELECT id, description, amount, charge_type, start_period FROM recurring_charges WHERE tenant_id = $1 AND active = true",
     [tenantId]
   );
   for (const rc of recurring) {
+    // Same floor as addons above, keyed off this recurring charge's own
+    // start_period (the period of the due_date the manager actually chose
+    // when creating it — see tenants.js's POST /:id/charges).
+    if (rc.start_period && period < rc.start_period) continue;
     await insertChargeIfMissing(client, {
       tenantId,
       chargeType: rc.charge_type,
