@@ -29,6 +29,7 @@ const mainNav = [
     ),
   },
   {
+    to: '/tenants',
     labelKey: 'nav.tenants',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -38,10 +39,7 @@ const mainNav = [
         <path d="M15.5 14.2c2.9.4 4.9 2.4 4.9 5.8" />
       </svg>
     ),
-    children: [
-      { to: '/tenants', labelKey: 'nav.tenants' },
-      { to: '/leases', labelKey: 'nav.leases' },
-    ],
+    children: [{ to: '/leases', labelKey: 'nav.leases' }],
   },
   {
     to: '/stays',
@@ -200,30 +198,65 @@ const languageNav = {
 function NavItems({ items, role, t, openGroups, onToggleGroup }) {
   return items.map((item) => {
     if (item.children) {
+      // A group whose header is also a real link (e.g. Tenants) needs its
+      // own role check same as any plain link, since it's no longer just a
+      // folder for the dropdown below it.
+      if (item.to && !ROUTE_ROLES[item.to]?.includes(role)) return null
       const visibleChildren = item.children.filter((child) => ROUTE_ROLES[child.to]?.includes(role))
-      if (visibleChildren.length === 0) return null
+      // A group whose own header also links somewhere still shows up even
+      // with zero visible children — it's a real page, not just a folder
+      // for its dropdown. A group with no `to` of its own (e.g. Telecom) is
+      // nothing but that dropdown, so it disappears once none of its
+      // children are visible.
+      if (visibleChildren.length === 0 && !item.to) return null
       const isOpen = openGroups.has(item.labelKey)
+      const chevronIcon = (
+        <svg
+          className={'nav-chevron' + (isOpen ? ' nav-chevron-open' : '')}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      )
       return (
         <div key={item.labelKey}>
-          <button
-            type="button"
-            className="nav-item nav-item-group"
-            onClick={() => onToggleGroup(item.labelKey)}
-            aria-expanded={isOpen}
-          >
-            {item.icon}
-            {t(item.labelKey)}
-            <svg
-              className={'nav-chevron' + (isOpen ? ' nav-chevron-open' : '')}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          {item.to ? (
+            // The header itself is a real link (clicking it navigates), so
+            // the dropdown toggle has to live in its own separate button
+            // instead of wrapping the whole row — a link can't contain
+            // another interactive element.
+            <div className="nav-item-group-row">
+              <NavLink to={item.to} end={item.end} className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}>
+                {item.icon}
+                {t(item.labelKey)}
+              </NavLink>
+              {visibleChildren.length > 0 && (
+                <button
+                  type="button"
+                  className="nav-group-toggle"
+                  onClick={() => onToggleGroup(item.labelKey)}
+                  aria-expanded={isOpen}
+                >
+                  {chevronIcon}
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="nav-item nav-item-group"
+              onClick={() => onToggleGroup(item.labelKey)}
+              aria-expanded={isOpen}
             >
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-          </button>
-          {isOpen && (
+              {item.icon}
+              {t(item.labelKey)}
+              {chevronIcon}
+            </button>
+          )}
+          {isOpen && visibleChildren.length > 0 && (
             <div className="nav-subgroup">
               {visibleChildren.map((child) => (
                 <NavLink

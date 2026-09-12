@@ -82,6 +82,43 @@
   text-align: start;
 }
 
+/* A group whose header is itself a real link (e.g. Tenants) can't wrap the
+   whole row in one clickable element the way a header-less group (e.g.
+   Telecom) does — a link can't contain another interactive element — so
+   the link and the dropdown toggle sit side by side here instead. */
+.nav-item-group-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.nav-item-group-row .nav-item {
+  flex: 1;
+  min-width: 0;
+}
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: #c7cdd6;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-group-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+/* Inside its own small dedicated button, the chevron should sit centered,
+   not pushed to the far edge the way it is as the last of several children
+   inside a wide .nav-item-group button. */
+.nav-group-toggle .nav-chevron {
+  margin-inline-start: 0;
+}
+
 .nav-chevron {
   width: 14px;
   height: 14px;
