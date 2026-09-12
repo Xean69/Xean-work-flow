@@ -157,6 +157,49 @@ export async function ensureAllTenantsLedgers() {
   }
 }
 
+export const SECURITY_DEPOSIT_DESCRIPTION = "Security Deposit";
+
+// A tenant's deposit becomes a real, payable one-time ledger charge —
+// charge_type 'custom', the exact mechanism the manager-facing "add
+// charge" form already uses for any other one-off charge — rather than a
+// number tracked only on tenants.deposit_amount. That's what makes it
+// contribute to balance due, accept a payment allocation, and appear in
+// the opening-balance carry-forward the same as every other charge, with
+// no special-casing anywhere else in the ledger. Dated to lease_start and
+// given period = NULL, so it's never touched by ensureChargesForTenant's
+// per-period generation (no proration, never recurs) — the exact same
+// shape a manager gets from the manual one-time "add charge" form.
+//
+// Existence is checked with a real SELECT rather than leaning on
+// idx_ledger_charges_dedup's ON CONFLICT: that index only actually dedupes
+// when charge_type/period/source ids collide, and every one-time custom
+// charge has period NULL — Postgres treats NULL as distinct from NULL in a
+// unique index, so two "Security Deposit" inserts for the same tenant
+// would NOT collide there the way two same-period rent charges would.
+// This explicit check is what makes both the tenant-creation call and the
+// backfill script (db/backfillSecurityDeposits.js) safe to run more than
+// once without ever double-charging a deposit.
+export async function ensureSecurityDepositCharge(client, tenantId, depositAmount, leaseStart) {
+  const amount = Number(depositAmount);
+  // ledger_charges.amount has CHECK (amount <> 0) — a tenant with no
+  // deposit on file simply gets no charge, not a $0 row.
+  if (!(amount > 0)) return null;
+
+  const { rows: existing } = await client.query(
+    `SELECT id FROM ledger_charges WHERE tenant_id = $1 AND charge_type = 'custom' AND description = $2`,
+    [tenantId, SECURITY_DEPOSIT_DESCRIPTION]
+  );
+  if (existing[0]) return null;
+
+  const { rows } = await client.query(
+    `INSERT INTO ledger_charges (tenant_id, charge_type, description, amount, due_date, period)
+     VALUES ($1, 'custom', $2, $3, $4, NULL)
+     RETURNING *`,
+    [tenantId, SECURITY_DEPOSIT_DESCRIPTION, amount, leaseStart]
+  );
+  return rows[0];
+}
+
 // Same "$0 owed is trivially paid" reasoning the old rentAmount+addonTotal
 // formula used — now applied to real charge totals instead of a live
 // calculation, so it naturally covers late fees/custom charges too.

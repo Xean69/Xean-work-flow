@@ -13,7 +13,7 @@ import {
 } from "../utils/validate.js";
 import { hashPassword } from "../utils/auth.js";
 import { currentPeriodInTimezone } from "../utils/period.js";
-import { ensureChargesThroughPeriod, getBalanceDue, getOverallStatus, deriveChargeStatus, allocatePayment, getPortfolioBalances } from "../utils/ledger.js";
+import { ensureChargesThroughPeriod, ensureSecurityDepositCharge, getBalanceDue, getOverallStatus, deriveChargeStatus, allocatePayment, getPortfolioBalances } from "../utils/ledger.js";
 import { upload, uploadToCloudinary } from "../utils/upload.js";
 import { generateResetToken } from "../utils/resetToken.js";
 import { sendTenantActivationEmail } from "../services/email.js";
@@ -620,6 +620,14 @@ router.post(
         currentPeriodInTimezone(businessRows[0].timezone),
         tenant
       );
+
+      // Inserted after the rent/addon backfill above (not before) so on the
+      // lease-start date's ties, rent/addons — created first, lower ids —
+      // are what an oldest-due-date-first payment allocation (below, and
+      // allocatePayment generally) or the ledger's own oldest-first sort
+      // reaches first. Matches the "first_payment" checkbox's own framing
+      // as the tenant's first *rent* payment, not their deposit.
+      await ensureSecurityDepositCharge(client, tenant.id, data.deposit_amount, data.lease_start);
 
       if (firstPayment) {
         const { rows: paymentRows } = await client.query(
