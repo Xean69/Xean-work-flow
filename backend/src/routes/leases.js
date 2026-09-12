@@ -7,9 +7,11 @@ import {
   parseLeaseContentBody,
   parseLeaseSendBody,
   parseLeaseVoidBody,
+  parseUploadedFileBody,
 } from "../utils/validate.js";
-import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
+import { deleteFromCloudinary, assertUploadedSizeOk, fetchUploadedBuffer } from "../utils/upload.js";
 import { generateLeaseContent, fillLeaseTemplate } from "../services/leaseGeneration.js";
+import { mimeTypeForFilename } from "../services/extraction.js";
 
 const router = Router();
 
@@ -94,23 +96,20 @@ router.get(
 
 router.post(
   "/",
-  upload.single("template_file"),
   asyncHandler(async (req, res) => {
-    // Multipart bodies arrive as strings — custom_clauses is sent as a
-    // JSON-stringified field so the manager's clause list survives the
-    // trip alongside the (optional) template file.
-    const rawBody = {
-      ...req.body,
-      custom_clauses: req.body.custom_clauses ? JSON.parse(req.body.custom_clauses) : undefined,
-    };
-    const data = parseLeaseCreateBody(rawBody);
+    // No more multipart special-casing (custom_clauses used to arrive as a
+    // JSON-stringified string field alongside the file) — the template, if
+    // any, already landed on Cloudinary directly from the browser (see
+    // /api/uploads/signature), so this whole request is now plain JSON.
+    const data = parseLeaseCreateBody(req.body);
+    const template_file = data.generation_mode === "template" ? parseUploadedFileBody(req.body) : null;
+    if (template_file) {
+      assertUploadedSizeOk(template_file.bytes, template_file.cloudinary_public_id, template_file.cloudinary_resource_type);
+    }
 
     const tenant = await loadTenantFacts(data.tenant_id, req.businessId);
     if (!tenant) throw new ApiError(400, "tenant_id does not belong to your business");
 
-    if (data.generation_mode === "template" && !req.file) {
-      throw new ApiError(400, "A template file is required for template mode");
-    }
     if (data.generation_mode === "generate") {
       const { rows: bizRows } = await pool.query(
         "SELECT ai_lease_generation_enabled FROM businesses WHERE id = $1",
@@ -134,16 +133,15 @@ router.post(
       customTerms: data.custom_terms,
     };
 
-    let sections, rawOutput, template = null;
+    let sections, rawOutput;
     if (data.generation_mode === "template") {
       try {
-        template = await uploadToCloudinary(req.file.buffer, "xean/lease-templates");
-      } catch (err) {
-        console.error("Cloudinary upload failed:", err);
-        throw new ApiError(502, "Failed to upload template, please try again");
-      }
-      try {
-        const result = await fillLeaseTemplate({ fileBuffer: req.file.buffer, mediaType: req.file.mimetype, facts });
+        const fileBuffer = await fetchUploadedBuffer(template_file.file_url);
+        const result = await fillLeaseTemplate({
+          fileBuffer,
+          mediaType: template_file.mime_type || mimeTypeForFilename(template_file.file_name),
+          facts,
+        });
         sections = result.sections;
         rawOutput = result.rawOutput;
       } catch (err) {
@@ -177,10 +175,10 @@ router.post(
         tenant.unit_id,
         req.adminId,
         data.generation_mode,
-        template?.url || null,
-        template?.publicId || null,
-        template?.resourceType || null,
-        data.generation_mode === "template" ? req.file.mimetype : null,
+        template_file?.file_url || null,
+        template_file?.cloudinary_public_id || null,
+        template_file?.cloudinary_resource_type || null,
+        template_file ? template_file.mime_type || mimeTypeForFilename(template_file.file_name) : null,
         data.custom_terms,
         JSON.stringify(data.custom_clauses),
         tenant.full_name,

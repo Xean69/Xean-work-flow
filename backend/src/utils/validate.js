@@ -400,6 +400,47 @@ export function parseStaffBody(body) {
 
 const DOC_TYPES = ["lease", "invoice", "inspection", "application", "other", "id"];
 
+// Required file metadata a browser reports back after uploading directly
+// to Cloudinary (see utils/upload.js's generateUploadSignature) — field
+// names match the documents table's own columns, since this is what used
+// to be computed server-side from multer's req.file + uploadToCloudinary's
+// result, now supplied by the client instead. Used by any route where a
+// file is mandatory (documents.js's upload, leases.js's template upload).
+export function parseUploadedFileBody(body) {
+  return {
+    file_url: requireString(body.file_url, "file_url"),
+    cloudinary_public_id: requireString(body.cloudinary_public_id, "cloudinary_public_id"),
+    cloudinary_resource_type: requireString(body.cloudinary_resource_type, "cloudinary_resource_type"),
+    file_name: requireString(body.file_name, "file_name"),
+    bytes: requireNumber(body.bytes, "bytes", { min: 1 }),
+    // Optional: documents.js derives a mimetype from file_name's extension
+    // instead (matching how /:id/extract already worked before this — see
+    // mimeTypeForFilename), but leases.js's template upload needs the
+    // browser's own real reported type for its template_mime_type column,
+    // not a guess from the extension.
+    mime_type: optionalString(body.mime_type),
+  };
+}
+
+// Same idea, for the optional case — a chat-style message that may or may
+// not carry an attachment (maintenance comments, a tenant's initial repair
+// report). Returns null exactly when req.file would have been undefined
+// under the old multer-based flow, so callers can keep the same
+// `if (attachment) { ... }` shape they already had.
+export function parseUploadedAttachmentBody(body) {
+  if (body.attachment_url === undefined) return null;
+  return {
+    attachment_url: requireString(body.attachment_url, "attachment_url"),
+    attachment_cloudinary_public_id: requireString(body.attachment_cloudinary_public_id, "attachment_cloudinary_public_id"),
+    attachment_cloudinary_resource_type: requireString(
+      body.attachment_cloudinary_resource_type,
+      "attachment_cloudinary_resource_type"
+    ),
+    attachment_file_name: requireString(body.attachment_file_name, "attachment_file_name"),
+    attachment_bytes: requireNumber(body.attachment_bytes, "attachment_bytes", { min: 1 }),
+  };
+}
+
 export function parseDocumentBody(body) {
   const doc_type = body.doc_type === undefined ? "other" : body.doc_type;
   if (!DOC_TYPES.includes(doc_type)) {

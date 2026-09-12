@@ -2,7 +2,7 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseMaintenanceBody, parseMessageBody, parseAssignBody, parseRescheduleProposalBody } from "../utils/validate.js";
+import { parseMaintenanceBody, parseMessageBody, parseAssignBody, parseRescheduleProposalBody, parseUploadedAttachmentBody } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
 import { generateMaintenanceChatReply } from "../services/maintenanceChat.js";
 import {
@@ -12,7 +12,7 @@ import {
   notifyTenantOfRescheduleProposed,
 } from "../services/email.js";
 import { proposeReschedule } from "../services/maintenanceReschedule.js";
-import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
+import { assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
 import { pushToBusinessAdmins, pushToTenant, pushToStaff } from "../services/webPush.js";
 
 const router = Router();
@@ -230,10 +230,17 @@ router.get(
 
 router.post(
   "/:id/comments",
-  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
-    if (req.file) assertChatAttachmentSizeOk(req.file);
-    const data = parseMessageBody(req.body, { requireBody: !req.file });
+    const attachment = parseUploadedAttachmentBody(req.body);
+    if (attachment) {
+      assertUploadedSizeOk(
+        attachment.attachment_bytes,
+        attachment.attachment_cloudinary_public_id,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
+    }
+    const data = parseMessageBody(req.body, { requireBody: !attachment });
     const { rows: ticketRows } = await pool.query(
       `SELECT m.id, m.title, m.tenant_id, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
        FROM maintenance_requests m
@@ -242,16 +249,6 @@ router.post(
       [req.params.id, req.businessId]
     );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
-
-    let uploaded = null;
-    if (req.file) {
-      try {
-        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
-      } catch (err) {
-        console.error("Cloudinary upload failed:", err);
-        throw new ApiError(502, "Failed to upload attachment, please try again");
-      }
-    }
 
     const { rows } = await pool.query(
       `INSERT INTO maintenance_comments
@@ -262,10 +259,10 @@ router.post(
         req.businessId,
         req.params.id,
         data.body,
-        uploaded?.url || null,
-        uploaded?.publicId || null,
-        uploaded?.resourceType || null,
-        req.file?.originalname || null,
+        attachment?.attachment_url || null,
+        attachment?.attachment_cloudinary_public_id || null,
+        attachment?.attachment_cloudinary_resource_type || null,
+        attachment?.attachment_file_name || null,
       ]
     );
     // Sending a comment implies you've seen the thread up to now too.

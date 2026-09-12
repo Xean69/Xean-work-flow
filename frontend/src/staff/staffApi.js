@@ -3,6 +3,8 @@
 // tenant portal's portalApi.js, hitting its own auth-guarded routes.
 const BASE_URL = "/api/staff";
 
+import { uploadFileDirectToCloudinary, IMAGE_DOC_MAX_SIZE, CHAT_VIDEO_MAX_SIZE } from "../utils/directCloudinaryUpload.js";
+
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -19,35 +21,29 @@ async function request(path, options = {}) {
   return data;
 }
 
-// No Content-Type header here — the browser sets the multipart boundary
-// itself for FormData, same reasoning as portalApi.js's own uploadRequest.
-//
-// Maintenance comment uploads can sit behind a slow AI reply (see
-// backend/src/services/maintenanceChat.js) — without a client-side abort, a
-// slow-but-not-officially-hung backend call left the UI stuck with no error
-// surfaced.
+// The 90s abort timeout below is still needed even though neither route
+// below sends a file body through this app's own API anymore (attachments
+// now go straight to Cloudinary — see addTicketComment/sendStaffMessage) —
+// posting a ticket comment still awaits a slow AI reply synchronously (see
+// backend/src/services/maintenanceChat.js), so that request can still hang
+// exactly as before; only the file bytes themselves moved out of it.
 //
 // 90s, not a smaller number: when a tenant's first AI reply itself times
 // out, its fallback outcome is "escalate", which immediately triggers a
 // SECOND, independent classification call (maintenanceTriage.js) in the
 // same request — confirmed by actually forcing both to stall in testing.
-// Worst case is upload (~5s) + two sequential 30s AI ceilings (15s timeout x
-// 1 retry each) + email/push/DB overhead (~15s) = ~80s. This has to sit
-// above that real worst case, or a slow-but-recovering backend gets aborted
-// client-side right before it would have succeeded on its own.
+// Worst case is two sequential 30s AI ceilings (15s timeout x 1 retry each)
+// + email/push/DB overhead (~15s) = ~75s. This has to sit above that real
+// worst case, or a slow-but-recovering backend gets aborted client-side
+// right before it would have succeeded on its own.
 const UPLOAD_TIMEOUT_MS = 90_000;
 
-async function uploadRequest(path, formData) {
+async function fetchWithTimeout(path, options) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
   let res;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
-      method: "POST",
-      body: formData,
-      credentials: "same-origin",
-      signal: controller.signal,
-    });
+    res = await fetch(`${BASE_URL}${path}`, { method: "POST", credentials: "same-origin", ...options, signal: controller.signal });
   } catch (err) {
     if (err.name === "AbortError") {
       throw new Error("This is taking longer than expected. Please try again.");
@@ -61,6 +57,28 @@ async function uploadRequest(path, formData) {
     throw new Error(data?.error || `Request failed with status ${res.status}`);
   }
   return data;
+}
+
+// Staff upload into two different folders (ticket comments vs. messages to
+// their manager) — unlike the tenant portal's single fixed one, so this
+// takes folder as a parameter, validated again against its own allowlist
+// backend-side (see staff.js's own /upload-signature).
+function getUploadSignature(folder) {
+  return request("/upload-signature", { method: "POST", body: JSON.stringify({ folder }) });
+}
+
+async function uploadAttachmentIfAny(formData, folder) {
+  const file = formData.get("attachment");
+  if (!file) return {};
+  const maxSize = file.type?.startsWith("video/") ? CHAT_VIDEO_MAX_SIZE : IMAGE_DOC_MAX_SIZE;
+  const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature(folder), maxSize);
+  return {
+    attachment_url: uploaded.url,
+    attachment_cloudinary_public_id: uploaded.publicId,
+    attachment_cloudinary_resource_type: uploaded.resourceType,
+    attachment_file_name: uploaded.fileName,
+    attachment_bytes: uploaded.bytes,
+  };
 }
 
 // Best-effort IANA zone name from the browser itself — used only to seed
@@ -128,8 +146,14 @@ export function updateTicketStatus(id, status, completionNote) {
   });
 }
 
-export function addTicketComment(id, formData) {
-  return uploadRequest(`/maintenance/${id}/comments`, formData);
+// Same "intercept the existing FormData" shape used throughout this
+// conversion — TicketDetail.jsx is unchanged.
+export async function addTicketComment(id, formData) {
+  const attachmentFields = await uploadAttachmentIfAny(formData, "xean/maintenance-chat");
+  return fetchWithTimeout(`/maintenance/${id}/comments`, {
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body: formData.get("body") || undefined, ...attachmentFields }),
+  });
 }
 
 export function proposeTicketReschedule(id, data) {
@@ -140,6 +164,10 @@ export function getMyMessages() {
   return request("/messages");
 }
 
-export function sendStaffMessage(formData) {
-  return uploadRequest("/messages", formData);
+export async function sendStaffMessage(formData) {
+  const attachmentFields = await uploadAttachmentIfAny(formData, "xean/staff-messages");
+  return fetchWithTimeout("/messages", {
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body: formData.get("body") || undefined, ...attachmentFields }),
+  });
 }

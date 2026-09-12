@@ -2,8 +2,8 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { requireString } from "../utils/validate.js";
-import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
+import { requireString, parseUploadedFileBody } from "../utils/validate.js";
+import { deleteFromCloudinary, assertUploadedSizeOk } from "../utils/upload.js";
 
 const router = Router();
 
@@ -242,10 +242,10 @@ router.delete(
 
 router.post(
   "/:id/items/:itemId/photos",
-  upload.single("photo"),
   asyncHandler(async (req, res) => {
     await assertInspectionEditable(req.params.id, req.businessId);
-    if (!req.file) throw new ApiError(400, "photo is required");
+    const file = parseUploadedFileBody(req.body);
+    assertUploadedSizeOk(file.bytes, file.cloudinary_public_id, file.cloudinary_resource_type);
 
     const { rows: itemRows } = await pool.query(
       `SELECT i.id FROM move_in_inspection_items i
@@ -255,19 +255,11 @@ router.post(
     );
     if (!itemRows[0]) throw new ApiError(404, "Item not found");
 
-    let uploaded;
-    try {
-      uploaded = await uploadToCloudinary(req.file.buffer, "xean/inspections");
-    } catch (err) {
-      console.error("Cloudinary upload failed:", err);
-      throw new ApiError(502, "Failed to upload photo, please try again");
-    }
-
     const { rows } = await pool.query(
       `INSERT INTO move_in_inspection_photos (item_id, photo_url, cloudinary_public_id, cloudinary_resource_type)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [req.params.itemId, uploaded.url, uploaded.publicId, uploaded.resourceType]
+      [req.params.itemId, file.file_url, file.cloudinary_public_id, file.cloudinary_resource_type]
     );
     res.status(201).json(rows[0]);
   })

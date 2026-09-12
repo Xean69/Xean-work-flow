@@ -1,3 +1,5 @@
+import { uploadFileDirectToCloudinary, IMAGE_DOC_MAX_SIZE, CHAT_VIDEO_MAX_SIZE } from "../utils/directCloudinaryUpload.js";
+
 // Relative — in local dev this is proxied to localhost by vite.config.js;
 // in production, Vercel proxies it straight through to the Railway backend
 // (see vercel.json) rather than calling it as a separate origin. Either
@@ -257,8 +259,27 @@ export function getMaintenanceRequest(id) {
   return request(`/maintenance/${id}`);
 }
 
-export function addMaintenanceComment(id, formData) {
-  return uploadRequest(`/maintenance/${id}/comments`, formData);
+// Same "intercept the existing FormData" shape as uploadDocument above —
+// Maintenance.jsx is unchanged; the attachment (if any) now goes straight
+// to Cloudinary from here before this app's own API ever sees a request.
+export async function addMaintenanceComment(id, formData) {
+  const file = formData.get("attachment");
+  let attachmentFields = {};
+  if (file) {
+    const maxSize = file.type?.startsWith("video/") ? CHAT_VIDEO_MAX_SIZE : IMAGE_DOC_MAX_SIZE;
+    const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature("xean/maintenance-chat"), maxSize);
+    attachmentFields = {
+      attachment_url: uploaded.url,
+      attachment_cloudinary_public_id: uploaded.publicId,
+      attachment_cloudinary_resource_type: uploaded.resourceType,
+      attachment_file_name: uploaded.fileName,
+      attachment_bytes: uploaded.bytes,
+    };
+  }
+  return request(`/maintenance/${id}/comments`, {
+    method: "POST",
+    body: JSON.stringify({ body: formData.get("body") || undefined, ...attachmentFields }),
+  });
 }
 
 export function proposeMaintenanceReschedule(id, data) {
@@ -314,8 +335,38 @@ async function uploadRequest(path, formData, method = "POST") {
   return data;
 }
 
-export function uploadDocument(formData) {
-  return uploadRequest("/documents", formData);
+// One admin-side signature endpoint, parameterized by folder (see
+// backend/src/routes/uploads.js) — every admin-mounted upload below asks
+// this for a short-lived signed Cloudinary upload before sending the file
+// itself straight there, never through this app's own API at all.
+function getUploadSignature(folder) {
+  return request("/uploads/signature", { method: "POST", body: JSON.stringify({ folder }) });
+}
+
+// Reads the same fields DocumentForm.jsx already puts in its FormData
+// (file, doc_type, property_id, tenant_id, notes) — kept as the external
+// signature every existing caller already uses, so nothing upstream of
+// this function needed to change. What actually changed is internal: the
+// file goes straight to Cloudinary from here, and only its resulting
+// metadata (plus the other fields) travels to this app's own API — the
+// fix for Vercel's proxy hard-failing on a file body over ~4.3MB.
+export async function uploadDocument(formData) {
+  const file = formData.get("file");
+  const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature("xean/documents"), IMAGE_DOC_MAX_SIZE);
+  return request("/documents", {
+    method: "POST",
+    body: JSON.stringify({
+      file_url: uploaded.url,
+      cloudinary_public_id: uploaded.publicId,
+      cloudinary_resource_type: uploaded.resourceType,
+      file_name: uploaded.fileName,
+      bytes: uploaded.bytes,
+      doc_type: formData.get("doc_type"),
+      property_id: formData.get("property_id") || undefined,
+      tenant_id: formData.get("tenant_id") || undefined,
+      notes: formData.get("notes") || undefined,
+    }),
+  });
 }
 
 export function deleteDocument(id) {
@@ -587,8 +638,19 @@ export function deleteInspectionItem(inspectionId, itemId) {
   return request(`/move-in-inspections/${inspectionId}/items/${itemId}`, { method: "DELETE" });
 }
 
-export function uploadInspectionPhoto(inspectionId, itemId, formData) {
-  return uploadRequest(`/move-in-inspections/${inspectionId}/items/${itemId}/photos`, formData);
+export async function uploadInspectionPhoto(inspectionId, itemId, formData) {
+  const file = formData.get("photo");
+  const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature("xean/inspections"), IMAGE_DOC_MAX_SIZE);
+  return request(`/move-in-inspections/${inspectionId}/items/${itemId}/photos`, {
+    method: "POST",
+    body: JSON.stringify({
+      file_url: uploaded.url,
+      cloudinary_public_id: uploaded.publicId,
+      cloudinary_resource_type: uploaded.resourceType,
+      file_name: uploaded.fileName,
+      bytes: uploaded.bytes,
+    }),
+  });
 }
 
 export function deleteInspectionPhoto(inspectionId, photoId) {
@@ -610,8 +672,35 @@ export function getLease(id) {
 // Always FormData, even for Generate mode (which has no file) — the
 // template file is optional but custom_clauses needs to travel as a
 // JSON-stringified field either way, so one upload path handles both modes.
-export function createLease(formData) {
-  return uploadRequest("/leases", formData);
+// custom_clauses arrives here as a JSON-stringified FormData field (a
+// leftover of multipart's strings-only limitation, unchanged in
+// Leases.jsx) — parsed back out here before being sent as real JSON, now
+// that nothing about this request needs to be multipart at all anymore.
+export async function createLease(formData) {
+  const templateFile = formData.get("template_file");
+  let templateFields = {};
+  if (templateFile) {
+    const uploaded = await uploadFileDirectToCloudinary(templateFile, () => getUploadSignature("xean/lease-templates"), IMAGE_DOC_MAX_SIZE);
+    templateFields = {
+      file_url: uploaded.url,
+      cloudinary_public_id: uploaded.publicId,
+      cloudinary_resource_type: uploaded.resourceType,
+      file_name: uploaded.fileName,
+      bytes: uploaded.bytes,
+      mime_type: uploaded.mimeType,
+    };
+  }
+  const customClauses = formData.get("custom_clauses");
+  return request("/leases", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: formData.get("tenant_id"),
+      generation_mode: formData.get("generation_mode"),
+      custom_terms: formData.get("custom_terms") || undefined,
+      custom_clauses: customClauses ? JSON.parse(customClauses) : undefined,
+      ...templateFields,
+    }),
+  });
 }
 
 export function updateLeaseContent(id, content) {

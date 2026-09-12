@@ -36,6 +36,7 @@ import contactRouter from "./routes/contact.js";
 import websitesRouter from "./routes/websites.js";
 import publicListingsRouter from "./routes/publicListings.js";
 import pushRouter from "./routes/push.js";
+import uploadsRouter from "./routes/uploads.js";
 import { startLedgerScheduler, startSubdomainVerificationScheduler, startBackupScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
@@ -130,6 +131,11 @@ app.use("/api/push", pushRouter);
 const staffOnly = requireRole("owner", "manager");
 const anyRole = requireRole("owner", "manager", "accountant");
 
+// Just the signed-upload endpoint (see routes/uploads.js) — gated on
+// requireAdminAuth alone, not staffOnly, since a signature can't itself
+// create or change anything; each real record-creation route it feeds
+// still enforces its own role check afterward, unchanged from before.
+app.use("/api/uploads", requireAdminAuth, uploadsRouter);
 app.use("/api/properties", requireAdminAuth, staffOnly, propertiesRouter);
 app.use("/api/units", requireAdminAuth, staffOnly, unitsRouter);
 app.use("/api/tenants", requireAdminAuth, staffOnly, tenantsRouter);

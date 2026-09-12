@@ -2,8 +2,8 @@ import { Router } from "express";
 import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
-import { parseDocumentBody, parseDocumentStatusBody, parseExtractedDataBody } from "../utils/validate.js";
-import { upload, uploadToCloudinary, deleteFromCloudinary } from "../utils/upload.js";
+import { parseDocumentBody, parseDocumentStatusBody, parseExtractedDataBody, parseUploadedFileBody } from "../utils/validate.js";
+import { assertUploadedSizeOk, deleteFromCloudinary, fetchUploadedBuffer } from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
 import { extractDocumentData, isExtractableDocType, mimeTypeForFilename } from "../services/extraction.js";
 import { notifyTenantOfNewDocument } from "../services/email.js";
@@ -62,23 +62,18 @@ router.get(
 router.post(
   "/",
   staffOnly,
-  upload.single("file"),
   asyncHandler(async (req, res) => {
-    if (!req.file) throw new ApiError(400, "file is required");
+    // The file itself already landed on Cloudinary directly from the
+    // browser (see /api/uploads/signature) — this only ever receives its
+    // metadata as plain JSON now, which is what actually fixes the upload
+    // (Vercel's proxy to Railway can't carry a file body over ~4.3MB, but
+    // this request never carries one at all anymore).
+    const file = parseUploadedFileBody(req.body);
+    assertUploadedSizeOk(file.bytes, file.cloudinary_public_id, file.cloudinary_resource_type);
 
-    // multer's memoryStorage holds the file only in req.file.buffer — validate
-    // metadata first, so a bad request never touches Cloudinary at all.
     const data = parseDocumentBody(req.body);
     await assertPropertyInBusiness(data.property_id, req.businessId);
     await assertTenantInBusiness(data.tenant_id, req.businessId);
-
-    let uploaded;
-    try {
-      uploaded = await uploadToCloudinary(req.file.buffer, "xean/documents");
-    } catch (err) {
-      console.error("Cloudinary upload failed:", err);
-      throw new ApiError(502, "Failed to upload file, please try again");
-    }
 
     const { rows } = await pool.query(
       `INSERT INTO documents (business_id, property_id, tenant_id, file_name, file_url, cloudinary_public_id, cloudinary_resource_type, doc_type, notes)
@@ -88,10 +83,10 @@ router.post(
         req.businessId,
         data.property_id,
         data.tenant_id,
-        req.file.originalname,
-        uploaded.url,
-        uploaded.publicId,
-        uploaded.resourceType,
+        file.file_name,
+        file.file_url,
+        file.cloudinary_public_id,
+        file.cloudinary_resource_type,
         data.doc_type,
         data.notes,
       ]
@@ -100,10 +95,16 @@ router.post(
 
     // Extraction runs once, right here on upload — never on a later view —
     // to keep API costs down. doc_types with no extractor (application,
-    // other) are marked unsupported without ever calling the API.
+    // other) are marked unsupported without ever calling the API. This
+    // server never saw the file's bytes at upload time (see above), so
+    // extraction needs them fetched back from the same Cloudinary URL the
+    // browser was just given — mirrors /:id/extract below exactly, which
+    // has always fetched from file_url for the same reason (re-extraction
+    // on an old row with no buffer left in memory).
     let finalDoc;
     if (isExtractableDocType(doc.doc_type)) {
-      const result = await extractDocumentData(req.file.buffer, req.file.mimetype, doc.doc_type);
+      const fileBuffer = await fetchUploadedBuffer(doc.file_url);
+      const result = await extractDocumentData(fileBuffer, mimeTypeForFilename(doc.file_name), doc.doc_type);
       const { rows: updated } = await pool.query(
         `UPDATE documents
          SET extracted_data = $1, extraction_confidence = $2, extraction_status = $3, extracted_at = now()

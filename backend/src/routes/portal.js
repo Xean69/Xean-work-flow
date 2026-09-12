@@ -17,6 +17,7 @@ import {
   parsePushPreferenceBody,
   parsePushSubscriptionBody,
   parsePushUnsubscribeBody,
+  parseUploadedAttachmentBody,
   requireString,
 } from "../utils/validate.js";
 import { classifyMaintenanceRequest } from "../services/maintenanceTriage.js";
@@ -34,7 +35,7 @@ import {
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
 import { getOverallStatus } from "../utils/ledger.js";
-import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk, uploadSignature } from "../utils/upload.js";
+import { uploadSignature, uploadToCloudinary, generateUploadSignature, assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
 import { notifyManagersOfLeaseSigned } from "../services/email.js";
 import { respondToReschedule, answerRescheduleEntryPermission } from "../services/maintenanceReschedule.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
@@ -488,15 +489,33 @@ router.get(
   })
 );
 
+// Tenants only ever upload maintenance attachments, never documents/
+// inspections/leases — folder is fixed, not client-supplied, unlike the
+// admin-side /api/uploads/signature which takes one (see uploads.js).
+router.post(
+  "/upload-signature",
+  requireTenantAuth,
+  asyncHandler(async (req, res) => {
+    res.json(generateUploadSignature("xean/maintenance-chat"));
+  })
+);
+
 // The unit is looked up from the tenant's own record, never taken from the
 // request — a tenant can only ever file a repair against their own unit.
 router.post(
   "/maintenance",
   requireTenantAuth,
-  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
     const data = parsePortalRepairBody(req.body);
-    if (req.file) assertChatAttachmentSizeOk(req.file);
+    const attachment = parseUploadedAttachmentBody(req.body);
+    if (attachment) {
+      assertUploadedSizeOk(
+        attachment.attachment_bytes,
+        attachment.attachment_cloudinary_public_id,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
+    }
     const { rows: tenantRows } = await pool.query("SELECT unit_id, full_name, language FROM tenants WHERE id = $1", [
       req.tenantId,
     ]);
@@ -538,28 +557,30 @@ router.post(
     // If the tenant attached a photo/video/document while reporting, it
     // becomes their first message in the thread (empty body, just the
     // attachment) — same shape as any other attached chat message, rather
-    // than a separate ticket-level attachment display.
+    // than a separate ticket-level attachment display. The file itself
+    // already landed on Cloudinary directly from the browser (see
+    // /upload-signature above) — this just records where.
     let initialAttachment = null;
-    if (req.file) {
-      let uploaded;
-      try {
-        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
-      } catch (err) {
-        console.error("Cloudinary upload failed:", err);
-        throw new ApiError(502, "Failed to upload attachment, please try again");
-      }
+    if (attachment) {
       await pool.query(
         `INSERT INTO maintenance_comments
            (business_id, request_id, sender, body, attachment_url, attachment_cloudinary_public_id, attachment_cloudinary_resource_type, attachment_file_name)
          VALUES ($1, $2, 'tenant', '', $3, $4, $5, $6)`,
-        [unitRows[0]?.business_id, ticket.id, uploaded.url, uploaded.publicId, uploaded.resourceType, req.file.originalname]
+        [
+          unitRows[0]?.business_id,
+          ticket.id,
+          attachment.attachment_url,
+          attachment.attachment_cloudinary_public_id,
+          attachment.attachment_cloudinary_resource_type,
+          attachment.attachment_file_name,
+        ]
       );
       initialAttachment = {
         sender: "tenant",
         body: "",
-        attachment_url: uploaded.url,
-        attachment_cloudinary_resource_type: uploaded.resourceType,
-        attachment_file_name: req.file.originalname,
+        attachment_url: attachment.attachment_url,
+        attachment_cloudinary_resource_type: attachment.attachment_cloudinary_resource_type,
+        attachment_file_name: attachment.attachment_file_name,
       };
     }
 
@@ -744,12 +765,19 @@ router.post(
 router.post(
   "/maintenance/:id/comments",
   requireTenantAuth,
-  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
-    if (req.file) assertChatAttachmentSizeOk(req.file);
-    // requireBody only relaxes to optional when there's a file — if neither
-    // is present, parseMessageBody's own requireString rejects the request.
-    const data = parseMessageBody(req.body, { requireBody: !req.file });
+    const attachment = parseUploadedAttachmentBody(req.body);
+    if (attachment) {
+      assertUploadedSizeOk(
+        attachment.attachment_bytes,
+        attachment.attachment_cloudinary_public_id,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
+    }
+    // requireBody only relaxes to optional when there's an attachment — if
+    // neither is present, parseMessageBody's own requireString rejects it.
+    const data = parseMessageBody(req.body, { requireBody: !attachment });
     const { rows: ticketRows } = await pool.query(
       `SELECT m.id, m.business_id, m.title, m.description, m.status, m.ai_trade, m.ai_urgency, m.is_emergency,
               m.assigned_staff_id, t.language AS tenant_language
@@ -760,16 +788,6 @@ router.post(
     );
     if (!ticketRows[0]) throw new ApiError(404, "Maintenance request not found");
     const ticket = ticketRows[0];
-
-    let uploaded = null;
-    if (req.file) {
-      try {
-        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
-      } catch (err) {
-        console.error("Cloudinary upload failed:", err);
-        throw new ApiError(502, "Failed to upload attachment, please try again");
-      }
-    }
 
     // Pre-existing bug found while wiring up email notifications: this
     // INSERT never set business_id before, and the column is NOT NULL — a
@@ -783,10 +801,10 @@ router.post(
         ticket.business_id,
         req.params.id,
         data.body,
-        uploaded?.url || null,
-        uploaded?.publicId || null,
-        uploaded?.resourceType || null,
-        req.file?.originalname || null,
+        attachment?.attachment_url || null,
+        attachment?.attachment_cloudinary_public_id || null,
+        attachment?.attachment_cloudinary_resource_type || null,
+        attachment?.attachment_file_name || null,
       ]
     );
     await pool.query("UPDATE maintenance_requests SET tenant_last_read_at = now() WHERE id = $1", [

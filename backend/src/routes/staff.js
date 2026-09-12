@@ -13,13 +13,14 @@ import {
   parsePushUnsubscribeBody,
   parseTimezoneBody,
   safeTimezoneOrNull,
+  parseUploadedAttachmentBody,
 } from "../utils/validate.js";
 import {
   notifyManagersOfStaffMessage,
   notifyTenantOfMaintenanceReply,
   notifyTenantOfRescheduleProposed,
 } from "../services/email.js";
-import { uploadChatAttachment, uploadToCloudinary, assertChatAttachmentSizeOk } from "../utils/upload.js";
+import { generateUploadSignature, assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
 import { proposeReschedule } from "../services/maintenanceReschedule.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
 import { pushToBusinessAdmins, pushToTenant } from "../services/webPush.js";
@@ -239,10 +240,17 @@ router.get(
 router.post(
   "/maintenance/:id/comments",
   requireStaffAuth,
-  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
-    if (req.file) assertChatAttachmentSizeOk(req.file);
-    const data = parseMessageBody(req.body, { requireBody: !req.file });
+    const attachment = parseUploadedAttachmentBody(req.body);
+    if (attachment) {
+      assertUploadedSizeOk(
+        attachment.attachment_bytes,
+        attachment.attachment_cloudinary_public_id,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
+    }
+    const data = parseMessageBody(req.body, { requireBody: !attachment });
 
     const { rows: ticketRows } = await pool.query(
       `SELECT m.id, m.title, m.tenant_id, t.email AS tenant_email, t.full_name AS tenant_name, t.language AS tenant_language
@@ -252,16 +260,6 @@ router.post(
       [req.params.id, req.staffId, req.businessId]
     );
     if (!ticketRows[0]) throw new ApiError(404, "Ticket not found");
-
-    let uploaded = null;
-    if (req.file) {
-      try {
-        uploaded = await uploadToCloudinary(req.file.buffer, "xean/maintenance-chat");
-      } catch (err) {
-        console.error("Cloudinary upload failed:", err);
-        throw new ApiError(502, "Failed to upload attachment, please try again");
-      }
-    }
 
     const { rows } = await pool.query(
       `INSERT INTO maintenance_comments
@@ -274,10 +272,10 @@ router.post(
         req.params.id,
         req.staffId,
         data.body,
-        uploaded?.url || null,
-        uploaded?.publicId || null,
-        uploaded?.resourceType || null,
-        req.file?.originalname || null,
+        attachment?.attachment_url || null,
+        attachment?.attachment_cloudinary_public_id || null,
+        attachment?.attachment_cloudinary_resource_type || null,
+        attachment?.attachment_file_name || null,
       ]
     );
 
@@ -452,23 +450,36 @@ router.get(
   })
 );
 
+// Requires an authenticated staff session (which folders that grants a
+// signature for is scoped right here, not in the shared upload.js
+// allowlist alone) — the two folders staff ever upload into: their own
+// maintenance ticket comments, and messages to their manager.
+const STAFF_UPLOAD_FOLDERS = new Set(["xean/maintenance-chat", "xean/staff-messages"]);
+
+router.post(
+  "/upload-signature",
+  requireStaffAuth,
+  asyncHandler(async (req, res) => {
+    const { folder } = req.body;
+    if (!STAFF_UPLOAD_FOLDERS.has(folder)) throw new ApiError(400, "Invalid upload folder");
+    res.json(generateUploadSignature(folder));
+  })
+);
+
 router.post(
   "/messages",
   requireStaffAuth,
-  uploadChatAttachment.single("attachment"),
   asyncHandler(async (req, res) => {
-    if (req.file) assertChatAttachmentSizeOk(req.file);
-    const data = parseMessageBody(req.body, { requireBody: !req.file });
-
-    let uploaded = null;
-    if (req.file) {
-      try {
-        uploaded = await uploadToCloudinary(req.file.buffer, "xean/staff-messages");
-      } catch (err) {
-        console.error("Cloudinary upload failed:", err);
-        throw new ApiError(502, "Failed to upload attachment, please try again");
-      }
+    const attachment = parseUploadedAttachmentBody(req.body);
+    if (attachment) {
+      assertUploadedSizeOk(
+        attachment.attachment_bytes,
+        attachment.attachment_cloudinary_public_id,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
     }
+    const data = parseMessageBody(req.body, { requireBody: !attachment });
 
     const { rows } = await pool.query(
       `INSERT INTO staff_messages
@@ -479,10 +490,10 @@ router.post(
         req.businessId,
         req.staffId,
         data.body,
-        uploaded?.url || null,
-        uploaded?.publicId || null,
-        uploaded?.resourceType || null,
-        req.file?.originalname || null,
+        attachment?.attachment_url || null,
+        attachment?.attachment_cloudinary_public_id || null,
+        attachment?.attachment_cloudinary_resource_type || null,
+        attachment?.attachment_file_name || null,
       ]
     );
 
