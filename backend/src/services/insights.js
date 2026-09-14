@@ -25,14 +25,14 @@ function monthBucket(dateStr) {
 
 // Pulls together everything the model needs to reason about the portfolio
 // with real numbers instead of guessing: current rent, full lease history
-// per unit (turnover), whether a unit has ever run as a short-term stay,
-// each property's city/province and STR license status, and a pre-computed
-// list of months where multiple leases end close together (renewal
-// clustering) — computed here in JS rather than left for the model to spot
-// in a raw date list, since exact date-bucketing is exactly the kind of
-// thing code should do reliably and an LLM shouldn't be trusted to eyeball.
+// per unit (turnover), each property's city/province and STR license
+// status, and a pre-computed list of months where multiple leases end
+// close together (renewal clustering) — computed here in JS rather than
+// left for the model to spot in a raw date list, since exact date-bucketing
+// is exactly the kind of thing code should do reliably and an LLM
+// shouldn't be trusted to eyeball.
 export async function gatherPortfolioData(businessId) {
-  const [{ rows: properties }, { rows: units }, { rows: tenants }, { rows: stays }, { rows: licenses }] =
+  const [{ rows: properties }, { rows: units }, { rows: tenants }, { rows: licenses }] =
     await Promise.all([
       pool.query(
         "SELECT id, name, city, province FROM properties WHERE business_id = $1 ORDER BY name",
@@ -58,13 +58,6 @@ export async function gatherPortfolioData(businessId) {
         [businessId]
       ),
       pool.query(
-        `SELECT s.unit_id, s.platform, s.checkout_date, s.next_checkin_date
-         FROM stays s JOIN units u ON u.id = s.unit_id JOIN properties p ON p.id = u.property_id
-         WHERE p.business_id = $1
-         ORDER BY s.unit_id, s.checkout_date DESC`,
-        [businessId]
-      ),
-      pool.query(
         `SELECT DISTINCT ON (property_id) property_id, license_number, issued_date, expiry_date
          FROM str_licenses
          WHERE business_id = $1
@@ -80,13 +73,6 @@ export async function gatherPortfolioData(businessId) {
     if (!tenantsByUnit.has(t.unit_id)) tenantsByUnit.set(t.unit_id, []);
     tenantsByUnit.get(t.unit_id).push(t);
   }
-  const staysByUnit = new Map();
-  for (const s of stays) {
-    s.checkout_date = toISODate(s.checkout_date);
-    s.next_checkin_date = toISODate(s.next_checkin_date);
-    if (!staysByUnit.has(s.unit_id)) staysByUnit.set(s.unit_id, []);
-    staysByUnit.get(s.unit_id).push(s);
-  }
   const licenseByProperty = new Map(licenses.map((l) => [l.property_id, l]));
   const propertyById = new Map(properties.map((p) => [p.id, p]));
 
@@ -98,7 +84,6 @@ export async function gatherPortfolioData(businessId) {
       rent_amount: Number(t.rent_amount),
       monthly_addon_revenue: Number(t.monthly_addon_revenue),
     }));
-    const unitStays = staysByUnit.get(u.unit_id) || [];
     return {
       unit_id: u.unit_id,
       label: `${property?.name ?? "Unknown property"} Unit ${u.unit_number}`,
@@ -108,12 +93,6 @@ export async function gatherPortfolioData(businessId) {
       occupancy_status: u.status,
       turnover_count: leaseHistory.length,
       lease_history: leaseHistory,
-      short_term_stay_usage: {
-        ever_used: unitStays.length > 0,
-        stay_count: unitStays.length,
-        platforms: [...new Set(unitStays.map((s) => s.platform))],
-        most_recent_checkout: unitStays[0]?.checkout_date ?? null,
-      },
     };
   });
 
@@ -163,7 +142,7 @@ const TOOL = {
       insufficient_data: {
         type: "boolean",
         description:
-          "true if the portfolio doesn't have enough real data (e.g. only one property, no lease history, no stay history, nothing to compare) to produce specific, well-supported insights. When true, insights must be an empty array — do not invent generic property-management advice to fill the gap.",
+          "true if the portfolio doesn't have enough real data (e.g. only one property, no lease history, nothing to compare) to produce specific, well-supported insights. When true, insights must be an empty array — do not invent generic property-management advice to fill the gap.",
       },
       note: {
         type: ["string", "null"],
@@ -235,7 +214,7 @@ ${JSON.stringify(portfolioData, null, 2)}
 
 Guidance:
 - Only report what this specific data actually supports. Cite real unit labels, dates, and numbers in your reasoning.
-- Where you don't have a hard number (e.g. this portfolio has no recorded short-term rental income, only whether a unit has ever been used for one), you may use your own general knowledge of typical rental markets to give a rough estimate — but say clearly in the reasoning that it's an estimate from general market knowledge, not data from this account.
+- Where you don't have a hard number, you may use your own general knowledge of typical rental markets to give a rough estimate — but say clearly in the reasoning that it's an estimate from general market knowledge, not data from this account.
 - renewal_clustering in the data is already computed for you: months where 2+ leases end close together. Only surface it as an insight if it looks like a genuine vacancy-crunch risk worth the manager's attention.
 - If the portfolio is too small or too thin (few properties/units, little or no lease history, no comparison points) to say anything specific and well-supported, set insufficient_data to true and explain briefly what's missing — do not pad the response with generic advice to compensate.
 - Use the ${TOOL.name} tool to record your response.`,

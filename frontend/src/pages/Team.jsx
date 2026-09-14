@@ -244,7 +244,7 @@ function Team() {
             </li>
             <li>
               <strong>Accountant</strong> — read-only access to Expenses, Owner Statements, and Documents. No access to
-              Properties, Tenants, Maintenance, Guest Stays, or Inbox.
+              Properties, Tenants, Maintenance, or Inbox.
             </li>
           </ul>
         </div>

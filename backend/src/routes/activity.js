@@ -101,30 +101,6 @@ const CATEGORIES = [
     `,
   },
   {
-    // Only rows whose turnover_status has actually moved since creation
-    // (see stays.js's PUT handler) — a freshly booked stay hasn't "changed"
-    // turnover yet, it's just sitting at its initial state.
-    roles: ["owner", "manager"],
-    sql: `
-      SELECT
-        s.updated_at AS ts,
-        CASE WHEN s.turnover_status = 'checkin_ready' THEN 'green' ELSE 'blue' END AS dot,
-        'Turnover updated: ' || s.guest_name || ' — ' || p.name || ' ' || u.unit_number || ' → ' ||
-          CASE s.turnover_status
-            WHEN 'checkout_done' THEN 'checkout done'
-            WHEN 'inspection_done' THEN 'inspection done'
-            WHEN 'cleaning_done' THEN 'cleaning done'
-            WHEN 'checkin_ready' THEN 'ready for check-in'
-          END AS text
-      FROM stays s
-      JOIN units u ON u.id = s.unit_id
-      JOIN properties p ON p.id = u.property_id
-      WHERE s.business_id = $1 AND s.updated_at > s.created_at
-      ORDER BY s.updated_at DESC
-      LIMIT ${PER_CATEGORY_LIMIT}
-    `,
-  },
-  {
     // A renewal is a new str_licenses row (see routes/strLicenses.js), so
     // created_at alone already distinguishes "first issued" from every
     // later renewal without needing an updated_at here too.

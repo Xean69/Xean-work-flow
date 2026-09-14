@@ -21,13 +21,6 @@ import { upsertSubscription, deleteSubscription } from "../services/pushSubscrip
 
 const router = Router();
 
-const DEFAULT_SCHEDULED_MESSAGES = [
-  ["checkin_instructions", "24h_before_checkin", true],
-  ["welcome", "on_arrival", true],
-  ["checkout_reminder", "8am_checkout_day", true],
-  ["review_request", "2h_after_checkout", false],
-];
-
 router.post(
   "/login",
   asyncHandler(async (req, res) => {
@@ -223,9 +216,6 @@ router.post(
 
 // Registers a new business and its first (and, for now, only) admin
 // account together, atomically — either both are created or neither is.
-// Also seeds the business's 4 default scheduled-message templates, which
-// every other business gets the same way (see schema.sql's note on why
-// that seeding isn't done there anymore).
 router.post(
   "/signup",
   asyncHandler(async (req, res) => {
@@ -256,13 +246,6 @@ router.post(
         [data.email, passwordHash, business.id, detectedTimezone]
       );
       const admin = adminRows[0];
-
-      for (const [messageType, sendTiming, isActive] of DEFAULT_SCHEDULED_MESSAGES) {
-        await client.query(
-          "INSERT INTO scheduled_messages (business_id, message_type, send_timing, is_active) VALUES ($1, $2, $3, $4)",
-          [business.id, messageType, sendTiming, isActive]
-        );
-      }
 
       await client.query("COMMIT");
 

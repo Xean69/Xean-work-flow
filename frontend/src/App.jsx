@@ -29,7 +29,6 @@ import Tenants from './pages/Tenants.jsx'
 import Leases from './pages/Leases.jsx'
 import TenantProfile from './pages/TenantProfile.jsx'
 import TenantAnalytics from './pages/TenantAnalytics.jsx'
-import GuestStays from './pages/GuestStays.jsx'
 import Maintenance from './pages/Maintenance.jsx'
 import Documents from './pages/Documents.jsx'
 import Inbox from './pages/Inbox.jsx'
@@ -167,7 +166,6 @@ function App() {
         <Route path="/tenants/:id" element={<TenantProfile />} />
         <Route path="/tenants/:tenantId/inspection" element={<TenantInspection />} />
         <Route path="/leases" element={<Leases />} />
-        <Route path="/stays" element={<GuestStays />} />
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/inbox" element={<Inbox />} />

@@ -130,39 +130,6 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE INDEX IF NOT EXISTS idx_documents_property_id ON documents(property_id);
 CREATE INDEX IF NOT EXISTS idx_documents_tenant_id ON documents(tenant_id);
 
-CREATE TABLE IF NOT EXISTS stays (
-  id SERIAL PRIMARY KEY,
-  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
-  platform TEXT NOT NULL CHECK (platform IN ('airbnb', 'vrbo', 'booking', 'direct')),
-  guest_name TEXT NOT NULL,
-  checkout_date DATE NOT NULL,
-  next_checkin_date DATE NOT NULL,
-  turnover_status TEXT NOT NULL DEFAULT 'checkout_done'
-    CHECK (turnover_status IN ('checkout_done', 'inspection_done', 'cleaning_done', 'checkin_ready')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_stays_unit_id ON stays(unit_id);
-
-CREATE TABLE IF NOT EXISTS scheduled_messages (
-  id SERIAL PRIMARY KEY,
-  stay_id INTEGER REFERENCES stays(id) ON DELETE CASCADE,
-  message_type TEXT NOT NULL
-    CHECK (message_type IN ('checkin_instructions', 'welcome', 'checkout_reminder', 'review_request')),
-  send_timing TEXT NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_scheduled_messages_stay_id ON scheduled_messages(stay_id);
-
--- Only one global template (stay_id IS NULL) per message type, per
--- business — the portfolio-wide toggle panel assumes exactly one row per
--- type. Each business gets its own 4 default rows seeded when the business
--- is created (see routes/admin.js's signup handler and the backfill below
--- for existing data), not here — a fresh install has zero businesses, so
--- there's nothing to seed until someone signs up.
-
 CREATE TABLE IF NOT EXISTS expenses (
   id SERIAL PRIMARY KEY,
   property_id INTEGER REFERENCES properties(id) ON DELETE SET NULL,
@@ -244,8 +211,6 @@ ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS business_id INTEGER RE
 ALTER TABLE maintenance_comments ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
-ALTER TABLE stays ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
-ALTER TABLE scheduled_messages ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
 ALTER TABLE property_guides ADD COLUMN IF NOT EXISTS business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE;
 
@@ -256,17 +221,8 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_requests_business_id ON maintenance_r
 CREATE INDEX IF NOT EXISTS idx_maintenance_comments_business_id ON maintenance_comments(business_id);
 CREATE INDEX IF NOT EXISTS idx_documents_business_id ON documents(business_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_business_id ON expenses(business_id);
-CREATE INDEX IF NOT EXISTS idx_stays_business_id ON stays(business_id);
-CREATE INDEX IF NOT EXISTS idx_scheduled_messages_business_id ON scheduled_messages(business_id);
 CREATE INDEX IF NOT EXISTS idx_messages_business_id ON messages(business_id);
 CREATE INDEX IF NOT EXISTS idx_property_guides_business_id ON property_guides(business_id);
-
--- Replaces the old single-column version of this index (one global template
--- per message_type across the whole app) now that business_id exists — each
--- business needs its own 4 defaults.
-DROP INDEX IF EXISTS idx_scheduled_messages_global_type;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_scheduled_messages_global_type
-  ON scheduled_messages(business_id, message_type) WHERE stay_id IS NULL;
 
 -- One-time backfill: if this database already had data before business_id
 -- existed (i.e. any row is still missing one), attribute all of it to a
@@ -295,8 +251,6 @@ BEGIN
     UPDATE maintenance_comments SET business_id = legacy_business_id WHERE business_id IS NULL;
     UPDATE documents SET business_id = legacy_business_id WHERE business_id IS NULL;
     UPDATE expenses SET business_id = legacy_business_id WHERE business_id IS NULL;
-    UPDATE stays SET business_id = legacy_business_id WHERE business_id IS NULL;
-    UPDATE scheduled_messages SET business_id = legacy_business_id WHERE business_id IS NULL;
     UPDATE messages SET business_id = legacy_business_id WHERE business_id IS NULL;
     UPDATE property_guides SET business_id = legacy_business_id WHERE business_id IS NULL;
   END IF;
@@ -309,8 +263,6 @@ ALTER TABLE maintenance_requests ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE maintenance_comments ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE documents ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE expenses ALTER COLUMN business_id SET NOT NULL;
-ALTER TABLE stays ALTER COLUMN business_id SET NOT NULL;
-ALTER TABLE scheduled_messages ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE messages ALTER COLUMN business_id SET NOT NULL;
 ALTER TABLE property_guides ALTER COLUMN business_id SET NOT NULL;
 
@@ -371,7 +323,6 @@ CREATE INDEX IF NOT EXISTS idx_str_licenses_property_id ON str_licenses(property
 -- inserted row's updated_at exactly equals its created_at until something
 -- actually edits it; the feed uses that equality to mean "never updated".
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
-ALTER TABLE stays ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- Drives the Documents page's "needs review" badge/checkbox and the
 -- Dashboard's Intake queue count. New uploads start at 'needs_review';
@@ -1475,3 +1426,12 @@ FROM (
   GROUP BY lc.tenant_id, lc.source_addon_id
 ) existing
 WHERE ta.tenant_id = existing.tenant_id AND ta.addon_id = existing.source_addon_id;
+
+-- ============================================================================
+-- Guest Stays feature removed entirely (nav, pages, routes, and these two
+-- tables) — real production data was dumped and verified before this ran;
+-- see the removal commit for details. scheduled_messages is dropped first
+-- since it holds the FK to stays (stay_id REFERENCES stays(id)).
+-- ============================================================================
+DROP TABLE IF EXISTS scheduled_messages;
+DROP TABLE IF EXISTS stays;
