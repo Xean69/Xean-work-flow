@@ -3,6 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { verifyPassword, hashPassword, requireAdminAuth } from "../utils/auth.js";
+import { rateLimit } from "../utils/publicRateLimit.js";
 import {
   parseSignupBody,
   parseForgotPasswordBody,
@@ -216,8 +217,13 @@ router.post(
 
 // Registers a new business and its first (and, for now, only) admin
 // account together, atomically — either both are created or neither is.
+// The only unauthenticated write route in this file (every other route
+// here needs a real session), so it's rate-limited the same way
+// contact.js's forms are — production saw 150+ bot-created accounts
+// (randomized "Xxxxxx LLC" names, zero real activity) before this existed.
 router.post(
   "/signup",
+  rateLimit({ windowMs: 60 * 60 * 1000, max: 5 }),
   asyncHandler(async (req, res) => {
     const data = parseSignupBody(req.body);
     const passwordHash = await hashPassword(data.password);
