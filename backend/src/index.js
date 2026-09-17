@@ -4,7 +4,6 @@ import multer from "multer";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pool from "./db.js";
-import { getClientIp } from "./utils/clientIp.js";
 import adminRouter from "./routes/admin.js";
 import propertiesRouter from "./routes/properties.js";
 import unitsRouter from "./routes/units.js";
@@ -113,10 +112,6 @@ app.use("/api/staff", maintenanceStaffRouter);
 // standing between this and unbounded abuse — see routes/contact.js and
 // schema.sql's contact_submissions note for the full reasoning.
 app.use("/api/contact", contactRouter);
-// TEMPORARY diagnostic route -- to be removed immediately after use.
-app.get("/api/debug-ip", (req, res) => {
-  res.json({ clientIp: getClientIp(req), xff: req.headers["x-forwarded-for"] || null, reqIp: req.ip });
-});
 // The public listing page a company's prospective tenants browse — same
 // "no requireAdminAuth" shape as contact.js above, but a read instead of a
 // write, and business-scoped via the slug in the URL rather than a single
