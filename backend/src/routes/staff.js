@@ -19,11 +19,13 @@ import {
   notifyManagersOfStaffMessage,
   notifyTenantOfMaintenanceReply,
   notifyTenantOfRescheduleProposed,
+  sendStaffNewDeviceLoginEmail,
 } from "../services/email.js";
 import { generateUploadSignature, assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
 import { proposeReschedule } from "../services/maintenanceReschedule.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
 import { pushToBusinessAdmins, pushToTenant } from "../services/webPush.js";
+import { recordDeviceLogin } from "../services/loginAlert.js";
 
 const router = Router();
 
@@ -36,7 +38,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      "SELECT id, first_name, last_name, email, business_id, password_hash, timezone FROM maintenance_staff WHERE lower(email) = lower($1)",
+      "SELECT id, first_name, last_name, email, business_id, password_hash, timezone, language FROM maintenance_staff WHERE lower(email) = lower($1)",
       [email]
     );
     const staff = rows[0];
@@ -54,6 +56,20 @@ router.post(
     if (!staff.timezone && detectedTimezone) {
       await pool.query("UPDATE maintenance_staff SET timezone = $1 WHERE id = $2", [detectedTimezone, staff.id]);
       staff.timezone = detectedTimezone;
+    }
+
+    // See admin.js's own login route for why this is awaited (the cookie
+    // write) and the email send right after it isn't.
+    const device = await recordDeviceLogin({ req, res, ownerColumn: "staff_id", ownerId: staff.id });
+    if (device.isNewDevice) {
+      sendStaffNewDeviceLoginEmail({
+        email: staff.email,
+        loginTime: new Date(),
+        timezone: staff.timezone,
+        deviceLabel: device.deviceLabel,
+        location: device.location,
+        language: staff.language,
+      });
     }
 
     req.session.staffId = staff.id;

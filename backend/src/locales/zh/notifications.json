@@ -2,83 +2,109 @@
   "activation": {
     "subject": "欢迎使用租户门户",
     "heading": "欢迎使用租户门户",
-    "line1": "房东已为您创建租户门户账户。请点击下方链接设置密码并开始使用。",
-    "line2": "该链接 1 小时后失效，且仅可使用一次。",
+    "line1": "房东已为您创建租户门户账户。请通过下方链接设置密码并开始使用。",
+    "line2": "此链接1小时后失效，且仅可使用一次。",
     "cta": "激活账户"
   },
   "announcement": {
-    "body": "您好 {{tenantName}}，物业经理发布了一则公告：",
-    "cta": "在消息中查看"
+    "body": "您好，{{tenantName}}，物业管理员发布了一则公告：",
+    "cta": "前往消息查看"
   },
   "defaultTenantName": "您好",
   "docType": {
     "lease": "租约",
     "invoice": "账单",
-    "inspection": "检查报告",
+    "inspection": "验房报告",
     "application": "申请表",
-    "other": "文档"
+    "other": "文件"
+  },
+  "loginAlert": {
+    "tenant": {
+      "subject": "租户门户有新的登录",
+      "heading": "检测到新的登录",
+      "intro": "我们发现有人使用此账户从未使用过的设备登录了您的租户门户：",
+      "timeLabel": "时间",
+      "deviceLabel": "设备",
+      "locationLabel": "大致位置",
+      "locationUnavailable": "无法获取",
+      "locationNote": "位置为大致范围——依据 IP 地址而非 GPS 判断——可能与实际位置不符。",
+      "warning": "如果是您本人操作，无需处理。如果不是，请立即重置密码或联系物业管理员。",
+      "cta": "重置密码"
+    },
+    "staff": {
+      "subject": "员工账户有新的登录",
+      "heading": "检测到新的登录",
+      "intro": "我们发现有人使用此账户从未使用过的设备登录了您的 Xean 员工账户：",
+      "timeLabel": "时间",
+      "deviceLabel": "设备",
+      "locationLabel": "大致位置",
+      "locationUnavailable": "无法获取",
+      "locationNote": "位置为大致范围——依据 IP 地址而非 GPS 判断——可能与实际位置不符。",
+      "warning": "如果是您本人操作，无需处理。如果不是，请立即联系您的主管。",
+      "cta": "前往登录"
+    }
   },
   "maintenanceReply": {
     "subject": "“{{ticketTitle}}”有新回复",
-    "heading": "物业经理已回复",
-    "body": "您好 {{tenantName}}，“{{ticketTitle}}”有一条新回复：",
-    "cta": "在维修中查看"
+    "heading": "物业管理员已回复",
+    "body": "您好，{{tenantName}}，“{{ticketTitle}}”有新回复：",
+    "cta": "前往维修查看"
   },
   "newDocument": {
     "subject": "您的账户新增了{{docTypeLabel}}",
-    "heading": "新{{docTypeLabel}}",
-    "body": "您好 {{tenantName}}，物业经理向您的账户添加了一份新文档：",
-    "cta": "在门户中查看"
+    "heading": "新增{{docTypeLabel}}",
+    "body": "您好，{{tenantName}}，物业管理员向您的账户添加了一份新文件：",
+    "cta": "前往门户查看"
   },
   "newMessage": {
-    "subject": "物业经理发来新消息",
+    "subject": "来自物业管理员的新消息",
     "heading": "新消息",
-    "body": "您好 {{tenantName}}，物业经理给您发来一条消息：",
-    "cta": "在消息中查看"
+    "body": "您好，{{tenantName}}，物业管理员给您发来一条消息：",
+    "cta": "前往消息查看"
   },
   "passwordReset": {
     "subject": "重置您的租户门户密码",
     "heading": "重置密码",
     "line1": "我们收到了重置您租户门户密码的请求。",
-    "line2": "该链接 1 小时后失效，且仅可使用一次。若非您本人操作，请忽略此邮件。",
+    "line2": "此链接1小时后失效，且仅可使用一次。如果这并非您本人的操作，请忽略此邮件。",
     "cta": "重置密码"
   },
   "paymentReceived": {
     "subject": "已收到付款 — {{amount}}",
     "heading": "已收到付款",
-    "body": "您好 {{tenantName}}，我们已于 {{paymentDate}} 收到您 {{amount}} 的付款。感谢！",
-    "cta": "在门户中查看"
+    "body": "您好，{{tenantName}}，我们已于 {{paymentDate}} 收到您 {{amount}} 的付款。感谢！",
+    "cta": "前往门户查看"
   },
   "reschedule": {
     "proposed": {
       "subject": "“{{ticketTitle}}”已提议新的上门日期",
       "heading": "已提议新的上门日期",
-      "body": "您好 {{tenantName}}，“{{ticketTitle}}”已提议新的上门日期：{{proposedDate}}。请查看并告知是否合适。",
-      "cta": "在维修中查看"
+      "body": "您好，{{tenantName}}，“{{ticketTitle}}”已提议新的上门日期：{{proposedDate}}。请确认该时间是否合适并告知我们。",
+      "cta": "前往维修确认"
     },
     "staffResponseApproved": {
       "subject": "日期已确认：{{ticketTitle}}",
-      "heading": "您提议的日期已确认",
-      "body": "您好 {{staffName}}，租户已确认“{{ticketTitle}}”的日期 {{proposedDate}}。",
+      "heading": "您提议的日期已获确认",
+      "body": "您好，{{staffName}}，租户已确认“{{ticketTitle}}”的上门日期 {{proposedDate}}。",
       "cta": "查看工单"
     },
     "staffResponseDeclined": {
       "subject": "日期被拒绝：{{ticketTitle}}",
-      "heading": "您提议的日期被拒绝",
-      "body": "您好 {{staffName}}，租户拒绝了“{{ticketTitle}}”的日期 {{proposedDate}}。您可以另行提议其他日期。",
+      "heading": "您提议的日期已被拒绝",
+      "body": "您好，{{staffName}}，租户拒绝了“{{ticketTitle}}”的上门日期 {{proposedDate}}。您可以另行提议其他日期。",
       "cta": "查看工单"
     }
   },
   "staffAssignment": {
-    "subject": "新工单指派：{{ticketTitle}}",
+    "subject": "新工单分配：{{ticketTitle}}",
     "heading": "您被指派了一个维修工单",
-    "body": "您好 {{staffName}}，您已被指派处理 {{propertyName}} · {{unitNumber}} 的“{{ticketTitle}}”：",
+    "body": "您好，{{staffName}}，您已被指派处理 {{propertyName}} · {{unitNumber}} 的“{{ticketTitle}}”：",
     "cta": "查看工单"
   },
   "staffMessage": {
-    "subject": "物业经理发来新消息",
+    "subject": "来自物业管理员的新消息",
     "heading": "新消息",
-    "body": "您好 {{staffName}}，物业经理给您发来一条消息：",
-    "cta": "在消息中查看"
+    "body": "您好，{{staffName}}，物业管理员给您发来一条消息：",
+    "cta": "前往消息查看"
   }
 }

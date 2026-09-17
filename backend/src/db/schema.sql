@@ -1435,3 +1435,43 @@ WHERE ta.tenant_id = existing.tenant_id AND ta.addon_id = existing.source_addon_
 -- ============================================================================
 DROP TABLE IF EXISTS scheduled_messages;
 DROP TABLE IF EXISTS stays;
+
+-- ============================================================================
+-- New-device login alerts (see services/loginAlert.js and utils/deviceToken.js).
+-- One row per known device per account — same polymorphic-owner shape as
+-- push_subscriptions (exactly one of admin_id/tenant_id/staff_id set),
+-- since a device is recognized per account, not globally: the same shared
+-- browser can be "known" separately for two different people who've each
+-- logged into their own account from it.
+--
+-- device_token_hash is the hash of a long-lived cookie set on first login,
+-- not a hash of user-agent+IP — an IP-based fingerprint would false-alarm
+-- constantly for anyone on a mobile network or a home ISP that rotates
+-- addresses, since that would look like a "new device" on every such
+-- change even on the exact same browser. The cookie survives logout and
+-- IP changes; only a genuinely different browser/device (or cleared
+-- cookies) looks new. user_agent/ip_address here are just the most recent
+-- values observed, kept for the alert email's own device/location text.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS known_devices (
+  id SERIAL PRIMARY KEY,
+  admin_id INTEGER REFERENCES admins(id) ON DELETE CASCADE,
+  tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+  staff_id INTEGER REFERENCES maintenance_staff(id) ON DELETE CASCADE,
+  device_token_hash TEXT NOT NULL,
+  user_agent TEXT,
+  ip_address TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK ((admin_id IS NOT NULL)::int + (tenant_id IS NOT NULL)::int + (staff_id IS NOT NULL)::int = 1)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_known_devices_admin
+  ON known_devices(admin_id, device_token_hash) WHERE admin_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_known_devices_tenant
+  ON known_devices(tenant_id, device_token_hash) WHERE tenant_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_known_devices_staff
+  ON known_devices(staff_id, device_token_hash) WHERE staff_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_known_devices_admin_id ON known_devices(admin_id);
+CREATE INDEX IF NOT EXISTS idx_known_devices_tenant_id ON known_devices(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_known_devices_staff_id ON known_devices(staff_id);

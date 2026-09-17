@@ -73,6 +73,32 @@
     "line2": "This link expires in 1 hour and can only be used once.",
     "cta": "Activate your account"
   },
+  "loginAlert": {
+    "tenant": {
+      "subject": "New sign-in to your tenant portal",
+      "heading": "New sign-in detected",
+      "intro": "We noticed a sign-in to your tenant portal from a device we haven't seen on this account before:",
+      "timeLabel": "Time",
+      "deviceLabel": "Device",
+      "locationLabel": "Approximate location",
+      "locationUnavailable": "Unavailable",
+      "locationNote": "Location is approximate — based on IP address, not GPS — and may not reflect the exact location.",
+      "warning": "If this was you, no action is needed. If it wasn't, reset your password immediately or contact your property manager.",
+      "cta": "Reset password"
+    },
+    "staff": {
+      "subject": "New sign-in to your staff account",
+      "heading": "New sign-in detected",
+      "intro": "We noticed a sign-in to your Xean staff account from a device we haven't seen on this account before:",
+      "timeLabel": "Time",
+      "deviceLabel": "Device",
+      "locationLabel": "Approximate location",
+      "locationUnavailable": "Unavailable",
+      "locationNote": "Location is approximate — based on IP address, not GPS — and may not reflect the exact location.",
+      "warning": "If this was you, no action is needed. If it wasn't, contact your manager immediately.",
+      "cta": "Go to login"
+    }
+  },
   "defaultTenantName": "there",
   "docType": {
     "lease": "Lease",

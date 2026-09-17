@@ -1,4 +1,49 @@
 {
+  "activation": {
+    "subject": "Bienvenido a tu portal del inquilino",
+    "heading": "Bienvenido a tu portal del inquilino",
+    "line1": "Tu arrendador ha creado una cuenta del portal del inquilino para ti. Usa el siguiente enlace para establecer tu contraseña y comenzar.",
+    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez.",
+    "cta": "Activar tu cuenta"
+  },
+  "announcement": {
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad ha enviado un comunicado:",
+    "cta": "Ver en Mensajes"
+  },
+  "defaultTenantName": "hola",
+  "docType": {
+    "lease": "Contrato",
+    "invoice": "Factura",
+    "inspection": "Inspección",
+    "application": "Solicitud",
+    "other": "Documento"
+  },
+  "loginAlert": {
+    "tenant": {
+      "subject": "Nuevo inicio de sesión en tu portal del inquilino",
+      "heading": "Nuevo inicio de sesión detectado",
+      "intro": "Hemos detectado un inicio de sesión en tu portal del inquilino desde un dispositivo que no habíamos visto antes en esta cuenta:",
+      "timeLabel": "Hora",
+      "deviceLabel": "Dispositivo",
+      "locationLabel": "Ubicación aproximada",
+      "locationUnavailable": "No disponible",
+      "locationNote": "La ubicación es aproximada —basada en la dirección IP, no en GPS— y puede no reflejar la ubicación exacta.",
+      "warning": "Si fuiste tú, no hace falta hacer nada. Si no, restablece tu contraseña de inmediato o contacta con el administrador de la propiedad.",
+      "cta": "Restablecer contraseña"
+    },
+    "staff": {
+      "subject": "Nuevo inicio de sesión en tu cuenta de personal",
+      "heading": "Nuevo inicio de sesión detectado",
+      "intro": "Hemos detectado un inicio de sesión en tu cuenta de personal de Xean desde un dispositivo que no habíamos visto antes en esta cuenta:",
+      "timeLabel": "Hora",
+      "deviceLabel": "Dispositivo",
+      "locationLabel": "Ubicación aproximada",
+      "locationUnavailable": "No disponible",
+      "locationNote": "La ubicación es aproximada —basada en la dirección IP, no en GPS— y puede no reflejar la ubicación exacta.",
+      "warning": "Si fuiste tú, no hace falta hacer nada. Si no, contacta con tu responsable de inmediato.",
+      "cta": "Ir al inicio de sesión"
+    }
+  },
   "maintenanceReply": {
     "subject": "Nueva respuesta en «{{ticketTitle}}»",
     "heading": "Tu administrador de la propiedad respondió",
@@ -6,79 +51,60 @@
     "cta": "Ver en Reparaciones"
   },
   "newDocument": {
-    "subject": "Nuevo documento de tipo {{docTypeLabel}} en tu cuenta",
-    "heading": "Nuevo: {{docTypeLabel}}",
-    "body": "Hola {{tenantName}}: tu administrador de la propiedad añadió un nuevo documento a tu cuenta:",
+    "subject": "Nuevo documento ({{docTypeLabel}}) añadido a tu cuenta",
+    "heading": "Nuevo documento: {{docTypeLabel}}",
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad ha añadido un nuevo documento a tu cuenta:",
     "cta": "Ver en el portal"
   },
   "newMessage": {
     "subject": "Nuevo mensaje de tu administrador de la propiedad",
     "heading": "Nuevo mensaje",
-    "body": "Hola {{tenantName}}: tu administrador de la propiedad te envió un mensaje:",
+    "body": "Hola {{tenantName}}: tu administrador de la propiedad te ha enviado un mensaje:",
     "cta": "Ver en Mensajes"
-  },
-  "announcement": {
-    "body": "Hola {{tenantName}}: tu administrador de la propiedad envió un anuncio:",
-    "cta": "Ver en Mensajes"
-  },
-  "staffAssignment": {
-    "subject": "Nueva incidencia asignada: {{ticketTitle}}",
-    "heading": "Se te asignó una incidencia de mantenimiento",
-    "body": "Hola {{staffName}}: se te asignó «{{ticketTitle}}» en {{propertyName}} · {{unitNumber}}:",
-    "cta": "Ver incidencia"
-  },
-  "staffMessage": {
-    "subject": "Nuevo mensaje de tu administrador de la propiedad",
-    "heading": "Nuevo mensaje",
-    "body": "Hola {{staffName}}: tu administrador de la propiedad te envió un mensaje:",
-    "cta": "Ver en Mensajes"
-  },
-  "reschedule": {
-    "proposed": {
-      "subject": "Nueva fecha de visita propuesta para «{{ticketTitle}}»",
-      "heading": "Se propuso una nueva fecha de visita",
-      "body": "Hola {{tenantName}}: se propuso una nueva fecha de visita para «{{ticketTitle}}»: {{proposedDate}}. Revísala y dinos si te viene bien.",
-      "cta": "Revisar en Reparaciones"
-    },
-    "staffResponseApproved": {
-      "subject": "Fecha aprobada: {{ticketTitle}}",
-      "heading": "Se aprobó la fecha que propusiste",
-      "body": "Hola {{staffName}}: el inquilino aprobó el {{proposedDate}} para «{{ticketTitle}}».",
-      "cta": "Ver incidencia"
-    },
-    "staffResponseDeclined": {
-      "subject": "Fecha rechazada: {{ticketTitle}}",
-      "heading": "Se rechazó la fecha que propusiste",
-      "body": "Hola {{staffName}}: el inquilino rechazó el {{proposedDate}} para «{{ticketTitle}}». Puedes proponer otra fecha.",
-      "cta": "Ver incidencia"
-    }
-  },
-  "paymentReceived": {
-    "subject": "Pago recibido — {{amount}}",
-    "heading": "Pago recibido",
-    "body": "Hola {{tenantName}}: recibimos tu pago de {{amount}} el {{paymentDate}}. ¡Gracias!",
-    "cta": "Ver en el portal"
   },
   "passwordReset": {
     "subject": "Restablece la contraseña de tu portal del inquilino",
     "heading": "Restablece tu contraseña",
-    "line1": "Recibimos una solicitud para restablecer la contraseña de tu portal del inquilino.",
-    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo.",
+    "line1": "Hemos recibido una solicitud para restablecer la contraseña de tu portal del inquilino.",
+    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez. Si no lo solicitaste, puedes ignorar este correo sin problema.",
     "cta": "Restablecer contraseña"
   },
-  "activation": {
-    "subject": "Te damos la bienvenida a tu portal del inquilino",
-    "heading": "Te damos la bienvenida a tu portal del inquilino",
-    "line1": "Tu arrendador creó una cuenta del portal del inquilino para ti. Usa el siguiente enlace para establecer tu contraseña y comenzar.",
-    "line2": "Este enlace caduca en 1 hora y solo puede usarse una vez.",
-    "cta": "Activar tu cuenta"
+  "paymentReceived": {
+    "subject": "Pago recibido — {{amount}}",
+    "heading": "Pago recibido",
+    "body": "Hola {{tenantName}}: hemos recibido tu pago de {{amount}} el {{paymentDate}}. ¡Gracias!",
+    "cta": "Ver en el portal"
   },
-  "defaultTenantName": "de nuevo",
-  "docType": {
-    "lease": "Contrato de arrendamiento",
-    "invoice": "Factura",
-    "inspection": "Inspección",
-    "application": "Solicitud",
-    "other": "Documento"
+  "reschedule": {
+    "proposed": {
+      "subject": "Nueva fecha de visita propuesta para «{{ticketTitle}}»",
+      "heading": "Se ha propuesto una nueva fecha de visita",
+      "body": "Hola {{tenantName}}: se ha propuesto una nueva fecha de visita para «{{ticketTitle}}»: {{proposedDate}}. Revísala y dinos si te viene bien.",
+      "cta": "Revisar en Reparaciones"
+    },
+    "staffResponseApproved": {
+      "subject": "Fecha aprobada: {{ticketTitle}}",
+      "heading": "Tu fecha propuesta fue aprobada",
+      "body": "Hola {{staffName}}: el inquilino aprobó el {{proposedDate}} para «{{ticketTitle}}».",
+      "cta": "Ver ticket"
+    },
+    "staffResponseDeclined": {
+      "subject": "Fecha rechazada: {{ticketTitle}}",
+      "heading": "Tu fecha propuesta fue rechazada",
+      "body": "Hola {{staffName}}: el inquilino rechazó el {{proposedDate}} para «{{ticketTitle}}». Puedes proponer otra fecha.",
+      "cta": "Ver ticket"
+    }
+  },
+  "staffAssignment": {
+    "subject": "Nuevo ticket asignado: {{ticketTitle}}",
+    "heading": "Se te ha asignado un ticket de mantenimiento",
+    "body": "Hola {{staffName}}: se te ha asignado «{{ticketTitle}}» en {{propertyName}} · {{unitNumber}}:",
+    "cta": "Ver ticket"
+  },
+  "staffMessage": {
+    "subject": "Nuevo mensaje de tu administrador de la propiedad",
+    "heading": "Nuevo mensaje",
+    "body": "Hola {{staffName}}: tu administrador de la propiedad te ha enviado un mensaje:",
+    "cta": "Ver en Mensajes"
   }
 }

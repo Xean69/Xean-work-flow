@@ -36,9 +36,10 @@ import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
 import { getOverallStatus } from "../utils/ledger.js";
 import { uploadSignature, uploadToCloudinary, generateUploadSignature, assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
-import { notifyManagersOfLeaseSigned } from "../services/email.js";
+import { notifyManagersOfLeaseSigned, sendTenantNewDeviceLoginEmail } from "../services/email.js";
 import { respondToReschedule, answerRescheduleEntryPermission } from "../services/maintenanceReschedule.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
+import { recordDeviceLogin } from "../services/loginAlert.js";
 import { pushToBusinessAdmins, pushToStaff, pushToTenant } from "../services/webPush.js";
 
 const router = Router();
@@ -52,7 +53,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      "SELECT id, full_name, email, password_hash, timezone FROM tenants WHERE lower(email) = lower($1)",
+      "SELECT id, full_name, email, password_hash, timezone, language FROM tenants WHERE lower(email) = lower($1)",
       [email]
     );
     const tenant = rows[0];
@@ -70,6 +71,20 @@ router.post(
     if (!tenant.timezone && detectedTimezone) {
       await pool.query("UPDATE tenants SET timezone = $1 WHERE id = $2", [detectedTimezone, tenant.id]);
       tenant.timezone = detectedTimezone;
+    }
+
+    // See admin.js's own login route for why this is awaited (the cookie
+    // write) and the email send right after it isn't.
+    const device = await recordDeviceLogin({ req, res, ownerColumn: "tenant_id", ownerId: tenant.id });
+    if (device.isNewDevice) {
+      sendTenantNewDeviceLoginEmail({
+        email: tenant.email,
+        loginTime: new Date(),
+        timezone: tenant.timezone,
+        deviceLabel: device.deviceLabel,
+        location: device.location,
+        language: tenant.language,
+      });
     }
 
     req.session.tenantId = tenant.id;

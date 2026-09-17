@@ -666,3 +666,91 @@ export async function notifyHrOfDemoRequest({ name, email, phone, preferredTime 
     return false;
   }
 }
+
+// See services/loginAlert.js for when this fires (first login from a
+// browser this specific account has never logged in from before) — never
+// on a repeat login from an already-known device. timezone is this
+// account's own (falls back to UTC, same convention as everywhere else
+// timezone can be unset), not the server's, so "3:45 PM" in the email
+// actually matches the clock on the wall for whoever's reading it.
+function formatLoginTime(date, timezone) {
+  // Spelled out as individual components rather than announcementPdf.js's
+  // dateStyle/timeStyle shorthand — Intl.DateTimeFormat rejects mixing
+  // those style presets with timeZoneName (confirmed by hitting exactly
+  // that TypeError here), and the zone abbreviation is worth keeping: it's
+  // what makes "3:45 PM" unambiguous as this account's own local time
+  // rather than the server's.
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone || "UTC",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
+export async function sendAdminNewDeviceLoginEmail({ email, loginTime, timezone, deviceLabel, location }) {
+  try {
+    await sendEmail({
+      to: email,
+      subject: "New sign-in to your Xean dashboard",
+      html: renderEmail({
+        heading: "New sign-in detected",
+        lines: [
+          "We noticed a sign-in to your Xean dashboard from a device we haven't seen on this account before:",
+          `<strong>Time:</strong> ${formatLoginTime(loginTime, timezone)}`,
+          `<strong>Device:</strong> ${escapeHtml(deviceLabel)}`,
+          `<strong>Approximate location:</strong> ${escapeHtml(location || "Unavailable")}`,
+          "Location is approximate — based on IP address, not GPS — and may not reflect the exact location.",
+          "If this was you, no action is needed. If it wasn't, reset your password immediately.",
+        ],
+        ctaText: "Reset password",
+        ctaUrl: `${APP_BASE_URL}/forgot-password`,
+      }),
+    });
+  } catch (err) {
+    console.error("sendAdminNewDeviceLoginEmail failed:", err);
+  }
+}
+
+// Shared by the tenant and staff portals below — same content shape, just
+// a different translation namespace and a different CTA destination
+// (tenants can self-service reset their password; staff can't, so their
+// version points back at the login page and tells them to contact their
+// manager instead — see routes/staff.js's note on why no staff
+// forgot-password flow exists).
+async function sendPortalNewDeviceLoginEmail({ portal, ctaUrl, email, loginTime, timezone, deviceLabel, location, language }) {
+  const ns = `loginAlert.${portal}`;
+  try {
+    const locationText = location ? escapeHtml(location) : tr(language, `${ns}.locationUnavailable`);
+    await sendEmail({
+      to: email,
+      subject: tr(language, `${ns}.subject`),
+      html: renderEmail({
+        heading: tr(language, `${ns}.heading`),
+        lines: [
+          tr(language, `${ns}.intro`),
+          `<strong>${tr(language, `${ns}.timeLabel`)}:</strong> ${formatLoginTime(loginTime, timezone)}`,
+          `<strong>${tr(language, `${ns}.deviceLabel`)}:</strong> ${escapeHtml(deviceLabel)}`,
+          `<strong>${tr(language, `${ns}.locationLabel`)}:</strong> ${locationText}`,
+          tr(language, `${ns}.locationNote`),
+          tr(language, `${ns}.warning`),
+        ],
+        ctaText: tr(language, `${ns}.cta`),
+        ctaUrl,
+      }),
+    });
+  } catch (err) {
+    console.error(`sendPortalNewDeviceLoginEmail (${portal}) failed:`, err);
+  }
+}
+
+export function sendTenantNewDeviceLoginEmail(args) {
+  return sendPortalNewDeviceLoginEmail({ portal: "tenant", ctaUrl: `${APP_BASE_URL}/portal/forgot-password`, ...args });
+}
+
+export function sendStaffNewDeviceLoginEmail(args) {
+  return sendPortalNewDeviceLoginEmail({ portal: "staff", ctaUrl: `${APP_BASE_URL}/staff/login`, ...args });
+}

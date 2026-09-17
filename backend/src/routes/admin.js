@@ -16,9 +16,10 @@ import {
   parsePushUnsubscribeBody,
 } from "../utils/validate.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
-import { sendAdminPasswordResetEmail } from "../services/email.js";
+import { sendAdminPasswordResetEmail, sendAdminNewDeviceLoginEmail } from "../services/email.js";
 import { computeTrialStatus } from "../utils/trial.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
+import { recordDeviceLogin } from "../services/loginAlert.js";
 
 const router = Router();
 
@@ -52,6 +53,23 @@ router.post(
     if (!admin.timezone && detectedTimezone) {
       await pool.query("UPDATE admins SET timezone = $1 WHERE id = $2", [detectedTimezone, admin.id]);
       admin.timezone = detectedTimezone;
+    }
+
+    // A brand-new device cookie (or one that exists but has never logged
+    // into *this* account before) gets an alert email — see
+    // services/loginAlert.js for the detection itself. The cookie write
+    // has to happen before res.json below sends headers, so this part is
+    // awaited; the email send that follows deliberately isn't (a slow or
+    // failed call to the email provider has no business delaying login).
+    const device = await recordDeviceLogin({ req, res, ownerColumn: "admin_id", ownerId: admin.id });
+    if (device.isNewDevice) {
+      sendAdminNewDeviceLoginEmail({
+        email: admin.email,
+        loginTime: new Date(),
+        timezone: admin.timezone,
+        deviceLabel: device.deviceLabel,
+        location: device.location,
+      });
     }
 
     req.session.adminId = admin.id;
