@@ -3,7 +3,7 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { requireString, parseUploadedFileBody } from "../utils/validate.js";
-import { deleteFromCloudinary, assertUploadedSizeOk } from "../utils/upload.js";
+import { deleteFromCloudinary, assertUploadedSizeOk, assertUploadedFormatOk, DOCUMENT_ALLOWED_FORMATS } from "../utils/upload.js";
 
 const router = Router();
 
@@ -246,6 +246,7 @@ router.post(
     await assertInspectionEditable(req.params.id, req.businessId);
     const file = parseUploadedFileBody(req.body);
     assertUploadedSizeOk(file.bytes, file.cloudinary_public_id, file.cloudinary_resource_type);
+    assertUploadedFormatOk(DOCUMENT_ALLOWED_FORMATS, file.cloudinary_resource_type, file.cloudinary_format, file.cloudinary_public_id);
 
     const { rows: itemRows } = await pool.query(
       `SELECT i.id FROM move_in_inspection_items i

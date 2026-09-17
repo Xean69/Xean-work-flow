@@ -98,7 +98,46 @@ export function assertUploadedSizeOk(bytes, publicId, resourceType, limit = IMAG
   }
 }
 
-export { IMAGE_DOC_MAX_SIZE, CHAT_VIDEO_MAX_SIZE };
+// Format allowlists per upload type, keyed by Cloudinary's own reported
+// resource_type ("image" | "video" | "raw") — a real signal Cloudinary
+// derived from the file's actual content, not the filename extension or a
+// client-claimed MIME type. A renamed .exe (or any file Cloudinary can't
+// interpret as an image/video) comes back as resource_type "raw" no
+// matter what it was named, and fails this check regardless of what
+// format string comes with it. Mirrors exactly what the old multer
+// fileFilters enforced before these file bytes stopped passing through
+// this server at all — see git history for the shared `upload` instance's
+// ALLOWED_MIME_TYPES (documents/inspections/lease-templates) and the
+// chat-specific CHAT_ALLOWED_MIME_TYPES this replaces (maintenance
+// attachments, across all three portals).
+//
+// Cloudinary reports a PDF's resource_type as "image" (it renders PDF
+// pages as images internally), which is why "pdf" sits in the image set
+// below rather than "raw" — confirmed directly against a real upload
+// earlier in this codebase's history, not assumed.
+const DOCUMENT_ALLOWED_FORMATS = {
+  image: new Set(["jpg", "jpeg", "png", "pdf"]),
+};
+const CHAT_ALLOWED_FORMATS = {
+  image: new Set(["jpg", "jpeg", "png", "webp", "heic", "pdf"]),
+  video: new Set(["mp4", "mov", "webm"]),
+};
+
+// Same after-the-fact shape as assertUploadedSizeOk above, for the same
+// reason: Cloudinary's base signed-upload endpoint has no signed
+// "restrict to these formats" parameter (that's an upload-preset feature,
+// configured in Cloudinary's own dashboard, not something this deploy
+// sets up) — so this runs the moment the browser reports back what it
+// actually uploaded, exactly like the size check.
+export function assertUploadedFormatOk(allowedFormats, resourceType, format, publicId) {
+  const allowed = allowedFormats[resourceType]?.has(String(format || "").toLowerCase());
+  if (!allowed) {
+    deleteFromCloudinary(publicId, resourceType);
+    throw new ApiError(400, "That file type isn't supported");
+  }
+}
+
+export { IMAGE_DOC_MAX_SIZE, CHAT_VIDEO_MAX_SIZE, DOCUMENT_ALLOWED_FORMATS, CHAT_ALLOWED_FORMATS };
 
 // Used wherever a route needs the actual bytes of a file that was uploaded
 // direct-to-Cloudinary (AI extraction, lease-template transcription) —

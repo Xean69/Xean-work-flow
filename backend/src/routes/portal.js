@@ -35,7 +35,15 @@ import {
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { loadInspection } from "./moveInInspections.js";
 import { getOverallStatus } from "../utils/ledger.js";
-import { uploadSignature, uploadToCloudinary, generateUploadSignature, assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
+import {
+  uploadSignature,
+  uploadToCloudinary,
+  generateUploadSignature,
+  assertUploadedSizeOk,
+  assertUploadedFormatOk,
+  CHAT_ALLOWED_FORMATS,
+  CHAT_VIDEO_MAX_SIZE,
+} from "../utils/upload.js";
 import { notifyManagersOfLeaseSigned, sendTenantNewDeviceLoginEmail } from "../services/email.js";
 import { respondToReschedule, answerRescheduleEntryPermission } from "../services/maintenanceReschedule.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
@@ -521,7 +529,15 @@ router.post(
   "/maintenance",
   requireTenantAuth,
   asyncHandler(async (req, res) => {
-    const data = parsePortalRepairBody(req.body);
+    // Attachment validated before parsePortalRepairBody, not after — the
+    // file already landed on Cloudinary by the time this request arrives
+    // (see /upload-signature above), so if the *other* fields failed
+    // validation first, a genuinely oversized/wrong-format file would
+    // never reach assertUploadedSizeOk/assertUploadedFormatOk at all and
+    // its Cloudinary asset would leak with nothing left to delete it.
+    // Every other attachment-accepting route in this app already checks
+    // the attachment first; this one didn't (found by testing this exact
+    // scenario), fixed here to match.
     const attachment = parseUploadedAttachmentBody(req.body);
     if (attachment) {
       assertUploadedSizeOk(
@@ -530,7 +546,14 @@ router.post(
         attachment.attachment_cloudinary_resource_type,
         attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
       );
+      assertUploadedFormatOk(
+        CHAT_ALLOWED_FORMATS,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_format,
+        attachment.attachment_cloudinary_public_id
+      );
     }
+    const data = parsePortalRepairBody(req.body);
     const { rows: tenantRows } = await pool.query("SELECT unit_id, full_name, language FROM tenants WHERE id = $1", [
       req.tenantId,
     ]);
@@ -788,6 +811,12 @@ router.post(
         attachment.attachment_cloudinary_public_id,
         attachment.attachment_cloudinary_resource_type,
         attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
+      assertUploadedFormatOk(
+        CHAT_ALLOWED_FORMATS,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_format,
+        attachment.attachment_cloudinary_public_id
       );
     }
     // requireBody only relaxes to optional when there's an attachment — if

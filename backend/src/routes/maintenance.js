@@ -12,7 +12,7 @@ import {
   notifyTenantOfRescheduleProposed,
 } from "../services/email.js";
 import { proposeReschedule } from "../services/maintenanceReschedule.js";
-import { assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
+import { assertUploadedSizeOk, assertUploadedFormatOk, CHAT_ALLOWED_FORMATS, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
 import { pushToBusinessAdmins, pushToTenant, pushToStaff } from "../services/webPush.js";
 
 const router = Router();
@@ -238,6 +238,12 @@ router.post(
         attachment.attachment_cloudinary_public_id,
         attachment.attachment_cloudinary_resource_type,
         attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
+      assertUploadedFormatOk(
+        CHAT_ALLOWED_FORMATS,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_format,
+        attachment.attachment_cloudinary_public_id
       );
     }
     const data = parseMessageBody(req.body, { requireBody: !attachment });

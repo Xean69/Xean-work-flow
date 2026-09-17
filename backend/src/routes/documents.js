@@ -3,7 +3,13 @@ import pool from "../db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/errors.js";
 import { parseDocumentBody, parseDocumentStatusBody, parseExtractedDataBody, parseUploadedFileBody } from "../utils/validate.js";
-import { assertUploadedSizeOk, deleteFromCloudinary, fetchUploadedBuffer } from "../utils/upload.js";
+import {
+  assertUploadedSizeOk,
+  assertUploadedFormatOk,
+  DOCUMENT_ALLOWED_FORMATS,
+  deleteFromCloudinary,
+  fetchUploadedBuffer,
+} from "../utils/upload.js";
 import { requireRole } from "../utils/auth.js";
 import { extractDocumentData, isExtractableDocType, mimeTypeForFilename } from "../services/extraction.js";
 import { notifyTenantOfNewDocument } from "../services/email.js";
@@ -70,6 +76,7 @@ router.post(
     // this request never carries one at all anymore).
     const file = parseUploadedFileBody(req.body);
     assertUploadedSizeOk(file.bytes, file.cloudinary_public_id, file.cloudinary_resource_type);
+    assertUploadedFormatOk(DOCUMENT_ALLOWED_FORMATS, file.cloudinary_resource_type, file.cloudinary_format, file.cloudinary_public_id);
 
     const data = parseDocumentBody(req.body);
     await assertPropertyInBusiness(data.property_id, req.businessId);

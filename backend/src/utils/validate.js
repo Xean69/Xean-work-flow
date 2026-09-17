@@ -421,6 +421,12 @@ export function parseUploadedFileBody(body) {
     file_url: requireString(body.file_url, "file_url"),
     cloudinary_public_id: requireString(body.cloudinary_public_id, "cloudinary_public_id"),
     cloudinary_resource_type: requireString(body.cloudinary_resource_type, "cloudinary_resource_type"),
+    // Optional, not required: Cloudinary omits `format` entirely for a
+    // resource_type it can't classify (e.g. "raw") — exactly the case
+    // assertUploadedFormatOk exists to reject. Requiring this field would
+    // throw a generic "field required" error for that case instead of the
+    // format check's own clearer "that file type isn't supported".
+    cloudinary_format: optionalString(body.cloudinary_format),
     file_name: requireString(body.file_name, "file_name"),
     bytes: requireNumber(body.bytes, "bytes", { min: 1 }),
     // Optional: documents.js derives a mimetype from file_name's extension
@@ -446,6 +452,8 @@ export function parseUploadedAttachmentBody(body) {
       body.attachment_cloudinary_resource_type,
       "attachment_cloudinary_resource_type"
     ),
+    // Optional — see parseUploadedFileBody's own cloudinary_format for why.
+    attachment_cloudinary_format: optionalString(body.attachment_cloudinary_format),
     attachment_file_name: requireString(body.attachment_file_name, "attachment_file_name"),
     attachment_bytes: requireNumber(body.attachment_bytes, "attachment_bytes", { min: 1 }),
   };

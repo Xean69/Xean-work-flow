@@ -21,7 +21,13 @@ import {
   notifyTenantOfRescheduleProposed,
   sendStaffNewDeviceLoginEmail,
 } from "../services/email.js";
-import { generateUploadSignature, assertUploadedSizeOk, CHAT_VIDEO_MAX_SIZE } from "../utils/upload.js";
+import {
+  generateUploadSignature,
+  assertUploadedSizeOk,
+  assertUploadedFormatOk,
+  CHAT_ALLOWED_FORMATS,
+  CHAT_VIDEO_MAX_SIZE,
+} from "../utils/upload.js";
 import { proposeReschedule } from "../services/maintenanceReschedule.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
 import { pushToBusinessAdmins, pushToTenant } from "../services/webPush.js";
@@ -265,6 +271,12 @@ router.post(
         attachment.attachment_cloudinary_resource_type,
         attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
       );
+      assertUploadedFormatOk(
+        CHAT_ALLOWED_FORMATS,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_format,
+        attachment.attachment_cloudinary_public_id
+      );
     }
     const data = parseMessageBody(req.body, { requireBody: !attachment });
 
@@ -493,6 +505,12 @@ router.post(
         attachment.attachment_cloudinary_public_id,
         attachment.attachment_cloudinary_resource_type,
         attachment.attachment_cloudinary_resource_type === "video" ? CHAT_VIDEO_MAX_SIZE : undefined
+      );
+      assertUploadedFormatOk(
+        CHAT_ALLOWED_FORMATS,
+        attachment.attachment_cloudinary_resource_type,
+        attachment.attachment_cloudinary_format,
+        attachment.attachment_cloudinary_public_id
       );
     }
     const data = parseMessageBody(req.body, { requireBody: !attachment });

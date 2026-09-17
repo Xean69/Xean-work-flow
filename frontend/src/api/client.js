@@ -1,4 +1,10 @@
-import { uploadFileDirectToCloudinary, IMAGE_DOC_MAX_SIZE, CHAT_VIDEO_MAX_SIZE } from "../utils/directCloudinaryUpload.js";
+import {
+  uploadFileDirectToCloudinary,
+  IMAGE_DOC_MAX_SIZE,
+  CHAT_VIDEO_MAX_SIZE,
+  DOCUMENT_ALLOWED_EXTENSIONS,
+  CHAT_ALLOWED_EXTENSIONS,
+} from "../utils/directCloudinaryUpload.js";
 
 // Relative — in local dev this is proxied to localhost by vite.config.js;
 // in production, Vercel proxies it straight through to the Railway backend
@@ -267,11 +273,17 @@ export async function addMaintenanceComment(id, formData) {
   let attachmentFields = {};
   if (file) {
     const maxSize = file.type?.startsWith("video/") ? CHAT_VIDEO_MAX_SIZE : IMAGE_DOC_MAX_SIZE;
-    const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature("xean/maintenance-chat"), maxSize);
+    const uploaded = await uploadFileDirectToCloudinary(
+      file,
+      () => getUploadSignature("xean/maintenance-chat"),
+      maxSize,
+      CHAT_ALLOWED_EXTENSIONS
+    );
     attachmentFields = {
       attachment_url: uploaded.url,
       attachment_cloudinary_public_id: uploaded.publicId,
       attachment_cloudinary_resource_type: uploaded.resourceType,
+      attachment_cloudinary_format: uploaded.format,
       attachment_file_name: uploaded.fileName,
       attachment_bytes: uploaded.bytes,
     };
@@ -352,13 +364,19 @@ function getUploadSignature(folder) {
 // fix for Vercel's proxy hard-failing on a file body over ~4.3MB.
 export async function uploadDocument(formData) {
   const file = formData.get("file");
-  const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature("xean/documents"), IMAGE_DOC_MAX_SIZE);
+  const uploaded = await uploadFileDirectToCloudinary(
+    file,
+    () => getUploadSignature("xean/documents"),
+    IMAGE_DOC_MAX_SIZE,
+    DOCUMENT_ALLOWED_EXTENSIONS
+  );
   return request("/documents", {
     method: "POST",
     body: JSON.stringify({
       file_url: uploaded.url,
       cloudinary_public_id: uploaded.publicId,
       cloudinary_resource_type: uploaded.resourceType,
+      cloudinary_format: uploaded.format,
       file_name: uploaded.fileName,
       bytes: uploaded.bytes,
       doc_type: formData.get("doc_type"),
@@ -616,13 +634,19 @@ export function deleteInspectionItem(inspectionId, itemId) {
 
 export async function uploadInspectionPhoto(inspectionId, itemId, formData) {
   const file = formData.get("photo");
-  const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature("xean/inspections"), IMAGE_DOC_MAX_SIZE);
+  const uploaded = await uploadFileDirectToCloudinary(
+    file,
+    () => getUploadSignature("xean/inspections"),
+    IMAGE_DOC_MAX_SIZE,
+    DOCUMENT_ALLOWED_EXTENSIONS
+  );
   return request(`/move-in-inspections/${inspectionId}/items/${itemId}/photos`, {
     method: "POST",
     body: JSON.stringify({
       file_url: uploaded.url,
       cloudinary_public_id: uploaded.publicId,
       cloudinary_resource_type: uploaded.resourceType,
+      cloudinary_format: uploaded.format,
       file_name: uploaded.fileName,
       bytes: uploaded.bytes,
     }),
@@ -656,11 +680,17 @@ export async function createLease(formData) {
   const templateFile = formData.get("template_file");
   let templateFields = {};
   if (templateFile) {
-    const uploaded = await uploadFileDirectToCloudinary(templateFile, () => getUploadSignature("xean/lease-templates"), IMAGE_DOC_MAX_SIZE);
+    const uploaded = await uploadFileDirectToCloudinary(
+      templateFile,
+      () => getUploadSignature("xean/lease-templates"),
+      IMAGE_DOC_MAX_SIZE,
+      DOCUMENT_ALLOWED_EXTENSIONS
+    );
     templateFields = {
       file_url: uploaded.url,
       cloudinary_public_id: uploaded.publicId,
       cloudinary_resource_type: uploaded.resourceType,
+      cloudinary_format: uploaded.format,
       file_name: uploaded.fileName,
       bytes: uploaded.bytes,
       mime_type: uploaded.mimeType,

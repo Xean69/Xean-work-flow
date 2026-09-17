@@ -3,7 +3,12 @@
 // tenant portal's portalApi.js, hitting its own auth-guarded routes.
 const BASE_URL = "/api/staff";
 
-import { uploadFileDirectToCloudinary, IMAGE_DOC_MAX_SIZE, CHAT_VIDEO_MAX_SIZE } from "../utils/directCloudinaryUpload.js";
+import {
+  uploadFileDirectToCloudinary,
+  IMAGE_DOC_MAX_SIZE,
+  CHAT_VIDEO_MAX_SIZE,
+  CHAT_ALLOWED_EXTENSIONS,
+} from "../utils/directCloudinaryUpload.js";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -71,11 +76,12 @@ async function uploadAttachmentIfAny(formData, folder) {
   const file = formData.get("attachment");
   if (!file) return {};
   const maxSize = file.type?.startsWith("video/") ? CHAT_VIDEO_MAX_SIZE : IMAGE_DOC_MAX_SIZE;
-  const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature(folder), maxSize);
+  const uploaded = await uploadFileDirectToCloudinary(file, () => getUploadSignature(folder), maxSize, CHAT_ALLOWED_EXTENSIONS);
   return {
     attachment_url: uploaded.url,
     attachment_cloudinary_public_id: uploaded.publicId,
     attachment_cloudinary_resource_type: uploaded.resourceType,
+    attachment_cloudinary_format: uploaded.format,
     attachment_file_name: uploaded.fileName,
     attachment_bytes: uploaded.bytes,
   };

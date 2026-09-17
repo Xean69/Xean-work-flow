@@ -9,7 +9,13 @@ import {
   parseLeaseVoidBody,
   parseUploadedFileBody,
 } from "../utils/validate.js";
-import { deleteFromCloudinary, assertUploadedSizeOk, fetchUploadedBuffer } from "../utils/upload.js";
+import {
+  deleteFromCloudinary,
+  assertUploadedSizeOk,
+  assertUploadedFormatOk,
+  DOCUMENT_ALLOWED_FORMATS,
+  fetchUploadedBuffer,
+} from "../utils/upload.js";
 import { generateLeaseContent, fillLeaseTemplate } from "../services/leaseGeneration.js";
 import { mimeTypeForFilename } from "../services/extraction.js";
 
@@ -105,6 +111,12 @@ router.post(
     const template_file = data.generation_mode === "template" ? parseUploadedFileBody(req.body) : null;
     if (template_file) {
       assertUploadedSizeOk(template_file.bytes, template_file.cloudinary_public_id, template_file.cloudinary_resource_type);
+      assertUploadedFormatOk(
+        DOCUMENT_ALLOWED_FORMATS,
+        template_file.cloudinary_resource_type,
+        template_file.cloudinary_format,
+        template_file.cloudinary_public_id
+      );
     }
 
     const tenant = await loadTenantFacts(data.tenant_id, req.businessId);

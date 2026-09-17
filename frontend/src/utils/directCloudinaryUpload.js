@@ -7,6 +7,20 @@
 export const IMAGE_DOC_MAX_SIZE = 10 * 1024 * 1024;
 export const CHAT_VIDEO_MAX_SIZE = 100 * 1024 * 1024;
 
+// Same mirroring as the size constants above, for the format allowlists
+// backend/src/utils/upload.js's assertUploadedFormatOk enforces (see that
+// file for why these exact extensions and not a broader/narrower set).
+// Extensions, not MIME types: file.type is unreliable across browsers/OSes
+// (some report an empty string for perfectly ordinary files) and this is a
+// UX nicety, not the real security boundary — the server-side check
+// against Cloudinary's own reported format is what actually enforces this.
+export const DOCUMENT_ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf"];
+export const CHAT_ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "heic", "pdf", "mp4", "mov", "webm"];
+
+function fileExtension(fileName) {
+  return fileName.split(".").pop()?.toLowerCase() ?? "";
+}
+
 // Uploads a file straight from the browser to Cloudinary, bypassing the
 // Vercel -> Railway proxy entirely for the actual file bytes. That proxy
 // hard-fails (502, before the request ever reaches the backend) on any
@@ -23,7 +37,12 @@ export const CHAT_VIDEO_MAX_SIZE = 100 * 1024 * 1024;
 // CHAT_VIDEO_MAX_SIZE — checked here first so an oversized file never even
 // starts uploading, and again server-side (assertUploadedSizeOk) once this
 // reports back, since a client-side check alone is never a real guarantee.
-export async function uploadFileDirectToCloudinary(file, getSignature, maxSizeBytes) {
+// allowedExtensions is the same idea for file type, checked against
+// DOCUMENT_ALLOWED_EXTENSIONS/CHAT_ALLOWED_EXTENSIONS above.
+export async function uploadFileDirectToCloudinary(file, getSignature, maxSizeBytes, allowedExtensions) {
+  if (allowedExtensions && !allowedExtensions.includes(fileExtension(file.name))) {
+    throw new Error(`That file type isn't supported. Allowed types: ${allowedExtensions.join(', ').toUpperCase()}`)
+  }
   if (maxSizeBytes && file.size > maxSizeBytes) {
     throw new Error(`File must be under ${Math.round(maxSizeBytes / (1024 * 1024))}MB`)
   }
@@ -58,6 +77,7 @@ export async function uploadFileDirectToCloudinary(file, getSignature, maxSizeBy
     url: data.secure_url,
     publicId: data.public_id,
     resourceType: data.resource_type,
+    format: data.format,
     bytes: data.bytes,
     fileName: file.name,
     mimeType: file.type,
