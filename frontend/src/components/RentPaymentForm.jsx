@@ -54,6 +54,15 @@ function RentPaymentForm({ rentAmount, initialValues, onSubmit, onCancel }) {
     <form onSubmit={handleSubmit}>
       {error && <p className="form-error">{error}</p>}
 
+      {!initialValues && (
+        <div className="form-field proration-box">
+          <p style={{ margin: 0 }}>
+            Applied automatically to the tenant's oldest unpaid charge first — rent, security deposit, or any other
+            charge type. "Period covered" is just a label for this payment, not what it's restricted to.
+          </p>
+        </div>
+      )}
+
       <div className="form-row">
         <div className="form-field">
           <label htmlFor="amount">Amount ($)</label>

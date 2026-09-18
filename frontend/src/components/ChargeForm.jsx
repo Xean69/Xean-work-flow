@@ -96,6 +96,16 @@ function ChargeForm({ initialValues, isEditing = false, onSubmit, onCancel }) {
         </div>
       )}
 
+      {!isEditing && values.charge_type === 'credit' && (
+        <div className="form-field proration-box">
+          <p style={{ margin: 0 }}>
+            A credit adjusts the balance directly — it doesn't record who paid, how, or when, so it won't show up
+            as a payment in the tenant's history or on a PDF statement. If the tenant actually paid you (e-transfer,
+            cash, cheque), use <strong>Record a payment</strong> on the ledger instead.
+          </p>
+        </div>
+      )}
+
       {!isEditing && values.charge_type !== 'credit' && (
         <div className="form-field">
           <label className="checkbox-label">
