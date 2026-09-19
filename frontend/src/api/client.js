@@ -72,6 +72,37 @@ export function getMe() {
   return request("/admin/me");
 }
 
+// Per-account 2FA login flow (see backend/src/routes/admin.js): login()
+// returns { requires_2fa_setup: true } or { requires_2fa: true } — never a
+// full profile — for an account enrolled in 2FA (totp_required or
+// totp_enabled), since no session exists until one of these two follow-ups
+// also succeeds. An account with neither flag set gets the full profile
+// directly from login(), exactly as before this feature existed.
+export function initTotpSetup() {
+  return request("/admin/2fa/setup/init", { method: "POST" });
+}
+
+export function confirmTotpSetup(code) {
+  return request("/admin/2fa/setup/confirm", { method: "POST", body: JSON.stringify({ code }) });
+}
+
+// Exactly one of code/backupCode should be set — the backend accepts
+// either in the same body shape.
+export function verifyTotpLogin({ code, backupCode }) {
+  return request("/admin/2fa/verify", {
+    method: "POST",
+    body: JSON.stringify({ code, backup_code: backupCode }),
+  });
+}
+
+export function resetTwoFactor(password) {
+  return request("/admin/2fa/reset", { method: "POST", body: JSON.stringify({ password }) });
+}
+
+export function regenerateBackupCodes(password) {
+  return request("/admin/2fa/backup-codes/regenerate", { method: "POST", body: JSON.stringify({ password }) });
+}
+
 export function updateAdminLanguage(language) {
   return request("/admin/me/language", { method: "PATCH", body: JSON.stringify({ language }) });
 }

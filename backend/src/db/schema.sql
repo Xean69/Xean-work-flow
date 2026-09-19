@@ -1475,3 +1475,50 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_known_devices_staff
 CREATE INDEX IF NOT EXISTS idx_known_devices_admin_id ON known_devices(admin_id);
 CREATE INDEX IF NOT EXISTS idx_known_devices_tenant_id ON known_devices(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_known_devices_staff_id ON known_devices(staff_id);
+
+-- ============================================================================
+-- Two-factor authentication (admins only — dashboard accounts, not the
+-- tenant or staff portals) — see services/twoFactor.js and
+-- routes/admin.js's /2fa/* routes.
+--
+-- totp_secret_encrypted holds the raw TOTP secret encrypted at rest
+-- (AES-256-GCM, see utils/totpEncryption.js) — a stolen database dump alone
+-- is never enough to generate valid codes, unlike storing the secret in
+-- plaintext. totp_enabled is the only thing that actually gates login (see
+-- admin.js's /login) — a row can hold a secret mid-setup (generated, QR
+-- shown, not yet confirmed with a real code) without that secret being
+-- live yet; only a confirmed setup flips this to true.
+--
+-- Backup codes are a real one-row-per-code table, not a JSON array column,
+-- for the same reason push_subscriptions and backup_runs are real tables
+-- elsewhere in this schema: each code needs its own independent used_at
+-- flag, and verifying one means comparing against several bcrypt hashes
+-- one at a time (bcrypt salts differ per hash, so there's no way to look
+-- one up by value directly) — a real table is what that naturally wants,
+-- not a workaround around a single column.
+--
+-- totp_required is this rollout's own on/off switch, separate from
+-- totp_enabled: it lets 2FA be turned on for one account (or none) without
+-- forcing every existing admin into mandatory setup the instant this code
+-- deploys, which is exactly what caused the original incident this
+-- reintroduction fixes (see git history: commit 47b5cc8, reverted as
+-- 894b8cb after it locked out logins in production). Defaults false, so
+-- deploying this migration alone changes nothing for any existing account
+-- until a row is deliberately flipped. Going fully mandatory later is a
+-- one-line `UPDATE admins SET totp_required = true` away, at whatever
+-- pace is chosen — no code change needed to widen the rollout.
+-- ============================================================================
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_secret_encrypted TEXT;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS totp_required BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS admin_backup_codes (
+  id SERIAL PRIMARY KEY,
+  admin_id INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_backup_codes_admin_id ON admin_backup_codes(admin_id);
