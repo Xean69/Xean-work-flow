@@ -32,6 +32,20 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: ca.xean.manager
+      # CERTIFICATE_PRIVATE_KEY lives in this group (Codemagic UI > Team
+      # settings > Environment variable groups), not here — automatic code
+      # signing needs a private key supplied up front to pair with the
+      # certificate fetch-signing-files creates; without it the create step
+      # fails with "Cannot save Signing Certificates without certificate
+      # private key" (confirmed against Codemagic's own docs and prior
+      # reports of this exact error — CODEMAGIC_API_TOKEN was the original
+      # suspicion but isn't what this error is actually about). Shared with
+      # ios-tenant-app below rather than duplicated: an Apple Developer
+      # account can only hold 3 active "iOS Distribution" certificates at
+      # once, and both apps sign under the same team, so both workflows are
+      # meant to reuse the one certificate this key creates.
+      groups:
+        - ios_signing
       vars:
         BUNDLE_ID: ca.xean.manager
         XCODE_WORKSPACE: ios/App/App.xcworkspace
@@ -136,6 +150,11 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: ca.xean.tenant
+      # Same ios_signing group as ios-xean-app above, on purpose — see that
+      # workflow's own comment for why CERTIFICATE_PRIVATE_KEY is shared
+      # rather than duplicated per app.
+      groups:
+        - ios_signing
       vars:
         BUNDLE_ID: ca.xean.tenant
         XCODE_WORKSPACE: ios/App/App.xcworkspace
