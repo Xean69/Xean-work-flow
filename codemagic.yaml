@@ -48,7 +48,18 @@ workflows:
         - ios_signing
       vars:
         BUNDLE_ID: ca.xean.manager
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        # Not a workspace: this Capacitor project uses Swift Package
+        # Manager for its native dependencies (see ios/App/CapApp-SPM), not
+        # CocoaPods -- there's no Podfile anywhere in ios/App, which is also
+        # why the "Install CocoaPods dependencies" step was removed from
+        # this workflow already. A CocoaPods-managed project gets its
+        # App.xcworkspace from `pod install`; without CocoaPods that file
+        # never exists, only the .xcodeproj's own internal workspace does
+        # (ios/App/App.xcodeproj/project.xcworkspace, not meant to be built
+        # directly). xcode-project build-ipa's --project flag is the
+        # documented way to build a plain .xcodeproj with no wrapping
+        # workspace.
+        XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 24
       xcode: latest
@@ -102,7 +113,7 @@ workflows:
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
@@ -157,7 +168,11 @@ workflows:
         - ios_signing
       vars:
         BUNDLE_ID: ca.xean.tenant
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        # Same as ios-xean-app above: no CocoaPods/Podfile here either (this
+        # project also uses Swift Package Manager, see ios/App/CapApp-SPM),
+        # so there's no App.xcworkspace to build against -- just the
+        # .xcodeproj directly.
+        XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 24
       xcode: latest
@@ -199,7 +214,7 @@ workflows:
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
