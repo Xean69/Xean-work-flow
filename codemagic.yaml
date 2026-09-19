@@ -75,6 +75,15 @@ workflows:
       - name: Sync Capacitor iOS project
         script: npx cap sync ios
 
+      - name: Set up keychain to be used for code signing
+        # Has to run before fetch-signing-files below, not after — this
+        # creates and activates the keychain that `keychain add-certificates`
+        # later imports the fetched certificate + private key into. Without
+        # this running first, the later "Set up signing certificate" step
+        # had nothing to import into (see that step's own comment for what
+        # actually broke and how this was found).
+        script: keychain initialize
+
       - name: Fetch signing files
         # environment.ios_signing above is just metadata — it doesn't fetch
         # or create anything by itself. This is the step that actually asks
@@ -90,7 +99,20 @@ workflows:
             --create
 
       - name: Set up signing certificate
-        script: keychain initialize
+        # This used to run `keychain initialize` here too — a copy-paste
+        # leftover that never actually imported anything, since initialize
+        # just creates/activates an empty keychain (moved to its own step
+        # above, before fetch-signing-files, which is where it actually
+        # belongs). fetch-signing-files above saves the certificate + private
+        # key to disk but does not itself put them in the keychain; this is
+        # the step that does that, which is what xcodebuild archive actually
+        # reads from at sign time. Its absence here is exactly why archive
+        # failed with "No signing certificate 'iOS Distribution' found ...
+        # with a private key" even though fetch-signing-files and
+        # use-profiles both reported success — the profile was wired up
+        # correctly, but the keychain xcodebuild checks for a matching
+        # certificate + key was still empty.
+        script: keychain add-certificates
 
       - name: Set up code signing settings on Xcode project
         # Now that the certificate + profile fetched above actually exist
@@ -189,6 +211,14 @@ workflows:
         # There's nothing to build.
         script: npx cap sync ios
 
+      - name: Set up keychain to be used for code signing
+        # Same fix as ios-xean-app above: has to run before fetch-signing-
+        # files, not after -- see that workflow's own comments for the full
+        # story (this ordering bug was the actual cause of "No signing
+        # certificate 'iOS Distribution' found ... with a private key" at
+        # the archive step, on this app too).
+        script: keychain initialize
+
       - name: Fetch signing files
         # Same gap as ios-xean-app had: environment.ios_signing is metadata
         # only, it doesn't fetch or create anything. This step actually
@@ -200,7 +230,10 @@ workflows:
             --create
 
       - name: Set up signing certificate
-        script: keychain initialize
+        # Actually imports the fetched certificate + private key into the
+        # keychain set up above -- `keychain initialize` (what used to run
+        # here) only creates an empty keychain, it doesn't import anything.
+        script: keychain add-certificates
 
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
