@@ -10,8 +10,17 @@ body {
   background: var(--parchment);
 }
 
+/* Fixed-height shell with .portal-main as its one scrolling region,
+   instead of letting the whole document grow and scroll — see index.css's
+   .shell/.main for the full reasoning (same fix, same native-app-bounce
+   motivation, applied here since PortalLayout and StaffLayout use this
+   shared shell instead of the dashboard's .shell/.main). .portal-tabbar
+   is already position: fixed relative to the viewport, so it's unaffected
+   either way; .portal-header now stays visually pinned at the top as a
+   result, which reads as more native, not less. */
 .portal-shell {
-  min-height: 100svh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: var(--parchment);
@@ -92,6 +101,8 @@ body {
 
 .portal-main {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 20px 20px 90px 20px;
 }
 

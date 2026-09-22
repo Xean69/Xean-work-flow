@@ -27,6 +27,11 @@ const config: CapacitorConfig = {
     // Matches the tenant portal's existing PWA behavior rather than
     // Capacitor's opaque-status-bar default.
     contentInset: 'automatic',
+    // Same fix as the manager app's config — see its own comment for the
+    // full reasoning. Disables the WKWebView's outer native scroll/bounce
+    // so the page doesn't have two independent scroll behaviors layered on
+    // top of each other.
+    scrollEnabled: false,
   },
 }
 

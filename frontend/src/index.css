@@ -9,6 +9,12 @@ html,
 body {
   margin: 0;
   padding: 0;
+  /* Stops rubber-band/bounce scroll-chaining at the page edges — this is
+     the CSS-level half of the native iOS app's "loose"/bouncy feel fix
+     (see capacitor.config.ts's ios.scrollEnabled for the native-WebView
+     half). Harmless everywhere else: this only changes what happens at a
+     scroll boundary, never normal scrolling itself. */
+  overscroll-behavior: none;
 }
 
 body {
@@ -46,14 +52,29 @@ a:hover {
   min-height: 100svh;
 }
 
+/* Fixed-height shell with exactly one scrolling region (.main), rather
+   than letting the whole document grow and scroll — the other half of the
+   native-app bounce fix (see capacitor.config.ts and the html/body rule
+   above). The native WebView no longer scrolls at all (scrollEnabled:
+   false), so something in the web content has to be the thing that
+   scrolls; making it .main here, rather than body, is what keeps the
+   sidebar pinned in place instead of scrolling away with long page
+   content, and is exactly the "only the outer page stops bouncing, inner
+   scrollable areas keep working" split — a long tenant list or a chat
+   thread inside .main scrolls completely normally, since overflow-y: auto
+   here doesn't touch any scrolling *within* that content, only where the
+   document-level scroll used to happen. */
 .shell {
   display: flex;
-  min-height: 100svh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .main {
   flex: 1;
   min-width: 0;
+  height: 100%;
+  overflow-y: auto;
 }
 
 ::-webkit-scrollbar {

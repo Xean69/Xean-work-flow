@@ -6,6 +6,11 @@
   display: flex;
   flex-direction: column;
   padding: 24px 16px;
+  /* .shell is now a fixed-height flex row (see index.css), so the sidebar
+     no longer grows with page content the way it used to — this keeps its
+     own nav scrollable in the rare case it's taller than a short viewport
+     (e.g. a phone in landscape) instead of silently clipping it. */
+  overflow-y: auto;
 }
 
 .brand {

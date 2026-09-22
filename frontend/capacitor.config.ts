@@ -36,6 +36,15 @@ const config: CapacitorConfig = {
     // Matches this app's existing PWA behavior (see the dashboard's own
     // manifest) rather than Capacitor's opaque-status-bar default.
     contentInset: 'automatic',
+    // Disables the WKWebView's own outer UIScrollView (and, with it, its
+    // native rubber-band bounce) — without this, the page has two
+    // independent scroll/bounce behaviors layered on top of each other
+    // (the native scroll view's and the web content's own), which is what
+    // reads as "loose"/bouncy instead of feeling locked in place like a
+    // native app. The web content already handles its own scrolling (see
+    // index.css and portal.css's overflow rules), so the outer native
+    // scroll view doesn't need to scroll at all.
+    scrollEnabled: false,
   },
 }
 
