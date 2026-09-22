@@ -146,17 +146,22 @@ workflows:
         # to 1 every time instead of erroring -- setting the build back to 1
         # and reproducing "must be higher than the previously uploaded
         # version" at Apple's publish step instead of failing here, where
-        # it would've been obvious immediately. The explicit check below is
-        # what actually catches that class of failure now, rather than a
-        # coincidence of the first-ever build already starting at 1 masking
-        # it (see APP_STORE_APPLE_ID's own comment for the argument fix).
+        # it would've been obvious immediately.
+        #
+        # No guard added for the empty case, deliberately: installed this
+        # exact CLI tool locally and confirmed the wrong-argument failure
+        # and a genuine first-ever-build ("no builds exist yet") both print
+        # nothing to stdout and exit 0 -- byte-for-byte indistinguishable
+        # from this script's side. A guard that fails on empty output would
+        # have blocked ca.xean.tenant's real first build (it has zero
+        # TestFlight builds as of this fix) exactly as often as it caught a
+        # real bug. Empty defaulting to 0 here (agvtool then sets 1) is the
+        # correct behavior for that legitimate case, and is why Codemagic's
+        # own official example script never guards this either -- the fix
+        # that actually matters is passing the right identifier above.
         script: |
           cd ios/App
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
-          if [ -z "$LATEST_BUILD_NUMBER" ]; then
-            echo "error: could not determine the latest TestFlight build number -- refusing to guess" >&2
-            exit 1
-          fi
           agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
 
       - name: Build ipa for distribution
@@ -274,16 +279,13 @@ workflows:
       - name: Increment build number
         # Same fix as ios-xean-app above: this needs APP_STORE_APPLE_ID (the
         # numeric Apple ID), not BUNDLE_ID -- see that workflow's own
-        # comment for the full story on how passing the bundle identifier
-        # here silently produced build number 1 every time instead of
-        # incrementing.
+        # comment for the full story, including why no guard is added for
+        # LATEST_BUILD_NUMBER coming back empty (this app in particular has
+        # zero TestFlight builds as of this fix, so that's the expected,
+        # correct case for its next build, not an error to catch).
         script: |
           cd ios/App
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
-          if [ -z "$LATEST_BUILD_NUMBER" ]; then
-            echo "error: could not determine the latest TestFlight build number -- refusing to guess" >&2
-            exit 1
-          fi
           agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
 
       - name: Build ipa for distribution
