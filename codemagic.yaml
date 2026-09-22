@@ -48,6 +48,15 @@ workflows:
         - ios_signing
       vars:
         BUNDLE_ID: ca.xean.manager
+        # App Store Connect's own numeric "Apple ID" for this app (General
+        # > App Information > Apple ID there) -- NOT the bundle identifier.
+        # get-latest-testflight-build-number below takes this, not
+        # BUNDLE_ID, despite both looking like plausible "which app" values;
+        # passing the bundle identifier here is exactly what silently broke
+        # the build-number increment (see that step's own comment). Confirmed
+        # against this app's real App Store Connect record via the API
+        # directly, not guessed.
+        APP_STORE_APPLE_ID: "6810459135"
         # Not a workspace: this Capacitor project uses Swift Package
         # Manager for its native dependencies (see ios/App/CapApp-SPM), not
         # CocoaPods -- there's no Podfile anywhere in ios/App, which is also
@@ -127,9 +136,27 @@ workflows:
         # (always 1, see Info.plist) would trip on every build after the
         # first. Reading the last TestFlight build number and incrementing
         # keeps every upload valid without hand-tracking a counter.
+        #
+        # This used to pass "$BUNDLE_ID" here instead of the app's numeric
+        # Apple ID -- get-latest-testflight-build-number silently failed on
+        # that (wrong argument type; confirmed against Codemagic's own docs,
+        # which show only the numeric Apple ID ever used here), leaving
+        # LATEST_BUILD_NUMBER empty. Bash's arithmetic treats an empty
+        # variable as 0, so $(($LATEST_BUILD_NUMBER + 1)) silently evaluated
+        # to 1 every time instead of erroring -- setting the build back to 1
+        # and reproducing "must be higher than the previously uploaded
+        # version" at Apple's publish step instead of failing here, where
+        # it would've been obvious immediately. The explicit check below is
+        # what actually catches that class of failure now, rather than a
+        # coincidence of the first-ever build already starting at 1 masking
+        # it (see APP_STORE_APPLE_ID's own comment for the argument fix).
         script: |
           cd ios/App
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID")
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            echo "error: could not determine the latest TestFlight build number -- refusing to guess" >&2
+            exit 1
+          fi
           agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
 
       - name: Build ipa for distribution
@@ -190,6 +217,12 @@ workflows:
         - ios_signing
       vars:
         BUNDLE_ID: ca.xean.tenant
+        # This app's own numeric App Store Connect Apple ID -- see
+        # ios-xean-app's own APP_STORE_APPLE_ID comment for why this,
+        # specifically, and not BUNDLE_ID, is what get-latest-testflight-
+        # build-number needs. Confirmed against this app's real App Store
+        # Connect record via the API directly, not guessed.
+        APP_STORE_APPLE_ID: "6810476965"
         # Same as ios-xean-app above: no CocoaPods/Podfile here either (this
         # project also uses Swift Package Manager, see ios/App/CapApp-SPM),
         # so there's no App.xcworkspace to build against -- just the
@@ -239,9 +272,18 @@ workflows:
         script: xcode-project use-profiles
 
       - name: Increment build number
+        # Same fix as ios-xean-app above: this needs APP_STORE_APPLE_ID (the
+        # numeric Apple ID), not BUNDLE_ID -- see that workflow's own
+        # comment for the full story on how passing the bundle identifier
+        # here silently produced build number 1 every time instead of
+        # incrementing.
         script: |
           cd ios/App
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID")
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            echo "error: could not determine the latest TestFlight build number -- refusing to guess" >&2
+            exit 1
+          fi
           agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
 
       - name: Build ipa for distribution
