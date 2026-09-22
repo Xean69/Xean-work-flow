@@ -36,15 +36,21 @@ const config: CapacitorConfig = {
     // Matches this app's existing PWA behavior (see the dashboard's own
     // manifest) rather than Capacitor's opaque-status-bar default.
     contentInset: 'automatic',
-    // Disables the WKWebView's own outer UIScrollView (and, with it, its
-    // native rubber-band bounce) — without this, the page has two
-    // independent scroll/bounce behaviors layered on top of each other
-    // (the native scroll view's and the web content's own), which is what
-    // reads as "loose"/bouncy instead of feeling locked in place like a
-    // native app. The web content already handles its own scrolling (see
-    // index.css and portal.css's overflow rules), so the outer native
-    // scroll view doesn't need to scroll at all.
-    scrollEnabled: false,
+    // REVERTED (previously tried scrollEnabled: false here to fix a loose/
+    // bouncy scroll feel). Confirmed on a real device: it caused the page
+    // to render zoomed in with content cropped on both edges and the
+    // sidebar pushed off-screen entirely, surfaced when iOS's in-call
+    // status banner resized the app's visible frame mid-session. This
+    // matches a documented WKWebView gotcha — isScrollEnabled = false can
+    // stop the WebView from recalculating its zoom/content scale when its
+    // frame changes (call banner, rotation, etc.), leaving it stuck at the
+    // wrong scale with no way to pan back into view since scrolling is
+    // also disabled. The CSS fix in index.css/portal.css (.shell/.main and
+    // .portal-shell/.portal-main now a fixed-height container with exactly
+    // one internal scroll region) already removes the document-level
+    // overflow that caused the original bounce — the outer native scroll
+    // view has nothing left to bounce against regardless of this setting,
+    // so it wasn't pulling its own weight against a real, worse bug.
   },
 }
 
