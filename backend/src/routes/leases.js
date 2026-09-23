@@ -158,6 +158,9 @@ router.post(
         rawOutput = result.rawOutput;
       } catch (err) {
         console.error("Lease template fill failed:", err);
+        if (err.message === "TEMPLATE_TOO_LONG") {
+          throw new ApiError(502, "Your template is too long to process in one pass — try a shorter or simpler document");
+        }
         throw new ApiError(502, "Failed to fill in your template, please try again");
       }
     } else {

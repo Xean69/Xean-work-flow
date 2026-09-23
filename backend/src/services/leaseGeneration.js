@@ -230,7 +230,20 @@ export async function fillLeaseTemplate({ fileBuffer, mediaType, facts }) {
 
   const response = await anthropic.messages.create({
     model: "claude-opus-5",
-    max_tokens: 4096,
+    // Verbatim transcription of an arbitrary uploaded document has no
+    // length ceiling we control, unlike generateLeaseContent's own fixed,
+    // bounded 15-section draft (which needed 8192 for that shorter task —
+    // see its own comment). This used to be capped at 4096, which a real
+    // multi-page template can easily exceed: confirmed directly against
+    // the real API that a truncated response (stop_reason: "max_tokens")
+    // comes back with toolUse.input as an empty object, not a partial one,
+    // which crashed on .sections.map with a useless "please try again"
+    // surfaced to the manager. 16000 gives a real template plenty of room
+    // while staying comfortably under the SDK's own non-streaming ceiling
+    // (~21333 tokens here — see Anthropic client's
+    // calculateNonstreamingTimeout — past which this call would need to
+    // switch to streaming instead).
+    max_tokens: 16000,
     output_config: { effort: "high" },
     tools: [TEMPLATE_TOOL],
     tool_choice: { type: "tool", name: TEMPLATE_TOOL.name },
@@ -253,8 +266,20 @@ ${factsBlock}`,
     ],
   });
 
+  // A genuinely truncated response comes back with an empty tool input
+  // (confirmed directly, not assumed) -- caught here with a message that
+  // actually tells the manager what happened and what to do about it,
+  // rather than letting it crash into the route's generic 502 below (see
+  // TEMPLATE_TOO_LONG in routes/leases.js, which maps this exact message
+  // through to the frontend instead of masking it).
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("TEMPLATE_TOO_LONG");
+  }
+
   const toolUse = response.content.find((block) => block.type === "tool_use");
-  if (!toolUse) throw new Error("No transcription returned");
+  if (!toolUse || !Array.isArray(toolUse.input?.sections) || toolUse.input.sections.length === 0) {
+    throw new Error("No transcription returned");
+  }
 
   const sections = toolUse.input.sections.map((s) => ({ ...s, contains_placeholder: false }));
   return {
