@@ -1522,3 +1522,56 @@ CREATE TABLE IF NOT EXISTS admin_backup_codes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_backup_codes_admin_id ON admin_backup_codes(admin_id);
+
+-- ============================================================================
+-- Trial enforcement + manual "paid until" billing
+--
+-- A business's manager dashboard (owner/manager/accountant) is usable while
+-- ANY of these holds: billing_exempt, now() < trial_ends_at, or
+-- now() < paid_until. Otherwise the admin API answers 402 "trial_expired"
+-- (see utils/trial.js's requireActiveBilling). Tenants and maintenance staff
+-- are never affected, and nothing is ever deleted.
+--
+-- trial_ends_at: its default is evaluated at INSERT, in the same statement
+-- (and therefore the same now()) as created_at's own default, so every
+-- business created from here on gets exactly created_at + 14 days with no
+-- code needing to remember to set it.
+--
+-- billing_exempt: every business that already exists at the moment this
+-- migration first runs is grandfathered as exempt, permanently. That has to
+-- happen exactly ONCE, so it is tied to the column's own creation rather
+-- than to a WHERE clause: the block only runs when billing_exempt does not
+-- exist yet. On every later run of migrate.js the column is already there,
+-- the block is skipped entirely, and so (a) businesses created after the
+-- first run are never swept into the exemption and (b) an exemption the
+-- platform owner switched off afterwards is never switched back on.
+-- (The whole schema file runs as one transaction, so the column can never
+-- end up created without the grandfathering UPDATE having run with it.)
+--
+-- paid_until: set by hand from the platform-owner page until a payment
+-- processor exists. NULL = never paid.
+--
+-- is_platform_owner: gates /api/platform (the billing admin page). Never
+-- settable from the app; flipped on exactly one row by hand. A platform
+-- owner is also never locked out by trial enforcement, whatever their own
+-- business's billing state.
+-- ============================================================================
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '14 days');
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS paid_until TIMESTAMPTZ;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'businesses' AND column_name = 'billing_exempt'
+  ) THEN
+    ALTER TABLE businesses ADD COLUMN billing_exempt BOOLEAN NOT NULL DEFAULT false;
+    -- Grandfather every business that exists right now. trial_ends_at is
+    -- also normalised to created_at + 14 days for these rows (adding the
+    -- column above stamped them with migration-time + 14 days instead),
+    -- purely so the platform page shows a sensible historical date.
+    UPDATE businesses SET billing_exempt = true, trial_ends_at = created_at + interval '14 days';
+  END IF;
+END $$;
+
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS is_platform_owner BOOLEAN NOT NULL DEFAULT false;
