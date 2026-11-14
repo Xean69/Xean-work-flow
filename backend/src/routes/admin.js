@@ -20,7 +20,9 @@ import {
   parsePushPreferenceBody,
   parsePushSubscriptionBody,
   parsePushUnsubscribeBody,
+  isHoneypotTripped,
 } from "../utils/validate.js";
+import { getClientIp } from "../utils/clientIp.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { sendAdminPasswordResetEmail, sendAdminNewDeviceLoginEmail } from "../services/email.js";
 import { computeTrialStatus, requireActiveBilling } from "../utils/trial.js";
@@ -453,10 +455,49 @@ router.post(
 // here needs a real session), so it's rate-limited the same way
 // contact.js's forms are — production saw 150+ bot-created accounts
 // (randomized "Xxxxxx LLC" names, zero real activity) before this existed.
+// Bot screening for /signup, before anything is parsed or created.
+// Production was taking 50-100 junk signups a day (random 10-character or
+// "Gibberish LLC" names, never used) spread across many IPs, so the per-IP
+// rate limit above never triggered. Two cheap checks that a real person
+// filling in the form never notices:
+//   - website: a hidden honeypot input (same idea as the contact forms).
+//     Filled in => a bot filled every field. It gets a success-shaped
+//     response and nothing is created, so it never learns it was caught.
+//   - form_fill_ms: how long the form was open, measured in the browser
+//     (a difference of two client timestamps, so a wrong device clock
+//     can't skew it). Missing means the request didn't come from the
+//     current form (a script posting straight to the API, or a very old
+//     cached page), so it gets a visible "refresh and try again" error.
+//     Under MIN_FILL_MS gets a visible "try again" too, never a silent
+//     drop, so a fast human with autofill just resubmits.
+// Each catch is logged with the IP so the effect can be measured in the
+// Railway logs.
+const SIGNUP_MIN_FILL_MS = 3000;
+
+function screenSignupBot(req, res) {
+  const ip = getClientIp(req);
+  if (isHoneypotTripped(req.body)) {
+    console.log(`[signup-bot] honeypot ip=${ip}`);
+    res.status(201).json({ ok: true });
+    return true;
+  }
+  const fillMs = req.body.form_fill_ms;
+  if (typeof fillMs !== "number" || !Number.isFinite(fillMs) || fillMs < 0) {
+    console.log(`[signup-bot] missing form_fill_ms ip=${ip}`);
+    throw new ApiError(400, "Please refresh the page and try again.");
+  }
+  if (fillMs < SIGNUP_MIN_FILL_MS) {
+    console.log(`[signup-bot] too fast (${Math.round(fillMs)}ms) ip=${ip}`);
+    throw new ApiError(400, "That was very quick. Please check your details and try again.");
+  }
+  return false;
+}
+
 router.post(
   "/signup",
   rateLimit({ windowMs: 60 * 60 * 1000, max: 5 }),
   asyncHandler(async (req, res) => {
+    if (screenSignupBot(req, res)) return;
     const data = parseSignupBody(req.body);
     const passwordHash = await hashPassword(data.password);
     // The founding owner's own browser is genuinely present at this exact

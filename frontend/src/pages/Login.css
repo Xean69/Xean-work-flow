@@ -101,3 +101,13 @@
 .link-button:hover {
   text-decoration: underline;
 }
+
+/* Signup honeypot — see Signup.jsx. Off-screen rather than display:none,
+   since some bots skip fields hidden that way. */
+.signup-hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}

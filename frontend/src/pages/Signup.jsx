@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signup } from '../api/client.js'
 import { TotpSetupForm, BackupCodesDisplay } from '../components/TwoFactorSetup.jsx'
@@ -17,6 +17,12 @@ function Signup() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [backupCodes, setBackupCodes] = useState(null)
+  // Bot screening (see backend routes/admin.js screenSignupBot): a hidden
+  // honeypot field real people never fill, and how long the form has been
+  // open. performance.now() is a monotonic in-page clock, so the elapsed
+  // time can't be thrown off by a wrong device clock.
+  const [website, setWebsite] = useState('')
+  const openedAt = useRef(performance.now())
   const navigate = useNavigate()
 
   function finishSignup() {
@@ -28,7 +34,10 @@ function Signup() {
     setError('')
     setSubmitting(true)
     try {
-      const result = await signup(businessName, email, password)
+      const result = await signup(businessName, email, password, {
+        website,
+        form_fill_ms: Math.round(performance.now() - openedAt.current),
+      })
       if (result.requires_2fa_setup) setStep('setup')
       else finishSignup()
     } catch (err) {
@@ -90,6 +99,19 @@ function Signup() {
 
         <form onSubmit={handleSubmit}>
           {error && <p className="form-error">{error}</p>}
+
+          {/* Honeypot: off-screen (not display:none, which some bots skip),
+              out of the tab order and hidden from screen readers. */}
+          <input
+            type="text"
+            name="website"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="signup-hp-field"
+          />
 
           <div className="form-field">
             <label htmlFor="businessName">Business name</label>

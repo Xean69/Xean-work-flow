@@ -68,10 +68,19 @@ export function login(email, password) {
   });
 }
 
-export function signup(businessName, email, password) {
+// botCheck = { website, form_fill_ms } from Signup.jsx — see the backend's
+// screenSignupBot (routes/admin.js) for what each one catches.
+export function signup(businessName, email, password, botCheck = {}) {
   return request("/admin/signup", {
     method: "POST",
-    body: JSON.stringify({ business_name: businessName, email, password, timezone: detectTimezone() }),
+    body: JSON.stringify({
+      business_name: businessName,
+      email,
+      password,
+      timezone: detectTimezone(),
+      website: botCheck.website ?? "",
+      form_fill_ms: botCheck.form_fill_ms,
+    }),
   });
 }
 
