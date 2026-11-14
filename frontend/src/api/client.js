@@ -12,6 +12,25 @@ import {
 // way, this API is always same-site with whatever's calling it.
 const BASE_URL = "/api";
 
+// Fired whenever the admin API answers 402 { code: "trial_expired" } (see
+// backend/src/utils/trial.js's requireActiveBilling). Layout listens for it
+// and swaps the whole dashboard for the "Your trial has ended" page — so a
+// trial that lapses mid-session locks the UI on the very next API call,
+// not only on the next full page load.
+export const TRIAL_EXPIRED_EVENT = "xean:trial-expired";
+
+// One place every admin fetch turns a failed response into a thrown Error,
+// keeping the server's status and machine-readable code on it.
+function apiError(res, data) {
+  const err = new Error(data?.error || `Request failed with status ${res.status}`);
+  err.status = res.status;
+  err.code = data?.code;
+  if (err.code === "trial_expired" && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(TRIAL_EXPIRED_EVENT));
+  }
+  return err;
+}
+
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -23,7 +42,7 @@ async function request(path, options = {}) {
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(data?.error || `Request failed with status ${res.status}`);
+    throw apiError(res, data);
   }
   return data;
 }
@@ -70,6 +89,16 @@ export function resetPassword(token, password) {
 
 export function getMe() {
   return request("/admin/me");
+}
+
+// Platform-owner billing admin (backend/src/routes/platform.js) — 404 for
+// every account without is_platform_owner.
+export function getPlatformBusinesses(q) {
+  return request(q ? `/platform/businesses?q=${encodeURIComponent(q)}` : "/platform/businesses");
+}
+
+export function updatePlatformBusiness(id, data) {
+  return request(`/platform/businesses/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 
 // Per-account 2FA login flow (see backend/src/routes/admin.js): login()
@@ -373,7 +402,7 @@ async function uploadRequest(path, formData, method = "POST") {
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(data?.error || `Request failed with status ${res.status}`);
+    throw apiError(res, data);
   }
   return data;
 }

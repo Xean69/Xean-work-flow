@@ -2,21 +2,26 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import './TrialBanner.css'
 
-// Dismiss lives in local component state, not localStorage — closing it
-// hides it for the current session, but it's back on the next full
-// load/login. This is a soft nag, not a one-and-done dismissal, since
-// there's no enforcement behind it yet (no Stripe integration).
+// Shown only while the business is inside its 14-day trial (status
+// "trial"). Once it lapses, Layout replaces the whole dashboard with the
+// TrialEnded page instead, so there's no "expired" variant here. Exempt and
+// paid businesses never see it. Dismiss is component state only — it comes
+// back on the next full load, so the countdown stays visible.
 function TrialBanner({ admin }) {
   const [dismissed, setDismissed] = useState(false)
+  const trial = admin?.trial
 
-  if (admin.trial_status !== 'expired' || dismissed) return null
+  if (!trial || trial.status !== 'trial' || dismissed) return null
+
+  const days = trial.days_left
+  const text = days === 1 ? '1 day left in your free trial.' : `${days} days left in your free trial.`
 
   return (
     <div className="trial-banner">
-      <span>Your 14-day trial has ended — upgrade to keep full access.</span>
+      <span>{text}</span>
       <div className="trial-banner-actions">
         <Link to="/upgrade" className="btn btn-primary btn-sm">
-          Upgrade
+          Contact us
         </Link>
         <button
           type="button"

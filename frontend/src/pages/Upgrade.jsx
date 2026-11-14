@@ -1,13 +1,25 @@
 import PageHeader from '../components/PageHeader.jsx'
+import { CONTACT_EMAIL } from '../components/TrialEnded.jsx'
 
+// Reached from the trial banner's "Contact us" button. Billing is arranged
+// directly with Xean (no payment processor yet), so this is a contact page,
+// not a checkout. Kept at /upgrade so existing links keep working.
 function Upgrade() {
   return (
     <div>
-      <PageHeader title="Upgrade" subtitle="Keep full access to your dashboard" />
+      <PageHeader title="Contact us" subtitle="Set up your Xean plan" />
       <div className="content">
         <div className="empty-state card">
-          <h3>Payment setup coming soon</h3>
-          <p>We're wiring up billing — check back shortly to upgrade your account.</p>
+          <h3>Talk to us about your plan</h3>
+          <p>
+            Plans are arranged directly with our team. Email us and we'll help you choose the right plan for your
+            portfolio.
+          </p>
+          <p style={{ marginTop: 12 }}>
+            <a href={`mailto:${CONTACT_EMAIL}`}>
+              <strong>{CONTACT_EMAIL}</strong>
+            </a>
+          </p>
         </div>
       </div>
     </div>

@@ -1,0 +1,110 @@
+.platform-search {
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+.platform-search,
+.platform-paid input[type='date'] {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--ink);
+}
+.platform-search:focus,
+.platform-paid input[type='date']:focus {
+  outline: 2px solid var(--brass);
+  outline-offset: -1px;
+}
+.platform-sub {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.platform-email {
+  overflow-wrap: anywhere;
+}
+.platform-nowrap {
+  white-space: nowrap;
+}
+.platform-paid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.platform-paid input[type='date'] {
+  min-width: 150px;
+  padding: 6px 10px;
+}
+.platform-count {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 10px;
+}
+
+/* Phone / narrow: one card per business instead of a 7-column table. */
+@media (max-width: 860px) {
+  .platform-table-wrap {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    overflow: visible;
+  }
+  .platform-table,
+  .platform-table tbody,
+  .platform-table tr,
+  .platform-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .platform-table thead {
+    display: none;
+  }
+  .platform-table tr {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md, 10px);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .platform-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border: none;
+    text-align: end;
+  }
+  .platform-table td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+    text-align: start;
+    flex-shrink: 0;
+  }
+  .platform-table td.platform-name {
+    display: block;
+    text-align: start;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .platform-table td.platform-name::before {
+    content: none;
+  }
+  .platform-table .platform-paid {
+    justify-content: flex-end;
+  }
+  .platform-table .form-error {
+    text-align: end;
+  }
+}

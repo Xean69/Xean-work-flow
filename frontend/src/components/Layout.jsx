@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import TrialBanner from './TrialBanner.jsx'
+import TrialEnded from './TrialEnded.jsx'
 import OfflineBanner from './OfflineBanner.jsx'
-import { getMe, logout } from '../api/client.js'
+import { getMe, logout, TRIAL_EXPIRED_EVENT } from '../api/client.js'
 import { canAccessPath, defaultRouteForRole } from '../utils/permissions.js'
 import { applyLanguage, ADMIN_LANG_KEY } from '../i18n/sync.js'
 import { usePushSubscription } from '../utils/usePushSubscription.js'
@@ -27,9 +28,19 @@ function Layout() {
   // (see Sidebar.css) it becomes an off-canvas drawer that this controls.
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [pushDismissed, setPushDismissed] = useState(false)
+  // Set when any admin API call comes back 402 "trial_expired" (see
+  // api/client.js) — catches a trial that lapses mid-session, after /me
+  // was already loaded showing it as active.
+  const [lockedByServer, setLockedByServer] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { permission: pushPermission, subscribe: subscribeToPush } = usePushSubscription()
+
+  useEffect(() => {
+    const onExpired = () => setLockedByServer(true)
+    window.addEventListener(TRIAL_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(TRIAL_EXPIRED_EVENT, onExpired)
+  }, [])
 
   useEffect(() => {
     getMe()
@@ -65,6 +76,14 @@ function Layout() {
 
   if (loading) return null
   if (!admin) return null
+
+  // Trial enforcement: once the business's trial has lapsed (and it isn't
+  // paid or exempt), owners/managers/accountants see only this page — no
+  // sidebar, no routes. The backend returns 402 on every manager API route
+  // regardless (utils/trial.js), so this is the UX half, not the boundary.
+  // The platform owner is never locked, matching the backend.
+  const locked = !admin.is_platform_owner && (admin.trial?.status === 'expired' || lockedByServer)
+  if (locked) return <TrialEnded admin={admin} onLogout={handleLogout} />
 
   // Don't mount the page for a route this role can't access, even for the
   // one render before the redirect effect above fires — otherwise its own

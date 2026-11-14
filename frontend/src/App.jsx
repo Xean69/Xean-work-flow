@@ -43,6 +43,7 @@ import OwnerStatements from './pages/OwnerStatements.jsx'
 import Insights from './pages/Insights.jsx'
 import Team from './pages/Team.jsx'
 import Upgrade from './pages/Upgrade.jsx'
+import PlatformBusinesses from './pages/PlatformBusinesses.jsx'
 import TenantInspection from './pages/TenantInspection.jsx'
 import LanguageSettings from './pages/LanguageSettings.jsx'
 import AppPicker from './pages/AppPicker.jsx'
@@ -179,6 +180,9 @@ function App() {
         <Route path="/insights" element={<Insights />} />
         <Route path="/team" element={<Team />} />
         <Route path="/upgrade" element={<Upgrade />} />
+        {/* Platform-owner only — the page redirects anyone else away, and
+            its API (/api/platform) answers 404 for them regardless. */}
+        <Route path="/platform/businesses" element={<PlatformBusinesses />} />
         <Route path="/language" element={<LanguageSettings />} />
       </Route>
       </Routes>

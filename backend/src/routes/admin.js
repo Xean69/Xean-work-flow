@@ -23,7 +23,7 @@ import {
 } from "../utils/validate.js";
 import { generateResetToken, hashResetToken } from "../utils/resetToken.js";
 import { sendAdminPasswordResetEmail, sendAdminNewDeviceLoginEmail } from "../services/email.js";
-import { computeTrialStatus } from "../utils/trial.js";
+import { computeTrialStatus, requireActiveBilling } from "../utils/trial.js";
 import { upsertSubscription, deleteSubscription } from "../services/pushSubscriptions.js";
 import { recordDeviceLogin } from "../services/loginAlert.js";
 import { encryptTotpSecret, decryptTotpSecret } from "../utils/totpEncryption.js";
@@ -54,7 +54,8 @@ const DEFAULT_SCHEDULED_MESSAGES = [
 // setup-completion and normal-verify still both funnel through here).
 async function loadAdminSummary(adminId) {
   const { rows } = await pool.query(
-    `SELECT a.id, a.email, a.role, a.business_id, a.timezone, b.business_name, b.created_at AS trial_started_at
+    `SELECT a.id, a.email, a.role, a.business_id, a.timezone, a.is_platform_owner, b.business_name,
+            b.billing_exempt, b.trial_ends_at, b.paid_until
      FROM admins a
      JOIN businesses b ON b.id = a.business_id
      WHERE a.id = $1`,
@@ -68,8 +69,8 @@ async function loadAdminSummary(adminId) {
     business_id: admin.business_id,
     timezone: admin.timezone,
     business_name: admin.business_name,
-    trial_started_at: admin.trial_started_at,
-    trial_status: computeTrialStatus(admin.trial_started_at),
+    is_platform_owner: admin.is_platform_owner,
+    trial: computeTrialStatus(admin),
   };
 }
 
@@ -354,15 +355,17 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
       `SELECT a.id, a.email, a.role, a.language, a.timezone, a.push_notify_other, a.totp_enabled, a.totp_enabled_at,
-              a.totp_required, a.business_id, b.business_name, b.created_at AS trial_started_at, b.logo_url,
-              b.ai_lease_generation_enabled, b.timezone AS business_timezone
+              a.totp_required, a.business_id, a.is_platform_owner, b.business_name, b.logo_url,
+              b.ai_lease_generation_enabled, b.timezone AS business_timezone,
+              b.billing_exempt, b.trial_ends_at, b.paid_until
        FROM admins a
        JOIN businesses b ON b.id = a.business_id
        WHERE a.id = $1`,
       [req.adminId]
     );
     if (!rows[0]) throw new ApiError(404, "Admin not found");
-    res.json({ ...rows[0], trial_status: computeTrialStatus(rows[0].trial_started_at) });
+    const { billing_exempt, trial_ends_at, paid_until, ...admin } = rows[0];
+    res.json({ ...admin, trial: computeTrialStatus({ billing_exempt, trial_ends_at, paid_until }) });
   })
 );
 
@@ -400,9 +403,14 @@ router.patch(
 
 // Controls only the OTHER-category push toggle — mandatory maintenance
 // pushes ignore this value entirely (see services/webPush.js).
+// Gated by trial enforcement (unlike /me/language and /me/timezone, which a
+// locked account can still change): a locked account has no dashboard to be
+// notified into. /push/unsubscribe below stays open on purpose so a locked
+// account can still turn notifications off.
 router.patch(
   "/me/push-preference",
   requireAdminAuth,
+  requireActiveBilling,
   asyncHandler(async (req, res) => {
     const data = parsePushPreferenceBody(req.body);
     const { rows } = await pool.query(
@@ -416,6 +424,7 @@ router.patch(
 router.post(
   "/push/subscribe",
   requireAdminAuth,
+  requireActiveBilling,
   asyncHandler(async (req, res) => {
     const subscription = parsePushSubscriptionBody(req.body);
     await upsertSubscription({
@@ -465,7 +474,7 @@ router.post(
       const { rows: businessRows } = await client.query(
         `INSERT INTO businesses (business_name, contact_email, timezone)
          VALUES ($1, $2, COALESCE($3, 'UTC'))
-         RETURNING id, business_name, created_at`,
+         RETURNING id, business_name, created_at, billing_exempt, trial_ends_at, paid_until`,
         [data.business_name, data.email, detectedTimezone]
       );
       const business = businessRows[0];
@@ -499,8 +508,8 @@ router.post(
         business_id: business.id,
         timezone: admin.timezone,
         business_name: business.business_name,
-        trial_started_at: business.created_at,
-        trial_status: computeTrialStatus(business.created_at),
+        is_platform_owner: false,
+        trial: computeTrialStatus(business),
       });
     } catch (err) {
       await client.query("ROLLBACK");

@@ -150,7 +150,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What happens after the 14-day trial?',
-    a: 'Nothing is locked or deleted when the trial period ends — your account and data stay exactly as they are. Our team will reach out to talk through the right plan for your portfolio before anything changes.',
+    a: 'When your trial ends, access to your manager dashboard is paused until you move onto a paid plan. Email hrsupport@xean.ca and we’ll set it up. Your data is kept while access is paused, and your tenants and maintenance staff can keep using Xean in the meantime.',
   },
   {
     q: 'Can tenants use Xean without downloading anything?',

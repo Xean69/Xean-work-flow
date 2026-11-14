@@ -38,6 +38,8 @@ import uploadsRouter from "./routes/uploads.js";
 import { startLedgerScheduler, startSubdomainVerificationScheduler, startBackupScheduler } from "./services/scheduler.js";
 import { ApiError } from "./utils/errors.js";
 import { requireAdminAuth, requireRole } from "./utils/auth.js";
+import { requireActiveBilling, requirePlatformOwner } from "./utils/trial.js";
+import platformRouter from "./routes/platform.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -129,66 +131,78 @@ app.use("/api/push", pushRouter);
 const staffOnly = requireRole("owner", "manager");
 const anyRole = requireRole("owner", "manager", "accountant");
 
+// Trial enforcement (utils/trial.js): every manager-dashboard router below
+// carries requireActiveBilling right after requireAdminAuth, so a business
+// whose trial has lapsed gets 402 "trial_expired" from the API itself — not
+// just a hidden UI. /api/admin (login, /me, logout, language/timezone) is
+// deliberately not gated at the mount; the few routes inside it that should
+// be (push subscribe/preference) are gated individually in admin.js.
+// /api/portal, /api/staff, /api/contact and the schedulers never see it.
+
+// Platform-owner billing admin (list businesses, set paid-until/exempt).
+// requirePlatformOwner answers 404 for every other admin.
+app.use("/api/platform", requireAdminAuth, requirePlatformOwner, platformRouter);
+
 // Just the signed-upload endpoint (see routes/uploads.js) — gated on
 // requireAdminAuth alone, not staffOnly, since a signature can't itself
 // create or change anything; each real record-creation route it feeds
 // still enforces its own role check afterward, unchanged from before.
-app.use("/api/uploads", requireAdminAuth, uploadsRouter);
-app.use("/api/properties", requireAdminAuth, staffOnly, propertiesRouter);
-app.use("/api/units", requireAdminAuth, staffOnly, unitsRouter);
-app.use("/api/tenants", requireAdminAuth, staffOnly, tenantsRouter);
+app.use("/api/uploads", requireAdminAuth, requireActiveBilling, uploadsRouter);
+app.use("/api/properties", requireAdminAuth, requireActiveBilling, staffOnly, propertiesRouter);
+app.use("/api/units", requireAdminAuth, requireActiveBilling, staffOnly, unitsRouter);
+app.use("/api/tenants", requireAdminAuth, requireActiveBilling, staffOnly, tenantsRouter);
 // Read access for accountants (they don't reach the Tenants page itself,
 // but do need this to make sense of Expenses/Owner Statements) — write
 // routes are gated staff-only inside rentPayments.js, same pattern as
 // documents.js and expenses.js.
-app.use("/api/rent-payments", requireAdminAuth, anyRole, rentPaymentsRouter);
-app.use("/api/maintenance", requireAdminAuth, staffOnly, maintenanceRouter);
-app.use("/api/documents", requireAdminAuth, anyRole, documentsRouter);
-app.use("/api/expenses", requireAdminAuth, anyRole, expensesRouter);
-app.use("/api/messages", requireAdminAuth, staffOnly, messagesRouter);
-app.use("/api/addons", requireAdminAuth, staffOnly, addonsRouter);
-app.use("/api/occupants", requireAdminAuth, staffOnly, tenantOccupantsRouter);
-app.use("/api/eviction-events", requireAdminAuth, staffOnly, evictionEventsRouter);
-app.use("/api/charges", requireAdminAuth, staffOnly, chargesRouter);
-app.use("/api/recurring-charges", requireAdminAuth, staffOnly, recurringChargesRouter);
-app.use("/api/import", requireAdminAuth, staffOnly, importsRouter);
-app.use("/api/team", requireAdminAuth, requireRole("owner"), teamRouter);
-app.use("/api/owner-statements", requireAdminAuth, anyRole, ownerStatementsRouter);
-app.use("/api/str-licenses", requireAdminAuth, staffOnly, strLicensesRouter);
+app.use("/api/rent-payments", requireAdminAuth, requireActiveBilling, anyRole, rentPaymentsRouter);
+app.use("/api/maintenance", requireAdminAuth, requireActiveBilling, staffOnly, maintenanceRouter);
+app.use("/api/documents", requireAdminAuth, requireActiveBilling, anyRole, documentsRouter);
+app.use("/api/expenses", requireAdminAuth, requireActiveBilling, anyRole, expensesRouter);
+app.use("/api/messages", requireAdminAuth, requireActiveBilling, staffOnly, messagesRouter);
+app.use("/api/addons", requireAdminAuth, requireActiveBilling, staffOnly, addonsRouter);
+app.use("/api/occupants", requireAdminAuth, requireActiveBilling, staffOnly, tenantOccupantsRouter);
+app.use("/api/eviction-events", requireAdminAuth, requireActiveBilling, staffOnly, evictionEventsRouter);
+app.use("/api/charges", requireAdminAuth, requireActiveBilling, staffOnly, chargesRouter);
+app.use("/api/recurring-charges", requireAdminAuth, requireActiveBilling, staffOnly, recurringChargesRouter);
+app.use("/api/import", requireAdminAuth, requireActiveBilling, staffOnly, importsRouter);
+app.use("/api/team", requireAdminAuth, requireActiveBilling, requireRole("owner"), teamRouter);
+app.use("/api/owner-statements", requireAdminAuth, requireActiveBilling, anyRole, ownerStatementsRouter);
+app.use("/api/str-licenses", requireAdminAuth, requireActiveBilling, staffOnly, strLicensesRouter);
 // Role-aware internally (see routes/activity.js) rather than blocked at
 // the mount level — an accountant gets a real, correctly-scoped feed
 // (documents/expenses only) instead of a 403, on the off chance this ever
 // gets surfaced somewhere an accountant can reach (it isn't yet; the
 // Dashboard page itself is owner/manager only).
-app.use("/api/activity", requireAdminAuth, anyRole, activityRouter);
+app.use("/api/activity", requireAdminAuth, requireActiveBilling, anyRole, activityRouter);
 // Owner/manager only — compliance isn't financial, so it's not part of
 // the accountant's read-only allowance the way expenses/documents are.
-app.use("/api/compliance-checks", requireAdminAuth, staffOnly, complianceChecksRouter);
+app.use("/api/compliance-checks", requireAdminAuth, requireActiveBilling, staffOnly, complianceChecksRouter);
 // Owner/manager only, matching the Insights page itself (see
 // frontend/src/utils/permissions.js) — a decision-making tool for
 // management, not something accountants need, and regenerating costs a
 // real Anthropic API call.
-app.use("/api/insights", requireAdminAuth, staffOnly, insightsRouter);
+app.use("/api/insights", requireAdminAuth, requireActiveBilling, staffOnly, insightsRouter);
 // Owner/manager only, same reasoning as compliance-checks — not a
 // bookkeeping concern, so accountants get no access at all here.
-app.use("/api/move-in-inspections", requireAdminAuth, staffOnly, moveInInspectionsRouter);
+app.use("/api/move-in-inspections", requireAdminAuth, requireActiveBilling, staffOnly, moveInInspectionsRouter);
 // Owner/manager only, matching ROUTE_ROLES on the frontend — Generate
 // mode is further gated inside leases.js itself (per-business opt-in),
 // and the /ai-lease-generation toggle below is further gated to owner
 // only inside business.js — this mount-level check is just the outer
 // "not an accountant" boundary both routers share.
-app.use("/api/leases", requireAdminAuth, staffOnly, leasesRouter);
-app.use("/api/business", requireAdminAuth, staffOnly, businessRouter);
+app.use("/api/leases", requireAdminAuth, requireActiveBilling, staffOnly, leasesRouter);
+app.use("/api/business", requireAdminAuth, requireActiveBilling, staffOnly, businessRouter);
 // Owner/manager only, matching ROUTE_ROLES on the frontend — marketing
 // setup, not a bookkeeping concern.
-app.use("/api/websites", requireAdminAuth, staffOnly, websitesRouter);
+app.use("/api/websites", requireAdminAuth, requireActiveBilling, staffOnly, websitesRouter);
 
 // Central error handler: ApiError carries its own status code, a MulterError
 // means an upload was rejected (e.g. too large), anything else is
 // unexpected.
 app.use((err, req, res, next) => {
   if (err instanceof ApiError) {
-    return res.status(err.status).json({ error: err.message });
+    return res.status(err.status).json(err.code ? { error: err.message, code: err.code } : { error: err.message });
   }
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: err.message });

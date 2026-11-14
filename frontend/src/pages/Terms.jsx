@@ -3,16 +3,18 @@ import LandingNav from '../components/LandingNav.jsx'
 import LandingFooter from '../components/LandingFooter.jsx'
 import './Landing.css'
 
-// Verified against the actual codebase before writing, not just carried
-// over from the earlier draft: no payment processor is integrated
-// anywhere in the backend (billing is a manual, "Talk to Us" process), the
-// 14-day trial (utils/trial.js) is informational only — computeTrialStatus
-// is never checked by any route to gate access — and hrsupport@xean.ca
-// (not the earlier draft's guessed support@xean.ca) is the real inbox
-// behind the contact form and every outbound notification (see
-// services/email.js's HR_EMAIL). If any of that changes (a payment
-// processor gets added, the trial becomes enforced, refunds get offered),
-// Section 5 specifically needs a rewrite, not just a date bump.
+// Verified against the actual codebase: no payment processor is
+// integrated anywhere in the backend (paid plans are arranged by hand and
+// recorded as a "paid until" date on the platform-owner page), the 14-day
+// trial IS enforced — backend/src/utils/trial.js's requireActiveBilling
+// returns 402 on every manager-dashboard API route once a business is
+// past trial_ends_at and paid_until and isn't billing_exempt — while the
+// tenant portal and maintenance staff portal are never gated, and nothing
+// is deleted. hrsupport@xean.ca is the real inbox behind the contact form
+// and every outbound notification (see services/email.js's HR_EMAIL). If
+// any of that changes (a payment processor gets added, refunds get
+// offered, data starts being removed), Section 5 needs a rewrite, not just
+// a date bump.
 function Terms() {
   return (
     <div className="landing">
@@ -33,7 +35,7 @@ function Terms() {
             Xean — Terms of <span>Service</span>
           </h1>
 
-          <p className="lnd-doc-updated">Last updated: September 7, 2026</p>
+          <p className="lnd-doc-updated">Last updated: November 14, 2026</p>
 
           <h2>1. Acceptance of Terms</h2>
           <p>
@@ -71,9 +73,10 @@ function Terms() {
               and payment collection are handled manually, in Canadian dollars unless otherwise agreed.
             </li>
             <li>
-              New accounts may display a 14-day trial period for reference. This trial is informational only: it does
-              not automatically restrict or suspend access to the Service when it ends, and no payment is ever charged
-              automatically. Moving onto a paid plan is arranged directly with Xean.
+              New accounts include a 14-day trial of the Service. When the trial ends, access to the manager dashboard
+              is paused for that account's owners, managers and accountants until a paid plan is arranged with Xean.
+              Your data is kept while access is paused, and Xean will give reasonable notice before any of it is
+              removed. To arrange a paid plan, contact hrsupport@xean.ca.
             </li>
             <li>Prices are subject to change with reasonable advance notice.</li>
             <li>
@@ -81,9 +84,9 @@ function Terms() {
               regardless of usage.
             </li>
             <li>
-              If payment for a paid plan is not received, Xean may, at its discretion, suspend or terminate the account
-              after providing reasonable notice. There is no automated billing-suspension system — any such action is
-              taken manually.
+              If a paid period ends without being renewed, access to the manager dashboard is paused in the same way as
+              at the end of the trial, until payment is arranged. If payment is not received, Xean may also, at its
+              discretion, suspend or terminate the account after providing reasonable notice.
             </li>
           </ul>
 

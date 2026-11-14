@@ -304,6 +304,19 @@ function Sidebar({ admin, onLogout, open }) {
           {t('nav.settings')}
         </div>
 
+        {/* Platform-owner billing admin — only ever rendered for the one
+            account with is_platform_owner (see pages/PlatformBusinesses.jsx). */}
+        {admin?.is_platform_owner && (
+          <NavLink to="/platform/businesses" className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 21h18" />
+              <path d="M5 21V7l7-4 7 4v14" />
+              <path d="M9 21v-6h6v6" />
+            </svg>
+            Businesses
+          </NavLink>
+        )}
+
         {/* Opens the tenant-facing login in a new tab — a quick jump-off point
             for testing the portal without losing the dashboard session. */}
         <a href="/portal/login" target="_blank" rel="noreferrer" className="nav-item">
