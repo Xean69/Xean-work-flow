@@ -29,9 +29,16 @@ workflows:
       app_store_connect: xean_manager_appstore
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: ca.xean.manager
+      # Deliberately NO `ios_signing:` block. That block is not metadata:
+      # it tells Codemagic to look up a certificate + provisioning profile
+      # already uploaded to Team settings > Code signing identities, while
+      # the build machine is being prepared (before any script runs). With
+      # nothing uploaded there, it fails right away with "No matching
+      # profiles found for bundle identifier ... and distribution type
+      # app_store". This workflow signs with the CLI instead (the
+      # fetch-signing-files step below, through the App Store Connect
+      # integration), so the two approaches must not be mixed.
+      #
       # CERTIFICATE_PRIVATE_KEY lives in this group (Codemagic UI > Team
       # settings > Environment variable groups), not here — automatic code
       # signing needs a private key supplied up front to pair with the
@@ -94,8 +101,7 @@ workflows:
         script: keychain initialize
 
       - name: Fetch signing files
-        # environment.ios_signing above is just metadata — it doesn't fetch
-        # or create anything by itself. This is the step that actually asks
+        # This is the step that actually asks
         # Apple (via the app_store_connect integration) for a distribution
         # certificate + provisioning profile matching ca.xean.manager,
         # creating them on the first run if none exist yet. Skipping this
@@ -212,9 +218,7 @@ workflows:
       app_store_connect: xean_manager_appstore
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: ca.xean.tenant
+      # No `ios_signing:` block here either: see ios-xean-app above.
       # Same ios_signing group as ios-xean-app above, on purpose — see that
       # workflow's own comment for why CERTIFICATE_PRIVATE_KEY is shared
       # rather than duplicated per app.
@@ -258,9 +262,7 @@ workflows:
         script: keychain initialize
 
       - name: Fetch signing files
-        # Same gap as ios-xean-app had: environment.ios_signing is metadata
-        # only, it doesn't fetch or create anything. This step actually
-        # gets (or creates, first run) a distribution cert + provisioning
+        # Same as ios-xean-app: this step gets (or creates, first run) a distribution cert + provisioning
         # profile for ca.xean.tenant via the app_store_connect integration.
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
